@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人主页</title>
+    <!-- 引入外部样式表 -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ==================== 导航栏 ==================== -->
+    <header class="header">
+        <nav class="nav container">
+            <a href="#home" class="nav__logo">MyHome</a>
+            <ul class="nav__list">
+                <li><a href="#home" class="nav__link">首页</a></li>
+                <li><a href="#about" class="nav__link">关于</a></li>
+                <li><a href="#skills" class="nav__link">技能</a></li>
+                <li><a href="#projects" class="nav__link">项目</a></li>
+                <li><a href="#contact" class="nav__link">联系</a></li>
+                <li><span id="nav-username" class="nav__username" style="display:none;"></span></li>
+                <li><a href="#" id="nav-logout" class="nav__link nav__link--logout" style="display:none;">退出</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- ==================== 首页 / 英雄区 ==================== -->
+    <section id="home" class="hero">
+        <div class="hero__content container">
+            <p class="hero__greeting">你好，我是</p>
+            <h1 class="hero__name">李神</h1>
+            <p class="hero__title">全栈开发者 / 开源爱好者</p>
+            <p class="hero__desc">
+                热爱技术，专注于构建优雅、高性能的 Web 应用。
+                相信代码的力量可以让世界变得更好。
+            </p>
+            <a href="#contact" class="btn btn--primary">与我联系</a>
+        </div>
+    </section>
+
+    <!-- ==================== 关于我 ==================== -->
+    <section id="about" class="about section">
+        <div class="container">
+            <h2 class="section__title">关于我</h2>
+            <p class="section__subtitle">一个热爱编程与设计的开发者</p>
+            <div class="about__grid">
+                <div class="about__avatar-wrapper">
+                    <!-- 头像占位符，可替换为真实图片 -->
+                    <div class="about__avatar">👨‍💻</div>
+                </div>
+                <div class="about__text">
+                    <p>
+                        我是一名拥有 5 年经验的 Web 开发者，擅长使用现代前端框架
+                        和后端技术构建完整的应用解决方案。我热衷于学习新技术，
+                        并在开源社区中贡献自己的力量。
+                    </p>
+                    <p>
+                        工作之余，我喜欢写技术博客、参加 Hackathon 以及探索
+                        新的咖啡店 ☕。
+                    </p>
+                    <div class="about__info">
+                        <div class="about__info-item">
+                            <span class="about__info-label">姓名</span>
+                            <span>李神</span>
+                        </div>
+                        <div class="about__info-item">
+                            <span class="about__info-label">邮箱</span>
+                            <span>hello@example.com</span>
+                        </div>
+                        <div class="about__info-item">
+                            <span class="about__info-label">地点</span>
+                            <span>中国 · 北京</span>
+                        </div>
+                    </div>
+                    <a href="#" class="btn btn--outline">下载简历</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 技能 ==================== -->
+    <section id="skills" class="skills section section--alt">
+        <div class="container">
+            <h2 class="section__title">技能栈</h2>
+            <p class="section__subtitle">这些年积累的技术能力</p>
+            <div class="skills__grid">
+                <div class="skill-card">
+                    <div class="skill-card__icon">🎨</div>
+                    <h3 class="skill-card__title">前端开发</h3>
+                    <ul class="skill-card__list">
+                        <li>HTML5 / CSS3 / JavaScript</li>
+                        <li>React / Vue.js</li>
+                        <li>TypeScript</li>
+                        <li>Tailwind CSS</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <div class="skill-card__icon">⚙️</div>
+                    <h3 class="skill-card__title">后端开发</h3>
+                    <ul class="skill-card__list">
+                        <li>Node.js / Express</li>
+                        <li>Python / FastAPI</li>
+                        <li>MySQL / MongoDB</li>
+                        <li>Redis / Docker</li>
+                    </ul>
+                </div>
+                <div class="skill-card">
+                    <div class="skill-card__icon">🛠️</div>
+                    <h3 class="skill-card__title">工具 & 其他</h3>
+                    <ul class="skill-card__list">
+                        <li>Git / GitHub Actions</li>
+                        <li>Linux / Shell</li>
+                        <li>Figma (基础)</li>
+                        <li>Agile / Scrum</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 项目 ==================== -->
+    <section id="projects" class="projects section">
+        <div class="container">
+            <h2 class="section__title">作品集</h2>
+            <p class="section__subtitle">一些我参与过的项目</p>
+            <div class="projects__grid">
+                <article class="project-card">
+                    <div class="project-card__img project-card__img--1"></div>
+                    <div class="project-card__body">
+                        <h3 class="project-card__title">电商平台</h3>
+                        <p class="project-card__desc">
+                            基于 React + Node.js 的全栈电商解决方案，
+                            支持商品管理、购物车、在线支付等功能。
+                        </p>
+                        <div class="project-card__tags">
+                            <span>React</span><span>Node.js</span><span>MongoDB</span>
+                        </div>
+                    </div>
+                </article>
+                <article class="project-card">
+                    <div class="project-card__img project-card__img--2"></div>
+                    <div class="project-card__body">
+                        <h3 class="project-card__title">任务看板</h3>
+                        <p class="project-card__desc">
+                            类似 Trello 的看板应用，支持拖拽排序、
+                            多人协作和实时更新。
+                        </p>
+                        <div class="project-card__tags">
+                            <span>Vue.js</span><span>Firebase</span><span>DnD</span>
+                        </div>
+                    </div>
+                </article>
+                <article class="project-card">
+                    <div class="project-card__img project-card__img--3"></div>
+                    <div class="project-card__body">
+                        <h3 class="project-card__title">天气应用</h3>
+                        <p class="project-card__desc">
+                            精美的天气预报 PWA，支持地理位置定位、
+                            7 天预报和天气动画效果。
+                        </p>
+                        <div class="project-card__tags">
+                            <span>PWA</span><span>API</span><span>CSS动画</span>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 联系我 ==================== -->
+    <section id="contact" class="contact section section--alt">
+        <div class="container">
+            <h2 class="section__title">联系我</h2>
+            <p class="section__subtitle">欢迎交流与合作</p>
+            <form class="contact__form" id="contactForm">
+                <div class="contact__row">
+                    <input type="text" class="contact__input" placeholder="你的名字" required>
+                    <input type="email" class="contact__input" placeholder="你的邮箱" required>
+                </div>
+                <input type="text" class="contact__input" placeholder="主题">
+                <textarea class="contact__textarea" placeholder="在这里写下你想说的话..." rows="6" required></textarea>
+                <button type="submit" class="btn btn--primary">发送消息</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- ==================== 页脚 ==================== -->
+    <footer class="footer">
+        <div class="container">
+            <p class="footer__copy">&copy; 2026 李神. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <!-- 引入认证库 -->
+    <script src="auth.js"></script>
+    <!-- 引入外部脚本 -->
+    <script src="script.js"></script>
+
+    <!-- ==================== 认证检查 ==================== -->
+    <script>
+        (async () => {
+            // 未登录 → 跳转到登录页
+            if (!Auth.isLoggedIn()) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // 已登录 → 向服务器验证 token 有效性
+            const result = await Auth.verify();
+            if (!result.valid) {
+                // token 失效 → 跳转登录页
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // 显示用户名和退出按钮
+            const usernameEl = document.getElementById('nav-username');
+            const logoutEl = document.getElementById('nav-logout');
+            if (usernameEl) {
+                usernameEl.textContent = result.username;
+                usernameEl.style.display = '';
+            }
+            if (logoutEl) {
+                logoutEl.style.display = '';
+                logoutEl.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    Auth.logout();
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

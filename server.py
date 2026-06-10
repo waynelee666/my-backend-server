@@ -159,17 +159,16 @@ class RequestHandler(BaseHTTPRequestHandler):
     # ---------- 通用响应工具 ----------
     def send_json(self, data: dict, status: int = 200):
     """发送 JSON 响应。"""
-    body = json.dumps(data, ensure_ascii=False).encode("utf-8")
-    self.send_response(status)
-    # 新增跨域头 开始
-    self.send_header("Access-Control-Allow-Origin", "*")
-    self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-    self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-    # 新增跨域头 结束
-    self.send_header("Content-Type", "application/json; charset=utf-8")
-    self.send_header("Content-Length", len(body))
-    self.end_headers()
-    self.wfile.write(body)
+    # 这一行开始的所有代码，都必须缩进（用4个空格）
+        body = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", len(body))
+        self.end_headers()
+        self.wfile.write(body)
 
     def read_json_body(self) -> dict | None:
         """读取并解析 JSON 请求体。"""

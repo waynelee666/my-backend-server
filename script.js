@@ -31,7 +31,7 @@ function findSimilarSubject(name) {
 
 // ==================== 数据层 ====================
 const DS = {
-    async loadSubjects() { try { const { data, error } = await sb.from('subjects').select('*').order('created_at'); return data||[]; } catch(e) { console.warn('subjects load failed:',e); return []; } },
+    async loadSubjects() { try { const { data } = await sb.from('subjects').select('*').order('position',{ascending:true}).order('created_at'); return data||[]; } catch(e) { console.warn('subjects:',e); const { data } = await sb.from('subjects').select('*').order('created_at'); return data||[]; } },
     async loadEvents() { const { data } = await sb.from('events').select('*').order('date'); return data||[]; },
     async loadTodos() { const { data } = await sb.from('todos').select('*').order('created_at',{ascending:false}); return data||[]; },
     async create(table, row) { const u = await sb.auth.getUser(); row.user_id = u.data.user.id;
@@ -202,16 +202,34 @@ function renderDayCard() {
     $('#dayCardDate').textContent = selectedCalDate;
     const seen = new Set();
     const dayEvents = events.filter(e=>{ const k=e.title+'|'+e.event_type; if (seen.has(k)) return false; seen.add(k); return e.date===selectedCalDate; });
-    $('#dayCardEvents').innerHTML = dayEvents.length ? dayEvents.map(e => `
+    const dayTodos = todos.filter(t => t.date === selectedCalDate);
+    const labels = {todo:'待办',doing:'进行中',done:'已完成'};
+    let html = '';
+    if (dayEvents.length) html += dayEvents.map(e => `
         <div class="day-card__event day-card__event--${e.event_type}">
             <span>${eventTypeLabel(e.event_type)==='考试'?'🔴':eventTypeLabel(e.event_type)==='学习'?'🔵':eventTypeLabel(e.event_type)==='生活'?'🟢':eventTypeLabel(e.event_type)==='DDL'?'🟡':'🟣'} ${esc(e.title)}</span>
             <button data-del-event="${e.id}" title="删除">✕</button>
-        </div>`).join('') : '<p style="font-size:.85rem;color:var(--color-text-light)">当天无事件</p>';
+        </div>`).join('');
+    if (dayTodos.length) html += dayTodos.map(t => `
+        <div class="day-card__event" style="background:#f8fafc;border-left:3px solid var(--color-primary);display:flex;align-items:center;gap:8px;justify-content:space-between;padding:8px 12px;margin-bottom:4px;border-radius:6px;font-size:.85rem">
+            <span style="cursor:pointer" data-toggle-todo="${t.id}">${t.status==='done'?'☑':'☐'} ${esc(t.title)}</span>
+            <span class="status-badge status-badge--${t.status}">${labels[t.status]}</span>
+        </div>`).join('');
+    if (!html) html = '<p style="font-size:.85rem;color:var(--color-text-light)">当天无事件和任务</p>';
+    $('#dayCardEvents').innerHTML = html;
 }
 $('#dayCardClose').addEventListener('click', () => { selectedCalDate=null; renderCalendar(); });
 $('#dayCardEvents').addEventListener('click', async e => {
-    const del = e.target.dataset.delEvent; if (!del) return;
-    if (confirm('删除此事件？')) { await DS.remove('events', parseInt(del)); await refreshAll(); selectedCalDate=null; renderCalendar(); }
+    const del = e.target.dataset.delEvent;
+    if (del) {
+        if (confirm('删除此事件？')) { await DS.remove('events', parseInt(del)); await refreshAll(); selectedCalDate=null; renderCalendar(); }
+        return;
+    }
+    const toggle = e.target.dataset.toggleTodo;
+    if (toggle) {
+        const t = todos.find(x=>x.id===parseInt(toggle));
+        if (t) { const ns = t.status==='done'?'todo':'done'; await DS.update('todos', t.id, {status:ns}); await refreshAll(); renderDayCard(); }
+    }
 });
 $('#dayCardGoTodos').addEventListener('click', () => {
     todoDate = selectedCalDate; $('#todoDate').value = todoDate;

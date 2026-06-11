@@ -82,15 +82,14 @@ function renderTodos() {
         </div>`).join('') : '';
 
     const dayTodos = todos.filter(t => t.date === todoDate);
-    if (!dayTodos.length) { $('#todoList').innerHTML = '<p class="empty-text">暂无任务</p>'; return; }
     const labels = {todo:'待办',doing:'进行中',done:'已完成'};
-    $('#todoList').innerHTML = dayTodos.map(t => {
+    $('#todoList').innerHTML = dayTodos.length ? dayTodos.map(t => {
         const sub = subjects.find(s=>s.id===t.subject_id);
         const dc = t.status==='done'?'todo-card--done':'';
-        const cc = t.status==='done'?'todo-card__checkbox--done':t.status==='doing'?'todo-card__checkbox--doing':'';
-        const ci = t.status==='done'?'✓':t.status==='doing'?'▶':'';
         return `<div class="todo-card ${dc}" data-id="${t.id}">
-            <div class="todo-card__checkbox ${cc}" data-action="cycle" title="切换状态">${ci}</div>
+            <div class="todo-card__check" data-action="toggle" title="点击打勾/取消">
+                ${t.status==='done' ? '☑' : '☐'}
+            </div>
             <div class="todo-card__body" data-action="edit">
                 <div class="todo-card__title">${esc(t.title)}</div>
                 ${t.description?`<div class="todo-card__desc">${esc(t.description)}</div>`:''}
@@ -105,7 +104,7 @@ function renderTodos() {
                 <button class="btn-del" data-action="delete" title="删除">🗑️</button>
             </div>
         </div>`;
-    }).join('');
+    }).join('') : '<p class="empty-text">暂无任务</p>';
 }
 
 $('#addTodoBtn').addEventListener('click', () => {
@@ -131,6 +130,7 @@ $('#todoList').addEventListener('click', async e => {
     const t = todos.find(x=>x.id===id); if (!t) return;
     const action = e.target.dataset.action || e.target.closest('[data-action]')?.dataset.action;
     if (action === 'cycle') { const n = {todo:'doing',doing:'done',done:'todo'}; await DS.update('todos',id,{status:n[t.status]}); await refreshAll(); }
+    else if (action === 'toggle') { const ns = t.status==='done'?'todo':'done'; await DS.update('todos',id,{status:ns}); await refreshAll(); }
     else if (action === 'edit') { editTodo(t); }
     else if (action === 'delete') { if (confirm(`确定删除「${t.title}」？`)) { await DS.remove('todos',id); await refreshAll(); } }
 });

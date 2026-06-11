@@ -74,10 +74,8 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .todo-card:hover { box-shadow:0 2px 12px var(--color-shadow); }
 .todo-card--done { opacity:.55; }
 .todo-card--done .todo-card__title { text-decoration:line-through; }
-.todo-card__checkbox { width:20px; height:20px; min-width:20px; border:2px solid #cbd5e1; border-radius:50%; cursor:pointer; transition:all var(--transition); display:flex; align-items:center; justify-content:center; font-size:.65rem; color:transparent; margin-top:2px; }
-.todo-card__checkbox:hover { border-color:var(--color-primary); }
-.todo-card__checkbox--done { background:var(--color-success); border-color:var(--color-success); color:#fff; }
-.todo-card__checkbox--doing { background:var(--color-warning); border-color:var(--color-warning); color:#fff; }
+.todo-card__check { font-size:1.3rem; cursor:pointer; user-select:none; transition:all var(--transition); color:#cbd5e1; margin-top:1px; }
+.todo-card__check:hover { color:var(--color-success); }
 .todo-card__body { flex:1; min-width:0; cursor:pointer; }
 .todo-card__title { font-size:.95rem; font-weight:600; margin-bottom:2px; }
 .todo-card__desc { font-size:.82rem; color:var(--color-text-light); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:4px; }

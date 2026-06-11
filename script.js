@@ -535,6 +535,10 @@ async function applyImport(results) {
                 }
             }
             const title = r.title || (subjectName + ' 考试');
+            // 检查是否已有相同日期+标题的考试，防止重复
+            const alreadyExists = events.some(e => e.date === r.date && (e.title === title || e.title.includes(subjectName)));
+            if (alreadyExists) { console.warn('Skipping duplicate event:', title, r.date); continue; }
+
             await DS.create('events', {
                 date: r.date, title,
                 event_type: 'exam', subject_id: subId,

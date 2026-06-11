@@ -249,3 +249,149 @@ textarea.form-input { resize: vertical; }
     .filter-bar { flex-wrap: wrap; }
     .form-row { flex-direction: column; }
 }
+
+/* ==================== 登录/注册页 ==================== */
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 背景装饰圆 */
+.auth-bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.auth-bg__circle {
+    position: absolute; border-radius: 50%; opacity: 0.12;
+}
+.auth-bg__circle--1 {
+    width: 500px; height: 500px;
+    background: #fff;
+    top: -150px; right: -100px;
+    animation: float 8s ease-in-out infinite;
+}
+.auth-bg__circle--2 {
+    width: 300px; height: 300px;
+    background: #fff;
+    bottom: -80px; left: -80px;
+    animation: float 6s ease-in-out infinite reverse;
+}
+.auth-bg__circle--3 {
+    width: 200px; height: 200px;
+    background: rgba(255,255,255,0.5);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation: float 10s ease-in-out infinite 2s;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+.auth-card {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 440px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 48px 40px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.08);
+    animation: cardIn 0.5s ease-out;
+}
+
+@keyframes cardIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.auth-card__icon {
+    text-align: center; font-size: 3rem; margin-bottom: 8px;
+}
+
+.auth-card__title {
+    font-size: 1.8rem; font-weight: 800; text-align: center;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.auth-card__subtitle {
+    text-align: center;
+    color: var(--color-text-light);
+    font-size: 0.95rem;
+    margin-bottom: 32px;
+}
+
+/* 表单 */
+.auth-card__form {
+    display: flex; flex-direction: column; gap: 14px;
+}
+
+.auth-card__input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid #e8ecf1;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    outline: none;
+    background: #f8fafc;
+    transition: all 0.25s ease;
+}
+.auth-card__input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102,126,234,0.1);
+    background: #fff;
+}
+.auth-card__input::placeholder { color: #b0b8c1; }
+
+.auth-card__btn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    padding: 14px 0;
+    font-size: 1rem;
+    border-radius: 12px;
+    margin-top: 4px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    transition: all 0.25s ease;
+}
+.auth-card__btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(102,126,234,0.4);
+}
+
+/* 提示消息 */
+.auth-card__msg {
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+.auth-card__msg--error {
+    background: #fef2f2; color: var(--color-danger); border: 1px solid #fecaca;
+}
+.auth-card__msg--success {
+    background: #ecfdf5; color: var(--color-success); border: 1px solid #a7f3d0;
+}
+
+/* 切换链接 */
+.auth-card__toggle {
+    text-align: center; margin-top: 24px; font-size: 0.9rem; color: var(--color-text-light);
+}
+.auth-card__toggle a {
+    color: #667eea; font-weight: 600; margin-left: 4px;
+    transition: color 0.2s;
+}
+.auth-card__toggle a:hover { color: #764ba2; text-decoration: underline; }

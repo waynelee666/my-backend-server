@@ -3,15 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>登录 - 个人主页</title>
+    <title>登录 - TaskFlow</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="auth-page">
+    <!-- 背景装饰 -->
+    <div class="auth-bg">
+        <div class="auth-bg__circle auth-bg__circle--1"></div>
+        <div class="auth-bg__circle auth-bg__circle--2"></div>
+        <div class="auth-bg__circle auth-bg__circle--3"></div>
+    </div>
 
     <!-- ==================== 认证卡片容器 ==================== -->
     <div class="auth-card">
-        <h1 class="auth-card__title">👋 欢迎</h1>
-        <p class="auth-card__subtitle">登录或注册以继续访问</p>
+        <div class="auth-card__icon">📋</div>
+        <h1 class="auth-card__title">TaskFlow</h1>
+        <p class="auth-card__subtitle">登录或注册以开始管理任务</p>
 
         <!-- ===== 错误提示区 ===== -->
         <div class="auth-card__msg auth-card__msg--error" id="authError" style="display:none;"></div>

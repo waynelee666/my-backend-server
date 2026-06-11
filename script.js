@@ -153,7 +153,7 @@ function editTodo(t) {
 }
 
 // ==================== 日历视图 ====================
-function eventTypeLabel(t) { return {exam:'考试',class:'上课',holiday:'假期',deadline:'DDL',other:'其他'}[t]||t; }
+function eventTypeLabel(t) { return {exam:'考试',class:'学习',holiday:'生活',deadline:'DDL',other:'其他'}[t]||t; }
 
 function renderCalendar() {
     $('#calMonthLabel').textContent = `${calYear}年 ${calMonth+1}月`;
@@ -196,7 +196,7 @@ function renderDayCard() {
     const dayEvents = events.filter(e=>{ const k=e.title+'|'+e.event_type; if (seen.has(k)) return false; seen.add(k); return e.date===selectedCalDate; });
     $('#dayCardEvents').innerHTML = dayEvents.length ? dayEvents.map(e => `
         <div class="day-card__event day-card__event--${e.event_type}">
-            <span>${eventTypeLabel(e.event_type)==='考试'?'🔴':eventTypeLabel(e.event_type)==='上课'?'🔵':eventTypeLabel(e.event_type)==='假期'?'🟢':eventTypeLabel(e.event_type)==='DDL'?'🟡':'🟣'} ${esc(e.title)}</span>
+            <span>${eventTypeLabel(e.event_type)==='考试'?'🔴':eventTypeLabel(e.event_type)==='学习'?'🔵':eventTypeLabel(e.event_type)==='生活'?'🟢':eventTypeLabel(e.event_type)==='DDL'?'🟡':'🟣'} ${esc(e.title)}</span>
             <button data-del-event="${e.id}" title="删除">✕</button>
         </div>`).join('') : '<p style="font-size:.85rem;color:var(--color-text-light)">当天无事件</p>';
 }
@@ -215,7 +215,7 @@ $('#dayCardAddEvent').addEventListener('click', () => {
     modalMode = 'event'; editId = null;
     openModal(`添加事件 - ${selectedCalDate}`, `
         <div class="form-group"><label>标题*</label><input class="form-input" id="mfTitle" maxlength="100" required placeholder="事件名称"></div>
-        <div class="form-group"><label>类型</label><select class="form-select" id="mfEventType"><option value="exam">🔴 考试</option><option value="class">🔵 上课</option><option value="holiday">🟢 假期</option><option value="deadline">🟡 DDL</option><option value="other">🟣 其他</option></select></div>
+        <div class="form-group"><label>类型</label><select class="form-select" id="mfEventType"><option value="exam">🔴 考试</option><option value="class">🔵 学习</option><option value="holiday">🟢 生活</option><option value="deadline">🟡 DDL</option><option value="other">🟣 其他</option></select></div>
         <div class="form-group"><label>关联科目</label><select class="form-select" id="mfSubject"><option value="">无</option>${showSubjectSelect(null)}</select></div>
         <div class="modal__footer">
             <button type="button" class="btn btn--outline" onclick="closeModal()">取消</button>

@@ -333,7 +333,7 @@ function renderComponents(s) {
     $('#totalBar').innerHTML = `合计：${total}% ${total===100?'✅':'⚠️ 不为100%'}` + scoreHTML;
     $('#totalBar').className = `total-bar ${cls}`;
 }
-$('#componentList').addEventListener('input', () => { updateComponentsFromDOM(); });
+$('#componentList').addEventListener('input', () => { updateCalcDisplay(); });
 $('#componentList').addEventListener('click', e => {
     if (e.target.dataset.compDel) { e.target.closest('.component-item').remove(); updateComponentsFromDOM(); }
 });
@@ -362,6 +362,27 @@ function currentSubjectId() {
     const m = $('#subjectDetailTitle').textContent.replace('📘 ','');
     return subjects.find(s=>s.name===m)?.id;
 }
+/** 仅更新计算显示，不重建 DOM（避免输入框焦点丢失） */
+function updateCalcDisplay() {
+    const items = $$('#componentList .component-item');
+    let totalPct = 0, totalWeighted = 0, totalWeight = 0;
+    [...items].forEach(item => {
+        const pct = parseFloat(item.querySelector('[data-comp-field="percentage"]').value)||0;
+        const score = parseFloat(item.querySelector('[data-comp-field="score"]').value);
+        totalPct += pct;
+        if (!isNaN(score)) { totalWeighted += score * (pct/100); totalWeight += pct; }
+    });
+    const cls = totalPct===100?'total-bar--ok':'total-bar--bad';
+    let html = `合计：${totalPct}% ${totalPct===100?'✅':'⚠️ 不为100%'}`;
+    if (totalWeight > 0) {
+        const finalScore = Math.round(totalWeighted * 10) / 10;
+        const gpa = scoreToGPA(finalScore);
+        html += `<div style="margin-top:8px;font-size:.9rem"><strong>预估总分：${finalScore} 分 → 绩点 ${gpa}</strong></div>`;
+    }
+    $('#totalBar').innerHTML = html;
+    $('#totalBar').className = `total-bar ${cls}`;
+}
+
 function updateComponentsFromDOM() {
     const s = subjects.find(x=>x.id===currentSubjectId()); if (!s) return;
     const items = $$('#componentList .component-item');

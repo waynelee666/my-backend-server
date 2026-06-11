@@ -31,7 +31,7 @@ function findSimilarSubject(name) {
 
 // ==================== 数据层 ====================
 const DS = {
-    async loadSubjects() { const { data, error } = await sb.from('subjects').select('*').order('position',{ascending:true}); if (error) { console.warn('subjects query error, trying without position:', error); const { data } = await sb.from('subjects').select('*').order('created_at'); return data||[]; } return data||[]; },
+    async loadSubjects() { try { const { data, error } = await sb.from('subjects').select('*').order('created_at'); return data||[]; } catch(e) { console.warn('subjects load failed:',e); return []; } },
     async loadEvents() { const { data } = await sb.from('events').select('*').order('date'); return data||[]; },
     async loadTodos() { const { data } = await sb.from('todos').select('*').order('created_at',{ascending:false}); return data||[]; },
     async create(table, row) { const u = await sb.auth.getUser(); row.user_id = u.data.user.id;
@@ -41,7 +41,15 @@ const DS = {
     async remove(table, id) { await sb.from(table).delete().eq('id', id); },
 };
 
-async function refreshAll() { subjects = await DS.loadSubjects(); events = await DS.loadEvents(); todos = await DS.loadTodos(); renderCurrent(); }
+async function refreshAll() {
+    const [s, e, t] = await Promise.all([
+        DS.loadSubjects().catch(e=>(console.warn(e),[])),
+        DS.loadEvents().catch(e=>(console.warn(e),[])),
+        DS.loadTodos().catch(e=>(console.warn(e),[]))
+    ]);
+    subjects = s; events = e; todos = t;
+    renderCurrent();
+}
 function renderCurrent() { if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else renderSubjects(); }
 
 // ==================== Tab 切换 ====================

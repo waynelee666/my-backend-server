@@ -166,6 +166,13 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .form-row { display:flex; gap:12px; }
 textarea.form-input { resize:vertical; }
 
+.gpa-summary {
+    background: linear-gradient(135deg,#667eea,#764ba2);
+    color: #fff; padding: 16px 24px; border-radius: var(--radius);
+    margin-bottom: 16px; font-size: 1.1rem;
+}
+.gpa-summary strong { font-size: 1.8rem; margin: 0 4px; }
+
 /* ==================== 响应式 ==================== */
 @media (max-width:768px) {
     .nav__tabs { gap:2px; }

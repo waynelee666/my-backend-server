@@ -228,18 +228,39 @@ $('#dayCardAddEvent').addEventListener('click', () => {
 // ==================== 科目视图 ====================
 function renderSubjects() {
     if (!subjects.length) { $('#subjectGrid').innerHTML = '<p class="empty-text">暂无科目，点击上方按钮添加</p>'; return; }
-    $('#subjectGrid').innerHTML = subjects.map(s => {
+
+    // 计算总 GPA
+    let totalWeight = 0, totalPoints = 0;
+    const subjectGPAs = subjects.map(s => {
+        const { gpa } = calcSubjectGPA(s.components || []);
+        if (gpa != null && s.credits) { totalWeight += s.credits; totalPoints += s.credits * gpa; }
+        return { ...s, gpa };
+    });
+    const overallGPA = totalWeight > 0 ? Math.round(totalPoints / totalWeight * 100) / 100 : null;
+
+    let html = '';
+    if (overallGPA != null) {
+        html += `<div class="gpa-summary">
+            📊 加权平均绩点：<strong>${overallGPA}</strong>
+            <span style="font-size:.8rem;color:var(--color-text-light)">（${subjectGPAs.filter(s=>s.gpa!=null).length}/${subjects.length} 科已评分）</span>
+        </div>`;
+    }
+
+    html += subjectGPAs.map(s => {
+        const { gpa } = s;
         const comps = s.components || [];
         const total = comps.reduce((a,c)=>a+(c.percentage||0),0);
         return `<div class="subject-card" data-id="${s.id}" data-action="detail">
             <div class="subject-card__name">📘 ${esc(s.name)}</div>
             <div class="subject-card__info">
                 <span>学分 ${s.credits||'-'}</span>
-                <span>目标绩点 ${s.target_gpa||'-'}</span>
+                ${gpa!=null ? `<span style="color:var(--color-primary);font-weight:600">绩点 ${gpa}</span>` : ''}
+                ${s.target_gpa ? `<span>目标 ${s.target_gpa}</span>` : ''}
             </div>
             ${comps.length ? `<div class="subject-card__progress"><div class="subject-card__bar" style="width:${total}%"></div></div><div style="font-size:.75rem;color:var(--color-text-light);margin-top:4px">已配置 ${total}%</div>` : ''}
         </div>`;
     }).join('');
+    $('#subjectGrid').innerHTML = html;
 }
 
 $('#subjectGrid').addEventListener('click', e => {
@@ -263,6 +284,31 @@ $('#addSubjectBtn').addEventListener('click', () => {
 });
 
 // ==================== 科目详情模态框 ====================
+/** 浙大绩点换算（百分制→5.0） */
+function scoreToGPA(score) {
+    if (score >= 95) return 5.0; if (score >= 92) return 4.8;
+    if (score >= 89) return 4.5; if (score >= 86) return 4.2;
+    if (score >= 83) return 3.9; if (score >= 80) return 3.6;
+    if (score >= 77) return 3.3; if (score >= 74) return 3.0;
+    if (score >= 71) return 2.7; if (score >= 68) return 2.4;
+    if (score >= 65) return 2.1; if (score >= 62) return 1.8;
+    if (score >= 60) return 1.5; return 0;
+}
+/** 计算单科加权总分和绩点 */
+function calcSubjectGPA(comps) {
+    if (!comps?.length) return { score: null, gpa: null };
+    let totalScore = 0, totalPct = 0;
+    for (const c of comps) {
+        if (c.score != null && c.percentage) {
+            totalScore += (c.score || 0) * (c.percentage / 100);
+            totalPct += c.percentage;
+        }
+    }
+    if (totalPct === 0) return { score: null, gpa: null };
+    const finalScore = Math.round(totalScore * 10) / 10;
+    return { score: finalScore, gpa: scoreToGPA(finalScore) };
+}
+
 function openSubjectDetail(id) {
     const s = subjects.find(x=>x.id===id); if (!s) return;
     $('#subjectDetailTitle').textContent = '📘 ' + s.name;
@@ -274,14 +320,17 @@ function openSubjectDetail(id) {
 function renderComponents(s) {
     const comps = s.components || [];
     const total = comps.reduce((a,c)=>a+(c.percentage||0),0);
+    const { score, gpa } = calcSubjectGPA(comps);
     $('#componentList').innerHTML = comps.map((c,i) => `
         <div class="component-item">
-            <input value="${esc(c.name)}" data-comp-idx="${i}" data-comp-field="name" placeholder="项目名称（如：期末考试）">
-            <input type="number" value="${c.percentage||0}" data-comp-idx="${i}" data-comp-field="percentage" placeholder="%" min="0" max="100"> %
+            <input value="${esc(c.name)}" data-comp-idx="${i}" data-comp-field="name" placeholder="项目名称">
+            <input type="number" value="${c.percentage||0}" data-comp-idx="${i}" data-comp-field="percentage" placeholder="%" min="0" max="100" style="width:60px"> %
+            <input type="number" value="${c.score!=null?c.score:''}" data-comp-idx="${i}" data-comp-field="score" placeholder="分数" min="0" max="100" style="width:70px"> 分
             <button data-comp-del="${i}">✕</button>
         </div>`).join('');
     const cls = total===100?'total-bar--ok':'total-bar--bad';
-    $('#totalBar').textContent = `合计：${total}% ${total===100?'✅':'⚠️ 不为100%'}`;
+    const scoreHTML = score!=null ? `<div style="margin-top:8px;font-size:.9rem"><strong>预估总分：${score} 分 → 绩点 ${gpa}</strong></div>` : '';
+    $('#totalBar').innerHTML = `合计：${total}% ${total===100?'✅':'⚠️ 不为100%'}` + scoreHTML;
     $('#totalBar').className = `total-bar ${cls}`;
 }
 $('#componentList').addEventListener('input', () => { updateComponentsFromDOM(); });
@@ -318,7 +367,8 @@ function updateComponentsFromDOM() {
     const items = $$('#componentList .component-item');
     s.components = [...items].map(item => ({
         name: item.querySelector('[data-comp-field="name"]').value.trim(),
-        percentage: parseFloat(item.querySelector('[data-comp-field="percentage"]').value)||0
+        percentage: parseFloat(item.querySelector('[data-comp-field="percentage"]').value)||0,
+        score: parseFloat(item.querySelector('[data-comp-field="score"]').value) || null,
     }));
     renderComponents(s);
 }

@@ -31,7 +31,7 @@ function findSimilarSubject(name) {
 
 // ==================== 数据层 ====================
 const DS = {
-    async loadSubjects() { const { data } = await sb.from('subjects').select('*').order('position',{ascending:true}); return data||[]; },
+    async loadSubjects() { const { data, error } = await sb.from('subjects').select('*').order('position',{ascending:true}); if (error) { console.warn('subjects query error, trying without position:', error); const { data } = await sb.from('subjects').select('*').order('created_at'); return data||[]; } return data||[]; },
     async loadEvents() { const { data } = await sb.from('events').select('*').order('date'); return data||[]; },
     async loadTodos() { const { data } = await sb.from('todos').select('*').order('created_at',{ascending:false}); return data||[]; },
     async create(table, row) { const u = await sb.auth.getUser(); row.user_id = u.data.user.id;

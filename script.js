@@ -76,8 +76,13 @@ function showSubjectSelect(selectedId) {
 // ==================== 待办视图 ====================
 $('#todoDate').value = todoDate;
 $('#todoDate').addEventListener('change', () => { todoDate = $('#todoDate').value; renderTodos(); });
-$('#todoPrevDay').addEventListener('click', () => { const d=new Date(todoDate+'T00:00:00'); d.setDate(d.getDate()-1); todoDate=d.toISOString().slice(0,10); $('#todoDate').value=todoDate; renderTodos(); });
-$('#todoNextDay').addEventListener('click', () => { const d=new Date(todoDate+'T00:00:00'); d.setDate(d.getDate()+1); todoDate=d.toISOString().slice(0,10); $('#todoDate').value=todoDate; renderTodos(); });
+function shiftDate(days) {
+    const [y,m,d] = todoDate.split('-').map(Number);
+    const dt = new Date(y, m-1, d + days);
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+$('#todoPrevDay').addEventListener('click', () => { todoDate = shiftDate(-1); $('#todoDate').value = todoDate; renderTodos(); });
+$('#todoNextDay').addEventListener('click', () => { todoDate = shiftDate(1); $('#todoDate').value = todoDate; renderTodos(); });
 $('#todoToday').addEventListener('click', () => { todoDate=new Date().toISOString().slice(0,10); $('#todoDate').value=todoDate; renderTodos(); });
 
 function renderTodos() {

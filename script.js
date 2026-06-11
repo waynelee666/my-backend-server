@@ -11,7 +11,23 @@ let currentTab = 'todos';
 let todoDate = new Date().toISOString().slice(0, 10);
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 let selectedCalDate = null;
-let modalMode = null, editId = null; // 'subject'|'event'|'todo'
+/** 查找相似科目名（"微积分" ≈ "微积分（甲）Ⅱ"） */
+function findSimilarSubject(name) {
+    if (!name) return null;
+    const clean = name.replace(/[（(][^)）]*[)）]/g,'').replace(/[ⅠⅡⅢⅣⅤV]+$/,'').trim();
+    // 精确匹配
+    let s = subjects.find(s=>s.name===name);
+    if (s) return s;
+    // 清理括号后匹配
+    s = subjects.find(s=>{
+        const sc = s.name.replace(/[（(][^)）]*[)）]/g,'').replace(/[ⅠⅡⅢⅣⅤV]+$/,'').trim();
+        return sc===clean;
+    });
+    if (s) return s;
+    // 包含关系（"微积分" 包含于 "微积分（甲）Ⅱ"）
+    s = subjects.find(s=>s.name.includes(clean) || clean.includes(s.name));
+    return s || null;
+}
 
 // ==================== 数据层 ====================
 const DS = {
@@ -480,12 +496,12 @@ async function applyImport(results) {
         if (eventType === 'subject_grade' || rtype === 'subject') {
             let subId = createdSubjects[subjectName];
             if (!subId) {
-                const existing = subjects.find(s=>s.name===subjectName);
+                const existing = findSimilarSubject(subjectName);
                 if (existing) {
                     subId = existing.id;
                     await DS.update('subjects', subId, {
                         components: r.components || [],
-                        ...(credits ? { credits } : {}),
+                        ...(credits && !existing.credits ? { credits } : {}),
                     });
                 } else {
                     const created = await DS.create('subjects', {
@@ -499,11 +515,10 @@ async function applyImport(results) {
                 subjectCount++;
             }
         } else if (eventType === 'exam_event') {
-            // 跳过缺少日期的事件
             if (!r.date) { console.warn('Skipping exam without date:', r); continue; }
             let subId = createdSubjects[subjectName];
             if (!subId) {
-                const existing = subjects.find(s=>s.name===subjectName);
+                const existing = findSimilarSubject(subjectName);
                 if (existing) {
                     subId = existing.id;
                     if (!existing.credits && credits) {

@@ -99,15 +99,15 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 /* ==================== 日历 ==================== */
 .cal__nav { display:flex; align-items:center; gap:8px; }
 .cal__month-label { font-size:1rem; font-weight:600; min-width:140px; text-align:center; }
-.cal__weekdays { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:.78rem; font-weight:600; color:var(--color-text-light); margin-bottom:4px; padding:4px 0; }
-.cal__grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; background:var(--color-bg); border:1px solid var(--color-border); border-radius:var(--radius); padding:8px; }
-.cal__cell { aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border-radius:6px; cursor:pointer; font-size:.85rem; font-weight:500; transition:all var(--transition); position:relative; }
+.cal__weekdays { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:.7rem; font-weight:600; color:var(--color-text-light); margin-bottom:2px; padding:2px 0; }
+.cal__grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; background:var(--color-bg); border:1px solid var(--color-border); border-radius:var(--radius); padding:6px; }
+.cal__cell { height:36px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; border-radius:4px; cursor:pointer; font-size:.78rem; font-weight:500; transition:all var(--transition); }
 .cal__cell:hover { background:#eef2ff; }
 .cal__cell--today { background:var(--color-primary); color:#fff; }
 .cal__cell--today:hover { background:var(--color-primary-dark); }
 .cal__cell--other { color:#cbd5e1; }
-.cal__dots { display:flex; gap:2px; }
-.cal__dot { width:5px; height:5px; border-radius:50%; }
+.cal__dots { display:flex; gap:1px; }
+.cal__dot { width:4px; height:4px; border-radius:50%; }
 .cal__dot--exam { background:var(--color-exam); }
 .cal__dot--class { background:var(--color-class); }
 .cal__dot--holiday { background:var(--color-holiday); }

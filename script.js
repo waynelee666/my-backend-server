@@ -34,6 +34,8 @@ $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
     $$('.nav__tab').forEach(b => b.classList.remove('active')); btn.classList.add('active');
     $$('.view').forEach(v => v.classList.remove('active')); $(`#view-${currentTab}`).classList.add('active');
     if (currentTab === 'calendar') renderCalendar();
+    if (currentTab === 'subjects') renderSubjects();
+    if (currentTab === 'todos') renderTodos();
 }));
 $('.nav__logo').addEventListener('click', () => { currentTab='todos'; $$('.nav__tab').forEach(b=>b.classList.remove('active')); $('[data-tab="todos"]').classList.add('active'); $$('.view').forEach(v=>v.classList.remove('active')); $('#view-todos').classList.add('active'); renderTodos(); });
 
@@ -497,6 +499,8 @@ async function applyImport(results) {
                 subjectCount++;
             }
         } else if (eventType === 'exam_event') {
+            // 跳过缺少日期的事件
+            if (!r.date) { console.warn('Skipping exam without date:', r); continue; }
             let subId = createdSubjects[subjectName];
             if (!subId) {
                 const existing = subjects.find(s=>s.name===subjectName);

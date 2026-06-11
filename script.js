@@ -327,6 +327,157 @@ async function saveModal() {
 
 function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
+// ==================== 文件导入 ====================
+$('#importBtn').addEventListener('click', () => $('#importFile').click());
+$('#importFile').addEventListener('change', async () => {
+    const file = $('#importFile').files[0];
+    if (!file) return;
+    const text = await file.text();
+    const results = parseTXT(text);
+    if (!results.length) { showToast('未识别到有效数据，请检查文件格式', 'error'); return; }
+    await applyImport(results);
+    $('#importFile').value = '';
+});
+
+/**
+ * 解析 TXT 文件，自动识别内容类型
+ * 支持：考试安排 / 绩点规则
+ */
+function parseTXT(text) {
+    const lines = text.split('\n').map(l=>l.trim()).filter(l=>l);
+
+    // 检测类型
+    const hasExam = lines.some(l=>l.includes('期末考试时间'));
+    const hasGrade = lines.some(l=>l.includes('总评构成'));
+
+    if (hasExam) return parseExamSchedule(lines);
+    if (hasGrade) return parseGradeRules(text);
+    return [];
+}
+
+/** 解析考试安排：提取日期、时间、地点 */
+function parseExamSchedule(lines) {
+    const results = [];
+    for (const line of lines) {
+        const m = line.match(/^(.+?)，学分\s*[\d.]+\s*，学期\S+期末考试时间：(\d{4})\s*年\s*(\d{2})\s*月\s*(\d{2})\s*日\s*\((\d{2}:\d{2})-(\d{2}:\d{2})\)期末考试地点：(.+?)期末考试座位号：(\d+)/);
+        if (m) {
+            const [, name, y, mo, d, t1, t2, loc, seat] = m;
+            results.push({
+                type: 'exam_event',
+                subjectName: name.trim(),
+                date: `${y}-${mo}-${d}`,
+                timeRange: `${t1}-${t2}`,
+                location: loc.trim(),
+                seat: seat,
+                title: `${name.trim()} 考试`,
+            });
+        }
+    }
+    return results;
+}
+
+/** 解析绩点规则：按 "N. 科目名\n总评构成" 分段 */
+function parseGradeRules(text) {
+    const results = [];
+    // 按 "N. 科目名" 分段（N 为数字）
+    const sections = text.split(/\n(?=\d+\.\s*\S)/);
+    for (const sec of sections) {
+        const headerMatch = sec.match(/^(\d+)\.\s*(.+)/m);
+        if (!headerMatch) continue;
+        const subjectName = headerMatch[2].trim();
+
+        // 提取百分比（两种模式：XX% 或 期末×XX%）
+        const percentPattern = /([一-龥\w()（）]+?)[：:]\s*([\d.]+)%/g;
+        const components = [];
+        // 先提取明确百分比的项目
+        let m;
+        while ((m = percentPattern.exec(sec)) !== null) {
+            const name = m[1].trim();
+            const pct = parseFloat(m[2]);
+            // 过滤明显不是成绩构成的关键词
+            const skipWords = ['学分','合计','占期末','占平时','平时成绩','占平时成绩','折算后','满分','多选','材料分析','论述','卷面','第','平时成绩计算公式','总评计算','空'];
+            if (!skipWords.some(w=>name.includes(w)) && name.length<30 && pct>0 && pct<=100) {
+                components.push({ name, percentage: pct });
+            }
+        }
+        // 去重（按名称）
+        const seen = new Set();
+        const unique = components.filter(c => { const k=c.name; if (seen.has(k)) return false; seen.add(k); return true; });
+
+        if (unique.length > 0) {
+            results.push({ type: 'subject_grade', subjectName, components: unique });
+        }
+    }
+    return results;
+}
+
+/** 将解析结果写入数据库 */
+async function applyImport(results) {
+    let examCount = 0, subjectCount = 0;
+    const createdSubjects = {}; // name → id mapping
+
+    for (const r of results) {
+        if (r.type === 'subject_grade') {
+            // 创建或查找科目
+            let subId = createdSubjects[r.subjectName];
+            if (!subId) {
+                const existing = subjects.find(s=>s.name===r.subjectName);
+                if (existing) {
+                    subId = existing.id;
+                    // 更新绩点分配
+                    await DS.update('subjects', subId, { components: r.components });
+                } else {
+                    const created = await DS.create('subjects', {
+                        name: r.subjectName, components: r.components,
+                    });
+                    subId = created.id;
+                }
+                createdSubjects[r.subjectName] = subId;
+                subjectCount++;
+            }
+        } else if (r.type === 'exam_event') {
+            // 查找关联科目
+            let subId = createdSubjects[r.subjectName];
+            if (!subId) {
+                const existing = subjects.find(s=>s.name===r.subjectName);
+                if (existing) subId = existing.id;
+            }
+            // 创建日历事件
+            await DS.create('events', {
+                date: r.date, title: r.title,
+                event_type: 'exam', subject_id: subId,
+            });
+            examCount++;
+        }
+    }
+
+    await refreshAll();
+    let msg = [];
+    if (examCount) msg.push(`${examCount} 场考试已导入日历`);
+    if (subjectCount) msg.push(`${subjectCount} 门科目已导入并配置绩点`);
+    showToast(msg.join('，') || '未识别到有效数据', msg.length?'success':'error');
+}
+
+/** 简易 Toast */
+function showToast(message, type) {
+    const existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    const t = document.createElement('div');
+    t.className = 'toast toast--'+type;
+    t.textContent = message;
+    Object.assign(t.style, {
+        position:'fixed', bottom:'32px', right:'32px', padding:'14px 24px', borderRadius:'10px',
+        color:'#fff', fontWeight:600, fontSize:'.9rem', zIndex:9999, opacity:0,
+        transform:'translateY(20px)', transition:'all .35s ease',
+        background: type==='success'?'linear-gradient(135deg,#10b981,#059669)':'linear-gradient(135deg,#ef4444,#dc2626)',
+        boxShadow:'0 6px 20px rgba(0,0,0,.15)'
+    });
+    document.body.appendChild(t);
+    requestAnimationFrame(()=>{ t.style.opacity='1'; t.style.transform='translateY(0)'; });
+    setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateY(20px)';
+        t.addEventListener('transitionend',()=>t.remove()); },3500);
+}
+
 // ==================== 启动 ====================
 document.addEventListener('DOMContentLoaded', async () => {
     if (!(await Auth.isLoggedIn())) return;

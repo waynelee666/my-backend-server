@@ -174,7 +174,9 @@ function calCell(day, dateKey, other) {
     let cls = 'cal__cell';
     if (other) cls += ' cal__cell--other';
     if (dateKey === today) cls += ' cal__cell--today';
-    const dots = events.filter(e=>e.date===dateKey);
+    // 去重：同名+同类型只显示一个点
+    const seen = new Set();
+    const dots = events.filter(e=>{ const k=e.title+'|'+e.event_type; if (seen.has(k)) return false; seen.add(k); return e.date===dateKey; });
     const dotHTML = dots.length ? `<div class="cal__dots">${dots.map(d=>`<span class="cal__dot cal__dot--${d.event_type}"></span>`).join('')}</div>` : '';
     return `<div class="${cls}" data-date="${dateKey}">${day}${dotHTML}</div>`;
 }
@@ -190,7 +192,8 @@ function renderDayCard() {
     if (!selectedCalDate) { $('#dayCard').style.display='none'; return; }
     $('#dayCard').style.display = '';
     $('#dayCardDate').textContent = selectedCalDate;
-    const dayEvents = events.filter(e=>e.date===selectedCalDate);
+    const seen = new Set();
+    const dayEvents = events.filter(e=>{ const k=e.title+'|'+e.event_type; if (seen.has(k)) return false; seen.add(k); return e.date===selectedCalDate; });
     $('#dayCardEvents').innerHTML = dayEvents.length ? dayEvents.map(e => `
         <div class="day-card__event day-card__event--${e.event_type}">
             <span>${eventTypeLabel(e.event_type)==='考试'?'🔴':eventTypeLabel(e.event_type)==='上课'?'🔵':eventTypeLabel(e.event_type)==='假期'?'🟢':eventTypeLabel(e.event_type)==='DDL'?'🟡':'🟣'} ${esc(e.title)}</span>

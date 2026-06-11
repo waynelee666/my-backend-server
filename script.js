@@ -312,8 +312,8 @@ function calcSubjectGPA(comps) {
 function openSubjectDetail(id) {
     const s = subjects.find(x=>x.id===id); if (!s) return;
     $('#subjectDetailTitle').textContent = '📘 ' + s.name;
-    $('#sdCredits').textContent = s.credits || '未设置';
-    $('#sdGPA').textContent = s.target_gpa || '未设置';
+    $('#sdCredits').innerHTML = `<input type="number" id="sdCreditsInput" value="${s.credits||''}" step="0.5" min="0" max="20" placeholder="学分" style="width:80px">`;
+    $('#sdGPA').innerHTML = `<input type="number" id="sdGPAInput" value="${s.target_gpa||''}" step="0.1" min="1.5" max="5.0" placeholder="目标绩点" style="width:80px">`;
     renderComponents(s);
     $('#subjectDetailModal').style.display = '';
 }
@@ -346,7 +346,9 @@ $('#addComponentBtn').addEventListener('click', () => {
 $('#saveSubjectBtn').addEventListener('click', async () => {
     const s = subjects.find(x=>x.id===currentSubjectId()); if (!s) return;
     updateComponentsFromDOM();
-    await DS.update('subjects', s.id, { components: s.components, credits: s.credits, target_gpa: s.target_gpa });
+    const cr = parseFloat($('#sdCreditsInput').value)||0;
+    const tg = parseFloat($('#sdGPAInput').value)||null;
+    await DS.update('subjects', s.id, { components: s.components, credits: cr, target_gpa: tg });
     await refreshAll(); $('#subjectDetailModal').style.display = 'none';
 });
 $('#deleteSubjectBtn').addEventListener('click', async () => {

@@ -20,7 +20,7 @@ const DS = {
     async loadTodos() { const { data } = await sb.from('todos').select('*').order('created_at',{ascending:false}); return data||[]; },
     async create(table, row) { const u = await sb.auth.getUser(); row.user_id = u.data.user.id;
         const { data, error } = await sb.from(table).insert(row).select().single(); if (error) throw error; return data; },
-    async update(table, id, fields) { fields.updated_at = new Date().toISOString();
+    async update(table, id, fields) {
         const { data, error } = await sb.from(table).update(fields).eq('id', id).select().single(); if (error) throw error; return data; },
     async remove(table, id) { await sb.from(table).delete().eq('id', id); },
 };

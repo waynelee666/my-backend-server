@@ -273,16 +273,21 @@ function renderSubjects() {
 }
 
 $('#subjectGrid').addEventListener('click', async e => {
-    const btn = e.target.closest('[data-action]');
-    if (btn) {
-        const action = btn.dataset.action;
-        const id = parseInt(btn.dataset.id);
-        if (action === 'up') await moveSubject(id, -1);
-        else if (action === 'down') await moveSubject(id, 1);
+    // 移动按钮
+    const moveBtn = e.target.closest('button[data-action="up"], button[data-action="down"]');
+    if (moveBtn && !moveBtn.disabled) {
+        e.stopPropagation();
+        const id = parseInt(moveBtn.dataset.id);
+        if (moveBtn.dataset.action === 'up') await moveSubject(id, -1);
+        else await moveSubject(id, 1);
         return;
     }
-    const card = e.target.closest('.subject-card'); if (!card) return;
-    const id = parseInt(card.dataset.id); openSubjectDetail(id);
+    // 科目卡片（打开详情）
+    const card = e.target.closest('.subject-card');
+    if (card && !e.target.closest('button')) {
+        const id = parseInt(card.dataset.id);
+        if (id) openSubjectDetail(id);
+    }
 });
 
 async function moveSubject(id, direction) {

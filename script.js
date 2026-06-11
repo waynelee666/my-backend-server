@@ -1,112 +1,89 @@
 /* ============================================================
-   TaskFlow - 任务清单 + 日历 脚本
-   封装 Supabase tasks 表 CRUD，渲染任务列表和日历
+   TaskFlow - 学业管理 脚本
    ============================================================ */
-
-// ---------- Supabase 客户端 ----------
 const SUPABASE_URL = 'https://swouijpxhujlwlrsmwmo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3b3VpanB4aHVqbHdscnNtd21vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMjQxMzIsImV4cCI6MjA5NjcwMDEzMn0.VhL4p8yoILq-5nFe2K5TKafoC03vsDwa_MBb-uBp8PQ';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
 
-// ---------- 全局状态 ----------
-let allTasks = [];
-let currentFilter = 'all';
-let selectedDate = null;       // 'YYYY-MM-DD' or null
-const calYear = { value: new Date().getFullYear() };
-const calMonth = { value: new Date().getMonth() };   // 0-based
+// ==================== 全局状态 ====================
+let subjects = [], events = [], todos = [];
+let currentTab = 'todos';
+let todoDate = new Date().toISOString().slice(0, 10);
+let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
+let selectedCalDate = null;
+let modalMode = null, editId = null; // 'subject'|'event'|'todo'
 
-// ---------- DOM 工具 ----------
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => document.querySelectorAll(sel);
-
-const taskListEl = $('#taskList');
-const calGridEl = $('#calGrid');
-const calMonthLabel = $('#calMonthLabel');
-const calDayTasksEl = $('#calDayTasks');
-const modalOverlay = $('#modalOverlay');
-const taskForm = $('#taskForm');
-const addTaskBtn = $('#addTaskBtn');
-
-// ---------- 数据层 ----------
-const TaskStore = {
-    /** 加载当前用户所有任务 */
-    async load() {
-        const { data, error } = await sb
-            .from('tasks')
-            .select('*')
-            .order('created_at', { ascending: false });
-        if (error) { console.error('Load tasks error:', error); return []; }
-        return data || [];
-    },
-
-    /** 新增任务 */
-    async create(task) {
-        const { data: { user } } = await sb.auth.getUser();
-        const { data, error } = await sb.from('tasks').insert({
-            user_id: user.id,
-            title: task.title,
-            description: task.description || '',
-            priority: task.priority || '中',
-            status: task.status || 'todo',
-            due_date: task.due_date || null,
-            due_time: task.due_time || null,
-        }).select().single();
-        if (error) throw error;
-        return data;
-    },
-
-    /** 更新任务 */
-    async update(id, fields) {
-        fields.updated_at = new Date().toISOString();
-        const { data, error } = await sb.from('tasks').update(fields).eq('id', id).select().single();
-        if (error) throw error;
-        return data;
-    },
-
-    /** 删除任务 */
-    async remove(id) {
-        const { error } = await sb.from('tasks').delete().eq('id', id);
-        if (error) throw error;
-    },
+// ==================== 数据层 ====================
+const DS = {
+    async loadSubjects() { const { data } = await sb.from('subjects').select('*').order('created_at'); return data||[]; },
+    async loadEvents() { const { data } = await sb.from('events').select('*').order('date'); return data||[]; },
+    async loadTodos() { const { data } = await sb.from('todos').select('*').order('created_at',{ascending:false}); return data||[]; },
+    async create(table, row) { const u = await sb.auth.getUser(); row.user_id = u.data.user.id;
+        const { data, error } = await sb.from(table).insert(row).select().single(); if (error) throw error; return data; },
+    async update(table, id, fields) { fields.updated_at = new Date().toISOString();
+        const { data, error } = await sb.from(table).update(fields).eq('id', id).select().single(); if (error) throw error; return data; },
+    async remove(table, id) { await sb.from(table).delete().eq('id', id); },
 };
 
-// ---------- 渲染 ----------
-function getFilteredTasks() {
-    if (currentFilter === 'all') return allTasks;
-    return allTasks.filter(t => t.status === currentFilter);
+async function refreshAll() { subjects = await DS.loadSubjects(); events = await DS.loadEvents(); todos = await DS.loadTodos(); renderCurrent(); }
+function renderCurrent() { if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else renderSubjects(); }
+
+// ==================== Tab 切换 ====================
+$$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
+    currentTab = btn.dataset.tab;
+    $$('.nav__tab').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+    $$('.view').forEach(v => v.classList.remove('active')); $(`#view-${currentTab}`).classList.add('active');
+    if (currentTab === 'calendar') renderCalendar();
+}));
+$('.nav__logo').addEventListener('click', () => { currentTab='todos'; $$('.nav__tab').forEach(b=>b.classList.remove('active')); $('[data-tab="todos"]').classList.add('active'); $$('.view').forEach(v=>v.classList.remove('active')); $('#view-todos').classList.add('active'); renderTodos(); });
+
+// ==================== 通用模态框 ====================
+function openModal(title, formHTML) { $('#modalTitle').textContent = title; $('#modalForm').innerHTML = formHTML; $('#modalOverlay').style.display = ''; }
+function closeModal() { $('#modalOverlay').style.display = 'none'; editId = null; modalMode = null; }
+$('#modalClose').addEventListener('click', closeModal);
+$('#modalOverlay').addEventListener('click', e => { if (e.target===$('#modalOverlay')) closeModal(); });
+
+function showSubjectSelect(selectedId) {
+    return subjects.map(s => `<option value="${s.id}" ${s.id===selectedId?'selected':''}>${esc(s.name)}</option>`).join('');
 }
 
-function renderTaskList() {
-    const tasks = getFilteredTasks();
-    if (tasks.length === 0) {
-        taskListEl.innerHTML = '<p class="task-list__empty">暂无任务，点击上方按钮添加</p>';
-        return;
-    }
+// ==================== 待办视图 ====================
+$('#todoDate').value = todoDate;
+$('#todoDate').addEventListener('change', () => { todoDate = $('#todoDate').value; renderTodos(); });
+$('#todoPrevDay').addEventListener('click', () => { const d=new Date(todoDate+'T00:00:00'); d.setDate(d.getDate()-1); todoDate=d.toISOString().slice(0,10); $('#todoDate').value=todoDate; renderTodos(); });
+$('#todoNextDay').addEventListener('click', () => { const d=new Date(todoDate+'T00:00:00'); d.setDate(d.getDate()+1); todoDate=d.toISOString().slice(0,10); $('#todoDate').value=todoDate; renderTodos(); });
+$('#todoToday').addEventListener('click', () => { todoDate=new Date().toISOString().slice(0,10); $('#todoDate').value=todoDate; renderTodos(); });
 
-    taskListEl.innerHTML = tasks.map(t => {
-        const doneClass = t.status === 'done' ? 'task-card--done' : '';
-        const cbClass = t.status === 'done' ? 'task-card__checkbox--done'
-                      : t.status === 'doing' ? 'task-card__checkbox--doing' : '';
-        const cbIcon = t.status === 'done' ? '✓' : t.status === 'doing' ? '▶' : '';
-        const desc = t.description ? `<div class="task-card__desc">${escapeHtml(t.description)}</div>` : '';
-        const dateStr = formatDate(t.due_date);
-        const timeStr = t.due_time ? t.due_time.slice(0, 5) : '';
-        const datetimeStr = [dateStr, timeStr].filter(Boolean).join(' ');
-        const statusLabel = { todo: '待办', doing: '进行中', done: '已完成' }[t.status];
+function renderTodos() {
+    const dayEvents = events.filter(e => e.date === todoDate);
+    $('#dayEvents').innerHTML = dayEvents.length ? dayEvents.map(e => `
+        <div class="day-event-item day-event-item--${e.event_type}">
+            <span class="event-dot event-dot--${e.event_type}"></span>
+            <span style="flex:1">${esc(e.title)}</span>
+            <span style="font-size:.75rem;color:var(--color-text-light)">${eventTypeLabel(e.event_type)}</span>
+        </div>`).join('') : '';
 
-        return `
-        <div class="task-card ${doneClass}" data-id="${t.id}">
-            <div class="task-card__checkbox ${cbClass}" data-action="cycle" title="点击切换状态">${cbIcon}</div>
-            <div class="task-card__body" data-action="edit">
-                <div class="task-card__title">${escapeHtml(t.title)}</div>
-                ${desc}
-                <div class="task-card__meta">
-                    <span class="status-badge status-badge--${t.status}">${statusLabel}</span>
+    const dayTodos = todos.filter(t => t.date === todoDate);
+    if (!dayTodos.length) { $('#todoList').innerHTML = '<p class="empty-text">暂无任务</p>'; return; }
+    const labels = {todo:'待办',doing:'进行中',done:'已完成'};
+    $('#todoList').innerHTML = dayTodos.map(t => {
+        const sub = subjects.find(s=>s.id===t.subject_id);
+        const dc = t.status==='done'?'todo-card--done':'';
+        const cc = t.status==='done'?'todo-card__checkbox--done':t.status==='doing'?'todo-card__checkbox--doing':'';
+        const ci = t.status==='done'?'✓':t.status==='doing'?'▶':'';
+        return `<div class="todo-card ${dc}" data-id="${t.id}">
+            <div class="todo-card__checkbox ${cc}" data-action="cycle" title="切换状态">${ci}</div>
+            <div class="todo-card__body" data-action="edit">
+                <div class="todo-card__title">${esc(t.title)}</div>
+                ${t.description?`<div class="todo-card__desc">${esc(t.description)}</div>`:''}
+                <div class="todo-card__meta">
+                    <span class="status-badge status-badge--${t.status}">${labels[t.status]}</span>
                     <span><span class="priority-dot priority--${t.priority}"></span>${t.priority}</span>
-                    ${datetimeStr ? `<span>📅 ${datetimeStr}</span>` : ''}
+                    ${sub?`<span>📚 ${esc(sub.name)}</span>`:''}
                 </div>
             </div>
-            <div class="task-card__actions">
+            <div class="todo-card__actions">
                 <button data-action="edit" title="编辑">✏️</button>
                 <button class="btn-del" data-action="delete" title="删除">🗑️</button>
             </div>
@@ -114,239 +91,246 @@ function renderTaskList() {
     }).join('');
 }
 
-function renderCalendar() {
-    calMonthLabel.textContent = `${calYear.value}年 ${calMonth.value + 1}月`;
+$('#addTodoBtn').addEventListener('click', () => {
+    modalMode = 'todo'; editId = null;
+    openModal('添加任务', `
+        <div class="form-group"><label>标题*</label><input class="form-input" id="mfTitle" maxlength="100" required placeholder="任务标题"></div>
+        <div class="form-group"><label>描述</label><textarea class="form-input" id="mfDesc" rows="2" placeholder="备注（可选）"></textarea></div>
+        <div class="form-row">
+            <div class="form-group"><label>优先级</label><select class="form-select" id="mfPriority"><option value="高">🔴 高</option><option value="中" selected>🟡 中</option><option value="低">🟢 低</option></select></div>
+            <div class="form-group"><label>关联科目</label><select class="form-select" id="mfSubject"><option value="">无</option>${showSubjectSelect(null)}</select></div>
+        </div>
+        <div class="modal__footer">
+            <button type="button" class="btn btn--outline" onclick="closeModal()">取消</button>
+            <button type="submit" class="btn btn--primary">保存</button>
+        </div>
+    `);
+    $('#modalForm').onsubmit = async e => { e.preventDefault(); await saveModal(); };
+});
 
-    const year = calYear.value;
-    const month = calMonth.value;
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const prevMonthDays = new Date(year, month, 0).getDate();
-
-    // 收集本月及跨月有任务的日期
-    const taskDates = new Map();
-    allTasks.forEach(t => {
-        if (!t.due_date) return;
-        taskDates.set(t.due_date, (taskDates.get(t.due_date) || 0) + 1);
-    });
-
-    const today = new Date();
-    const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-
-    let html = '';
-
-    // 上月填充
-    for (let i = firstDay - 1; i >= 0; i--) {
-        const d = prevMonthDays - i;
-        const m = month === 0 ? 12 : month;
-        const y = month === 0 ? year - 1 : year;
-        const key = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        html += calCell(d, 'cal__cell--other-month', key, taskDates.get(key) || 0, false, false);
-    }
-
-    // 本月
-    for (let d = 1; d <= daysInMonth; d++) {
-        const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const isToday = key === todayKey;
-        const isSelected = key === selectedDate;
-        html += calCell(d, '', key, taskDates.get(key) || 0, isToday, isSelected);
-    }
-
-    // 下月填充
-    const remaining = 42 - (firstDay + daysInMonth);
-    for (let d = 1; d <= remaining; d++) {
-        const m = month === 11 ? 1 : month + 2;
-        const y = month === 11 ? year + 1 : year;
-        const key = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        html += calCell(d, 'cal__cell--other-month', key, taskDates.get(key) || 0, false, false);
-    }
-
-    calGridEl.innerHTML = html;
-    renderCalDayTasks();
-}
-
-function calCell(day, extraClass, dateKey, taskCount, isToday, isSelected) {
-    let cls = `cal__cell ${extraClass}`;
-    if (isToday) cls += ' cal__cell--today';
-    if (isSelected) cls += ' cal__cell--selected';
-    const dot = taskCount > 0 ? '<span class="cal__dot"></span>' : '';
-    return `<div class="${cls}" data-date="${dateKey}">${day}${dot}</div>`;
-}
-
-function renderCalDayTasks() {
-    if (!selectedDate) {
-        calDayTasksEl.innerHTML = '<p class="task-list__empty cal__day-empty">点击日期查看当天任务</p>';
-        return;
-    }
-    const dayTasks = allTasks.filter(t => t.due_date === selectedDate);
-    if (dayTasks.length === 0) {
-        calDayTasksEl.innerHTML = `<p class="task-list__empty cal__day-empty">${selectedDate} 暂无任务</p>`;
-        return;
-    }
-    const labels = { todo: '待办', doing: '进行中', done: '已完成' };
-    calDayTasksEl.innerHTML = `
-        <div class="cal__day-label">📌 ${selectedDate}</div>
-        ${dayTasks.map(t => `
-            <div class="cal__day-task">
-                <span class="priority-dot priority--${t.priority}"></span>
-                <span style="flex:1">${escapeHtml(t.title)}</span>
-                ${t.due_time ? `<span>${t.due_time.slice(0,5)}</span>` : ''}
-                <span class="status-badge status-badge--${t.status}">${labels[t.status]}</span>
-            </div>
-        `).join('')}
-    `;
-}
-
-// ---------- 模态框 ----------
-function openModal(task = null) {
-    editingTaskId = task ? task.id : null;
-    $('#modalTitle').textContent = task ? '编辑任务' : '添加任务';
-    $('#taskId').value = task ? task.id : '';
-    $('#taskTitle').value = task ? task.title : '';
-    $('#taskDesc').value = task ? (task.description || '') : '';
-    $('#taskPriority').value = task ? task.priority : '中';
-    $('#taskStatus').value = task ? task.status : 'todo';
-    $('#taskDate').value = task ? (task.due_date || '') : '';
-    $('#taskTime').value = task ? (task.due_time ? task.due_time.slice(0,5) : '') : '';
-    modalOverlay.style.display = '';
-}
-let editingTaskId = null;
-
-function closeModal() {
-    modalOverlay.style.display = 'none';
-    editingTaskId = null;
-    taskForm.reset();
-}
-
-async function saveTask(e) {
-    e.preventDefault();
-    const taskData = {
-        title: $('#taskTitle').value.trim(),
-        description: $('#taskDesc').value.trim(),
-        priority: $('#taskPriority').value,
-        status: $('#taskStatus').value,
-        due_date: $('#taskDate').value || null,
-        due_time: $('#taskTime').value || null,
-    };
-    if (!taskData.title) return;
-
-    const saveBtn = $('#modalSave');
-    saveBtn.textContent = '保存中...';
-    saveBtn.disabled = true;
-
-    try {
-        if (editingTaskId) {
-            await TaskStore.update(editingTaskId, taskData);
-        } else {
-            await TaskStore.create(taskData);
-        }
-        closeModal();
-        await refresh();
-    } catch (err) {
-        alert('保存失败: ' + err.message);
-    } finally {
-        saveBtn.textContent = '保存';
-        saveBtn.disabled = false;
-    }
-}
-
-// ---------- 事件处理 ----------
-async function handleTaskClick(e) {
-    const card = e.target.closest('.task-card');
-    if (!card) return;
+$('#todoList').addEventListener('click', async e => {
+    const card = e.target.closest('.todo-card'); if (!card) return;
     const id = parseInt(card.dataset.id);
-    const task = allTasks.find(t => t.id === id);
-    if (!task) return;
-
+    const t = todos.find(x=>x.id===id); if (!t) return;
     const action = e.target.dataset.action || e.target.closest('[data-action]')?.dataset.action;
+    if (action === 'cycle') { const n = {todo:'doing',doing:'done',done:'todo'}; await DS.update('todos',id,{status:n[t.status]}); await refreshAll(); }
+    else if (action === 'edit') { editTodo(t); }
+    else if (action === 'delete') { if (confirm(`确定删除「${t.title}」？`)) { await DS.remove('todos',id); await refreshAll(); } }
+});
 
-    if (action === 'cycle') {
-        const next = { todo: 'doing', doing: 'done', done: 'todo' };
-        await TaskStore.update(id, { status: next[task.status] });
-        await refresh();
-    } else if (action === 'edit') {
-        openModal(task);
-    } else if (action === 'delete') {
-        if (confirm(`确定删除「${task.title}」吗？`)) {
-            await TaskStore.remove(id);
-            await refresh();
-        }
+function editTodo(t) {
+    modalMode = 'todo'; editId = t.id;
+    openModal('编辑任务', `
+        <div class="form-group"><label>标题*</label><input class="form-input" id="mfTitle" maxlength="100" required value="${esc(t.title)}"></div>
+        <div class="form-group"><label>描述</label><textarea class="form-input" id="mfDesc" rows="2">${esc(t.description||'')}</textarea></div>
+        <div class="form-row">
+            <div class="form-group"><label>优先级</label><select class="form-select" id="mfPriority"><option value="高" ${t.priority==='高'?'selected':''}>🔴 高</option><option value="中" ${t.priority==='中'?'selected':''}>🟡 中</option><option value="低" ${t.priority==='低'?'selected':''}>🟢 低</option></select></div>
+            <div class="form-group"><label>关联科目</label><select class="form-select" id="mfSubject"><option value="">无</option>${showSubjectSelect(t.subject_id)}</select></div>
+        </div>
+        <div class="modal__footer">
+            <button type="button" class="btn btn--outline" onclick="closeModal()">取消</button>
+            <button type="submit" class="btn btn--primary">保存</button>
+        </div>
+    `);
+    $('#modalForm').onsubmit = async e => { e.preventDefault(); await saveModal(); };
+}
+
+// ==================== 日历视图 ====================
+function eventTypeLabel(t) { return {exam:'考试',class:'上课',holiday:'假期',deadline:'DDL',other:'其他'}[t]||t; }
+
+function renderCalendar() {
+    $('#calMonthLabel').textContent = `${calYear}年 ${calMonth+1}月`;
+    const f = new Date(calYear,calMonth,1).getDay(), dim = new Date(calYear,calMonth+1,0).getDate();
+    const pd = new Date(calYear,calMonth,0).getDate();
+    const today = new Date().toISOString().slice(0,10);
+    let h = '';
+    for (let i=f-1; i>=0; i--) { const d=pd-i, m=calMonth===0?12:calMonth, y=calMonth===0?calYear-1:calYear; h+=calCell(d,`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`,true); }
+    for (let d=1; d<=dim; d++) { h+=calCell(d,`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`,false); }
+    const rem = 42-(f+dim);
+    for (let d=1; d<=rem; d++) { const m=calMonth===11?1:calMonth+2, y=calMonth===11?calYear+1:calYear; h+=calCell(d,`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`,true); }
+    $('#calGrid').innerHTML = h;
+    if (selectedCalDate) renderDayCard();
+}
+
+function calCell(day, dateKey, other) {
+    const today = new Date().toISOString().slice(0,10);
+    let cls = 'cal__cell';
+    if (other) cls += ' cal__cell--other';
+    if (dateKey === today) cls += ' cal__cell--today';
+    const dots = events.filter(e=>e.date===dateKey);
+    const dotHTML = dots.length ? `<div class="cal__dots">${dots.map(d=>`<span class="cal__dot cal__dot--${d.event_type}"></span>`).join('')}</div>` : '';
+    return `<div class="${cls}" data-date="${dateKey}">${day}${dotHTML}</div>`;
+}
+
+$('#calGrid').addEventListener('click', e => {
+    const cell = e.target.closest('.cal__cell'); if (!cell) return;
+    selectedCalDate = cell.dataset.date; renderCalendar();
+});
+$('#calPrev').addEventListener('click', () => { if (calMonth===0){calMonth=11;calYear--;}else calMonth--; selectedCalDate=null; renderCalendar(); });
+$('#calNext').addEventListener('click', () => { if (calMonth===11){calMonth=0;calYear++;}else calMonth++; selectedCalDate=null; renderCalendar(); });
+
+function renderDayCard() {
+    if (!selectedCalDate) { $('#dayCard').style.display='none'; return; }
+    $('#dayCard').style.display = '';
+    $('#dayCardDate').textContent = selectedCalDate;
+    const dayEvents = events.filter(e=>e.date===selectedCalDate);
+    $('#dayCardEvents').innerHTML = dayEvents.length ? dayEvents.map(e => `
+        <div class="day-card__event day-card__event--${e.event_type}">
+            <span>${eventTypeLabel(e.event_type)==='考试'?'🔴':eventTypeLabel(e.event_type)==='上课'?'🔵':eventTypeLabel(e.event_type)==='假期'?'🟢':eventTypeLabel(e.event_type)==='DDL'?'🟡':'🟣'} ${esc(e.title)}</span>
+            <button data-del-event="${e.id}" title="删除">✕</button>
+        </div>`).join('') : '<p style="font-size:.85rem;color:var(--color-text-light)">当天无事件</p>';
+}
+$('#dayCardClose').addEventListener('click', () => { selectedCalDate=null; renderCalendar(); });
+$('#dayCardEvents').addEventListener('click', async e => {
+    const del = e.target.dataset.delEvent; if (!del) return;
+    if (confirm('删除此事件？')) { await DS.remove('events', parseInt(del)); await refreshAll(); selectedCalDate=null; renderCalendar(); }
+});
+$('#dayCardGoTodos').addEventListener('click', () => {
+    todoDate = selectedCalDate; $('#todoDate').value = todoDate;
+    currentTab = 'todos'; $$('.nav__tab').forEach(b=>b.classList.remove('active')); $('[data-tab="todos"]').classList.add('active');
+    $$('.view').forEach(v=>v.classList.remove('active')); $('#view-todos').classList.add('active');
+    renderTodos();
+});
+$('#dayCardAddEvent').addEventListener('click', () => {
+    modalMode = 'event'; editId = null;
+    openModal(`添加事件 - ${selectedCalDate}`, `
+        <div class="form-group"><label>标题*</label><input class="form-input" id="mfTitle" maxlength="100" required placeholder="事件名称"></div>
+        <div class="form-group"><label>类型</label><select class="form-select" id="mfEventType"><option value="exam">🔴 考试</option><option value="class">🔵 上课</option><option value="holiday">🟢 假期</option><option value="deadline">🟡 DDL</option><option value="other">🟣 其他</option></select></div>
+        <div class="form-group"><label>关联科目</label><select class="form-select" id="mfSubject"><option value="">无</option>${showSubjectSelect(null)}</select></div>
+        <div class="modal__footer">
+            <button type="button" class="btn btn--outline" onclick="closeModal()">取消</button>
+            <button type="submit" class="btn btn--primary">保存</button>
+        </div>
+    `);
+    $('#modalForm').onsubmit = async e => { e.preventDefault(); await saveModal(); };
+});
+
+// ==================== 科目视图 ====================
+function renderSubjects() {
+    if (!subjects.length) { $('#subjectGrid').innerHTML = '<p class="empty-text">暂无科目，点击上方按钮添加</p>'; return; }
+    $('#subjectGrid').innerHTML = subjects.map(s => {
+        const comps = s.components || [];
+        const total = comps.reduce((a,c)=>a+(c.percentage||0),0);
+        return `<div class="subject-card" data-id="${s.id}" data-action="detail">
+            <div class="subject-card__name">📘 ${esc(s.name)}</div>
+            <div class="subject-card__info">
+                <span>学分 ${s.credits||'-'}</span>
+                <span>目标绩点 ${s.target_gpa||'-'}</span>
+            </div>
+            ${comps.length ? `<div class="subject-card__progress"><div class="subject-card__bar" style="width:${total}%"></div></div><div style="font-size:.75rem;color:var(--color-text-light);margin-top:4px">已配置 ${total}%</div>` : ''}
+        </div>`;
+    }).join('');
+}
+
+$('#subjectGrid').addEventListener('click', e => {
+    const card = e.target.closest('.subject-card'); if (!card) return;
+    const id = parseInt(card.dataset.id); openSubjectDetail(id);
+});
+$('#addSubjectBtn').addEventListener('click', () => {
+    modalMode = 'subject'; editId = null;
+    openModal('添加科目', `
+        <div class="form-group"><label>科目名称*</label><input class="form-input" id="mfName" maxlength="50" required placeholder="如：微积分（甲）Ⅱ"></div>
+        <div class="form-row">
+            <div class="form-group"><label>学分</label><input class="form-input" id="mfCredits" type="number" step="0.5" min="0" placeholder="如 5.0"></div>
+            <div class="form-group"><label>目标绩点</label><input class="form-input" id="mfGPA" type="number" step="0.1" min="0" max="5" placeholder="如 5.0"></div>
+        </div>
+        <div class="modal__footer">
+            <button type="button" class="btn btn--outline" onclick="closeModal()">取消</button>
+            <button type="submit" class="btn btn--primary">创建</button>
+        </div>
+    `);
+    $('#modalForm').onsubmit = async e => { e.preventDefault(); await saveModal(); };
+});
+
+// ==================== 科目详情模态框 ====================
+function openSubjectDetail(id) {
+    const s = subjects.find(x=>x.id===id); if (!s) return;
+    $('#subjectDetailTitle').textContent = '📘 ' + s.name;
+    $('#sdCredits').textContent = s.credits || '未设置';
+    $('#sdGPA').textContent = s.target_gpa || '未设置';
+    renderComponents(s);
+    $('#subjectDetailModal').style.display = '';
+}
+function renderComponents(s) {
+    const comps = s.components || [];
+    const total = comps.reduce((a,c)=>a+(c.percentage||0),0);
+    $('#componentList').innerHTML = comps.map((c,i) => `
+        <div class="component-item">
+            <input value="${esc(c.name)}" data-comp-idx="${i}" data-comp-field="name" placeholder="项目名称（如：期末考试）">
+            <input type="number" value="${c.percentage||0}" data-comp-idx="${i}" data-comp-field="percentage" placeholder="%" min="0" max="100"> %
+            <button data-comp-del="${i}">✕</button>
+        </div>`).join('');
+    const cls = total===100?'total-bar--ok':'total-bar--bad';
+    $('#totalBar').textContent = `合计：${total}% ${total===100?'✅':'⚠️ 不为100%'}`;
+    $('#totalBar').className = `total-bar ${cls}`;
+}
+$('#componentList').addEventListener('input', () => { updateComponentsFromDOM(); });
+$('#componentList').addEventListener('click', e => {
+    if (e.target.dataset.compDel) { e.target.closest('.component-item').remove(); updateComponentsFromDOM(); }
+});
+$('#addComponentBtn').addEventListener('click', () => {
+    const s = subjects.find(x=>x.id===currentSubjectId());
+    if (!s) return;
+    const comps = [...(s.components||[]), {name:'',percentage:0}];
+    s.components = comps; renderComponents(s);
+});
+$('#saveSubjectBtn').addEventListener('click', async () => {
+    const s = subjects.find(x=>x.id===currentSubjectId()); if (!s) return;
+    updateComponentsFromDOM();
+    await DS.update('subjects', s.id, { components: s.components, credits: s.credits, target_gpa: s.target_gpa });
+    await refreshAll(); $('#subjectDetailModal').style.display = 'none';
+});
+$('#deleteSubjectBtn').addEventListener('click', async () => {
+    const s = subjects.find(x=>x.id===currentSubjectId()); if (!s) return;
+    if (!confirm(`确定删除科目「${s.name}」吗？相关的待办不会删除，但关联会断开。`)) return;
+    await DS.remove('subjects', s.id);
+    await refreshAll(); $('#subjectDetailModal').style.display = 'none';
+});
+$('[data-close="subjectDetailModal"]').addEventListener('click', () => { $('#subjectDetailModal').style.display='none'; });
+$('#subjectDetailModal').addEventListener('click', e => { if (e.target===$('#subjectDetailModal')) $('#subjectDetailModal').style.display='none'; });
+
+function currentSubjectId() {
+    const m = $('#subjectDetailTitle').textContent.replace('📘 ','');
+    return subjects.find(s=>s.name===m)?.id;
+}
+function updateComponentsFromDOM() {
+    const s = subjects.find(x=>x.id===currentSubjectId()); if (!s) return;
+    const items = $$('#componentList .component-item');
+    s.components = [...items].map(item => ({
+        name: item.querySelector('[data-comp-field="name"]').value.trim(),
+        percentage: parseFloat(item.querySelector('[data-comp-field="percentage"]').value)||0
+    }));
+    renderComponents(s);
+}
+
+// ==================== 保存（通用） ====================
+async function saveModal() {
+    if (modalMode === 'subject') {
+        const name = $('#mfName').value.trim(); if (!name) return;
+        const row = { name, credits: parseFloat($('#mfCredits').value)||0, target_gpa: parseFloat($('#mfGPA').value)||null, components:[] };
+        await DS.create('subjects', row); closeModal(); await refreshAll();
+    } else if (modalMode === 'event') {
+        const title = $('#mfTitle').value.trim(); if (!title) return;
+        const event_type = $('#mfEventType').value;
+        const subject_id = $('#mfSubject').value ? parseInt($('#mfSubject').value) : null;
+        await DS.create('events', { date: selectedCalDate, title, event_type, subject_id });
+        closeModal(); await refreshAll(); renderCalendar();
+    } else if (modalMode === 'todo') {
+        const title = $('#mfTitle').value.trim(); if (!title) return;
+        const row = { date: todoDate, title, description: $('#mfDesc').value.trim(), priority: $('#mfPriority').value,
+            status: 'todo', subject_id: $('#mfSubject').value ? parseInt($('#mfSubject').value) : null };
+        if (editId) { await DS.update('todos', editId, { title: row.title, description: row.description, priority: row.priority, subject_id: row.subject_id }); }
+        else { await DS.create('todos', row); }
+        closeModal(); await refreshAll();
     }
 }
 
-async function handleCalClick(e) {
-    const cell = e.target.closest('.cal__cell');
-    if (!cell) return;
-    selectedDate = cell.dataset.date;
-    renderCalendar();
-}
+function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
-// ---------- 工具函数 ----------
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
-
-function formatDate(dateStr) {
-    if (!dateStr) return '';
-    const d = new Date(dateStr + 'T00:00:00');
-    const now = new Date();
-    const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
-    const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
-
-    if (dateStr === now.toISOString().slice(0, 10)) return '今天';
-    if (dateStr === tomorrow.toISOString().slice(0, 10)) return '明天';
-    if (dateStr === yesterday.toISOString().slice(0, 10)) return '昨天';
-
-    return `${d.getMonth() + 1}月${d.getDate()}日`;
-}
-
-async function refresh() {
-    allTasks = await TaskStore.load();
-    renderTaskList();
-    renderCalendar();
-}
-
-// ---------- 初始化 ----------
+// ==================== 启动 ====================
 document.addEventListener('DOMContentLoaded', async () => {
     if (!(await Auth.isLoggedIn())) return;
-    await refresh();
-
-    // 筛选按钮
-    $$('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            $$('.filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentFilter = btn.dataset.filter;
-            renderTaskList();
-        });
-    });
-
-    // 日历导航
-    $('#calPrev').addEventListener('click', () => {
-        if (calMonth.value === 0) { calMonth.value = 11; calYear.value--; }
-        else calMonth.value--;
-        selectedDate = null;
-        renderCalendar();
-    });
-    $('#calNext').addEventListener('click', () => {
-        if (calMonth.value === 11) { calMonth.value = 0; calYear.value++; }
-        else calMonth.value++;
-        selectedDate = null;
-        renderCalendar();
-    });
-
-    // 模态框
-    addTaskBtn.addEventListener('click', () => openModal());
-    $('#modalClose').addEventListener('click', closeModal);
-    $('#modalCancel').addEventListener('click', closeModal);
-    modalOverlay.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) closeModal();
-    });
-    taskForm.addEventListener('submit', saveTask);
-
-    // 事件委托
-    taskListEl.addEventListener('click', handleTaskClick);
-    calGridEl.addEventListener('click', handleCalClick);
+    await refreshAll();
+    renderTodos();
+    renderCalendar();
 });

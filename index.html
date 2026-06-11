@@ -3,164 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>任务管理</title>
+    <title>学业管理</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- ==================== 导航栏 ==================== -->
-    <header class="header">
-        <nav class="nav container">
-            <a href="#" class="nav__logo">📋 TaskFlow</a>
-            <ul class="nav__list">
-                <li><span id="nav-username" class="nav__username" style="display:none;"></span></li>
-                <li><a href="#" id="nav-logout" class="nav__link nav__link--logout" style="display:none;">退出</a></li>
-            </ul>
-        </nav>
-    </header>
+<!-- ==================== 顶部导航 ==================== -->
+<header class="header">
+    <nav class="nav container">
+        <a href="#" class="nav__logo" data-tab="todos">📋 TaskFlow</a>
+        <div class="nav__tabs">
+            <button class="nav__tab active" data-tab="todos">✅ 待办</button>
+            <button class="nav__tab" data-tab="calendar">📅 日历</button>
+            <button class="nav__tab" data-tab="subjects">📚 科目</button>
+        </div>
+        <ul class="nav__list">
+            <li><span id="nav-username" class="nav__username" style="display:none;"></span></li>
+            <li><a href="#" id="nav-logout" class="nav__link nav__link--logout" style="display:none;">退出</a></li>
+        </ul>
+    </nav>
+</header>
 
-    <!-- ==================== 主内容区 ==================== -->
-    <main class="main container">
-        <!-- ===== 左侧：任务清单 ===== -->
-        <section class="panel panel--tasks" id="taskPanel">
-            <div class="panel__header">
-                <h2 class="panel__title">📋 任务清单</h2>
-                <button class="btn btn--primary btn--sm" id="addTaskBtn">+ 添加任务</button>
-            </div>
+<!-- ==================== 主内容区 ==================== -->
+<main class="main container">
 
-            <!-- 筛选栏 -->
-            <div class="filter-bar">
-                <button class="filter-btn active" data-filter="all">全部</button>
-                <button class="filter-btn" data-filter="todo">待办</button>
-                <button class="filter-btn" data-filter="doing">进行中</button>
-                <button class="filter-btn" data-filter="done">已完成</button>
-            </div>
-
-            <!-- 任务列表 -->
-            <div class="task-list" id="taskList">
-                <p class="task-list__empty">暂无任务，点击上方按钮添加</p>
-            </div>
-        </section>
-
-        <!-- ===== 右侧：日历 ===== -->
-        <section class="panel panel--calendar" id="calPanel">
-            <div class="panel__header">
-                <h2 class="panel__title">📅 日历</h2>
-                <div class="cal__nav">
-                    <button class="btn btn--icon" id="calPrev">◀</button>
-                    <span class="cal__month-label" id="calMonthLabel"></span>
-                    <button class="btn btn--icon" id="calNext">▶</button>
+    <!-- ===== 待办视图 ===== -->
+    <section class="view active" id="view-todos">
+        <div class="view__header">
+            <div class="view__header-left">
+                <h2>✅ 待办清单</h2>
+                <div class="date-picker">
+                    <button class="btn btn--icon" id="todoPrevDay">◀</button>
+                    <input type="date" id="todoDate" class="date-input">
+                    <button class="btn btn--icon" id="todoNextDay">▶</button>
+                    <button class="btn btn--icon" id="todoToday">今天</button>
                 </div>
             </div>
+            <button class="btn btn--primary btn--sm" id="addTodoBtn">+ 添加任务</button>
+        </div>
+        <!-- 当天事件提示 -->
+        <div class="day-events" id="dayEvents"></div>
+        <!-- 任务列表 -->
+        <div class="todo-list" id="todoList">
+            <p class="empty-text">暂无任务</p>
+        </div>
+    </section>
 
-            <!-- 日历网格 -->
-            <div class="cal__weekdays">
-                <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+    <!-- ===== 日历视图 ===== -->
+    <section class="view" id="view-calendar">
+        <div class="view__header">
+            <h2>📅 日历</h2>
+            <div class="cal__nav">
+                <button class="btn btn--icon" id="calPrev">◀</button>
+                <span class="cal__month-label" id="calMonthLabel"></span>
+                <button class="btn btn--icon" id="calNext">▶</button>
             </div>
-            <div class="cal__grid" id="calGrid"></div>
+        </div>
+        <div class="cal__weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+        <div class="cal__grid" id="calGrid"></div>
+        <!-- 点击日期弹窗 -->
+        <div class="day-card" id="dayCard" style="display:none;">
+            <div class="day-card__header">
+                <span class="day-card__date" id="dayCardDate"></span>
+                <button class="day-card__close" id="dayCardClose">&times;</button>
+            </div>
+            <div class="day-card__events" id="dayCardEvents"></div>
+            <div class="day-card__actions">
+                <button class="btn btn--primary btn--sm" id="dayCardAddEvent">+ 添加事件</button>
+                <button class="btn btn--outline btn--sm" id="dayCardGoTodos">查看当天待办 →</button>
+            </div>
+        </div>
+    </section>
 
-            <!-- 选中日期任务 -->
-            <div class="cal__day-tasks" id="calDayTasks">
-                <p class="task-list__empty cal__day-empty">点击日期查看当天任务</p>
-            </div>
-        </section>
-    </main>
+    <!-- ===== 科目视图 ===== -->
+    <section class="view" id="view-subjects">
+        <div class="view__header">
+            <h2>📚 科目管理</h2>
+            <button class="btn btn--primary btn--sm" id="addSubjectBtn">+ 添加科目</button>
+        </div>
+        <div class="subject-grid" id="subjectGrid">
+            <p class="empty-text">暂无科目，点击上方按钮添加</p>
+        </div>
+    </section>
+</main>
 
-    <!-- ==================== 添加/编辑任务模态框 ==================== -->
-    <div class="modal-overlay" id="modalOverlay" style="display:none;">
-        <div class="modal">
-            <div class="modal__header">
-                <h3 class="modal__title" id="modalTitle">添加任务</h3>
-                <button class="modal__close" id="modalClose">&times;</button>
+<!-- ==================== 科目详情模态框 ==================== -->
+<div class="modal-overlay" id="subjectDetailModal" style="display:none;">
+    <div class="modal modal--lg">
+        <div class="modal__header">
+            <h3 class="modal__title" id="subjectDetailTitle"></h3>
+            <button class="modal__close" data-close="subjectDetailModal">&times;</button>
+        </div>
+        <div class="modal__body">
+            <div class="form-row">
+                <div class="form-group"><label>学分</label><span id="sdCredits"></span></div>
+                <div class="form-group"><label>目标绩点</label><span id="sdGPA"></span></div>
             </div>
-            <form class="modal__body" id="taskForm">
-                <input type="hidden" id="taskId">
-                <div class="form-group">
-                    <label for="taskTitle">任务标题 *</label>
-                    <input type="text" id="taskTitle" class="form-input" maxlength="100" required placeholder="输入任务标题">
-                </div>
-                <div class="form-group">
-                    <label for="taskDesc">描述</label>
-                    <textarea id="taskDesc" class="form-input" rows="3" maxlength="500" placeholder="输入任务描述（可选）"></textarea>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="taskPriority">优先级</label>
-                        <select id="taskPriority" class="form-input">
-                            <option value="高">🔴 高</option>
-                            <option value="中" selected>🟡 中</option>
-                            <option value="低">🟢 低</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="taskStatus">状态</label>
-                        <select id="taskStatus" class="form-input">
-                            <option value="todo">待办</option>
-                            <option value="doing">进行中</option>
-                            <option value="done">已完成</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="taskDate">截止日期</label>
-                        <input type="date" id="taskDate" class="form-input">
-                    </div>
-                    <div class="form-group">
-                        <label for="taskTime">截止时间</label>
-                        <input type="time" id="taskTime" class="form-input">
-                    </div>
-                </div>
-                <div class="modal__footer">
-                    <button type="button" class="btn btn--outline" id="modalCancel">取消</button>
-                    <button type="submit" class="btn btn--primary" id="modalSave">保存</button>
-                </div>
-            </form>
+            <div class="form-group"><label>绩点分配</label></div>
+            <div class="component-list" id="componentList"></div>
+            <button class="btn btn--outline btn--sm" id="addComponentBtn">+ 添加分配项</button>
+            <div class="total-bar" id="totalBar">合计：0%</div>
+            <div class="modal__footer">
+                <button class="btn btn--danger btn--sm" id="deleteSubjectBtn">删除科目</button>
+                <button class="btn btn--primary" id="saveSubjectBtn">保存</button>
+            </div>
         </div>
     </div>
+</div>
 
-    <!-- Supabase + Auth + App -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="auth.js"></script>
-    <script src="script.js"></script>
+<!-- ==================== 通用模态框（科目/事件/待办） ==================== -->
+<div class="modal-overlay" id="modalOverlay" style="display:none;">
+    <div class="modal">
+        <div class="modal__header">
+            <h3 class="modal__title" id="modalTitle"></h3>
+            <button class="modal__close" id="modalClose">&times;</button>
+        </div>
+        <form class="modal__body" id="modalForm"></form>
+    </div>
+</div>
 
-    <!-- ==================== 认证检查 ==================== -->
-    <script>
-        function showAuthUI(username) {
-            const usernameEl = document.getElementById('nav-username');
-            const logoutEl = document.getElementById('nav-logout');
-            if (usernameEl) {
-                usernameEl.textContent = username;
-                usernameEl.style.display = '';
-            }
-            if (logoutEl) {
-                logoutEl.style.display = '';
-                logoutEl.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    Auth.logout();
-                });
-            }
-        }
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth.js"></script>
+<script src="script.js"></script>
 
-        (async () => {
-            if (!(await Auth.isLoggedIn())) {
-                window.location.href = '/login.html';
-                return;
-            }
-            let result;
-            try {
-                result = await Auth.verify();
-            } catch (e) {
-                console.error('Session 验证失败:', e);
-                showAuthUI(await Auth.getUsername() || '用户');
-                return;
-            }
-            if (!result.valid) {
-                window.location.href = '/login.html';
-                return;
-            }
-            showAuthUI(result.username);
-        })();
-    </script>
+<script>
+function showAuthUI(username) {
+    const ue = document.getElementById('nav-username'), le = document.getElementById('nav-logout');
+    if (ue) { ue.textContent = username; ue.style.display = ''; }
+    if (le) { le.style.display = ''; le.addEventListener('click', e => { e.preventDefault(); Auth.logout(); }); }
+}
+(async () => {
+    if (!(await Auth.isLoggedIn())) { window.location.href = '/login.html'; return; }
+    let r;
+    try { r = await Auth.verify(); } catch (e) {
+        showAuthUI(await Auth.getUsername() || '用户'); return;
+    }
+    if (!r.valid) { window.location.href = '/login.html'; return; }
+    showAuthUI(r.username);
+})();
+</script>
 </body>
 </html>

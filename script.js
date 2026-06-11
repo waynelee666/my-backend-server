@@ -234,17 +234,17 @@ function renderDayCard() {
 $('#dayCardClose').addEventListener('click', () => { selectedCalDate=null; renderCalendar(); });
 $('#dayCardEvents').addEventListener('click', async e => {
     if (e.target.dataset.delEvent) {
-        if (confirm('删除此事件？')) { await DS.remove('events', parseInt(e.target.dataset.delEvent)); await refreshAll(); renderCalendar(); }
+        if (confirm('删除此事件？')) { await DS.remove('events', parseInt(e.target.dataset.delEvent)); events = events.filter(x=>x.id!==parseInt(e.target.dataset.delEvent)); renderCalendar(); renderDayCard(); }
         return;
     }
     if (e.target.dataset.delTodo) {
-        if (confirm('删除此任务？')) { await DS.remove('todos', parseInt(e.target.dataset.delTodo)); await refreshAll(); renderDayCard(); }
+        if (confirm('删除此任务？')) { await DS.remove('todos', parseInt(e.target.dataset.delTodo)); todos = todos.filter(x=>x.id!==parseInt(e.target.dataset.delTodo)); renderCalendar(); renderDayCard(); renderTodos(); }
         return;
     }
     if (e.target.dataset.toggleTodo || e.target.closest('[data-toggle-todo]')) {
         const id = parseInt(e.target.dataset.toggleTodo || e.target.closest('[data-toggle-todo]').dataset.toggleTodo);
         const t = todos.find(x=>x.id===id);
-        if (t) { const ns = t.status==='done'?'todo':'done'; await DS.update('todos', id, {status:ns}); await refreshAll(); renderDayCard(); }
+        if (t) { const ns = t.status==='done'?'todo':'done'; t.status = ns; await DS.update('todos', id, {status:ns}); renderDayCard(); renderTodos(); }
     }
 });
 $('#dayCardAddTodo').addEventListener('click', () => {

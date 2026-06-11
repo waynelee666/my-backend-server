@@ -59,16 +59,6 @@ function initContactForm() {
     form.addEventListener('submit', (e) => {
         e.preventDefault();
 
-        // 收集表单数据
-        const formData = new FormData(form);
-        const data = {};
-        formData.forEach((value, key) => {
-            // input 没有 name 属性时，用 placeholder 作为键名
-            const inputEl = form.querySelector(`[name="${key}"]`) ||
-                            [...form.querySelectorAll('input, textarea')]
-                                .find(el => (el.value === value && el !== form.querySelector('button')));
-        });
-
         // 简单校验：至少填写名字、邮箱和内容
         const inputs = form.querySelectorAll('input, textarea');
         const values = [...inputs].map((el) => el.value.trim());

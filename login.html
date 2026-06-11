@@ -20,11 +20,11 @@
         <!-- ==================== 登录表单 ==================== -->
         <form class="auth-card__form" id="loginForm">
             <input
-                type="email"
+                type="text"
                 class="auth-card__input"
                 id="loginUsername"
-                placeholder="邮箱"
-                autocomplete="email"
+                placeholder="邮箱或用户名"
+                autocomplete="username"
                 maxlength="30"
                 required
             >
@@ -43,6 +43,15 @@
 
         <!-- ==================== 注册表单（默认隐藏） ==================== -->
         <form class="auth-card__form" id="registerForm" style="display:none;">
+            <input
+                type="text"
+                class="auth-card__input"
+                id="regName"
+                placeholder="用户名（3-30位，字母数字下划线）"
+                autocomplete="username"
+                maxlength="30"
+                required
+            >
             <input
                 type="email"
                 class="auth-card__input"
@@ -171,16 +180,16 @@
                 e.preventDefault();
                 hideMsgs();
 
-                const email = document.getElementById('loginUsername').value.trim();
+                const identifier = document.getElementById('loginUsername').value.trim();
                 const password = document.getElementById('loginPassword').value;
 
-                if (!email || !password) {
-                    showMsg('error', '请填写邮箱和密码');
+                if (!identifier || !password) {
+                    showMsg('error', '请填写用户名/邮箱和密码');
                     return;
                 }
 
                 setLoading(loginBtn, true);
-                const result = await Auth.login(email, password);
+                const result = await Auth.login(identifier, password);
                 setLoading(loginBtn, false);
 
                 if (result.ok) {
@@ -195,13 +204,22 @@
                 e.preventDefault();
                 hideMsgs();
 
+                const username = document.getElementById('regName').value.trim();
                 const email = document.getElementById('regUsername').value.trim();
                 const password = document.getElementById('regPassword').value;
                 const confirm = document.getElementById('regConfirm').value;
 
                 // 客户端校验
-                if (!email || !password || !confirm) {
+                if (!username || !email || !password || !confirm) {
                     showMsg('error', '请填写所有字段');
+                    return;
+                }
+                if (username.length < 3) {
+                    showMsg('error', '用户名至少 3 个字符');
+                    return;
+                }
+                if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                    showMsg('error', '用户名只能包含字母、数字和下划线');
                     return;
                 }
                 if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -218,7 +236,7 @@
                 }
 
                 setLoading(regBtn, true);
-                const result = await Auth.register(email, password);
+                const result = await Auth.register(email, password, username);
                 setLoading(regBtn, false);
 
                 if (result.ok) {

@@ -201,14 +201,14 @@
     <!-- ==================== 认证检查 ==================== -->
     <script>
         /**
-         * 在导航栏显示用户邮箱和退出按钮
-         * @param {string} email
+         * 在导航栏显示用户名和退出按钮
+         * @param {string} username
          */
-        function showAuthUI(email) {
+        function showAuthUI(username) {
             const usernameEl = document.getElementById('nav-username');
             const logoutEl = document.getElementById('nav-logout');
             if (usernameEl) {
-                usernameEl.textContent = email;
+                usernameEl.textContent = username;
                 usernameEl.style.display = '';
             }
             if (logoutEl) {
@@ -234,7 +234,7 @@
             } catch (e) {
                 // 网络错误，用本地缓存的 session 继续浏览
                 console.error('Session 验证失败（网络错误）:', e);
-                showAuthUI(await Auth.getEmail() || '用户');
+                showAuthUI(await Auth.getUsername() || '用户');
                 return;
             }
             if (!result.valid) {
@@ -243,7 +243,7 @@
                 return;
             }
 
-            showAuthUI(result.email);
+            showAuthUI(result.username);
         })();
     </script>
 </body>

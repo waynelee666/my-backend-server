@@ -294,16 +294,16 @@ async function moveSubject(id, direction) {
     const idx = subjects.findIndex(s=>s.id===id); if (idx<0) return;
     const newIdx = idx + direction;
     if (newIdx<0 || newIdx>=subjects.length) return;
+    // 交换数组位置
     const a = subjects[idx], b = subjects[newIdx];
-    // 在内存中先交换，立即渲染
     const ap = a.position!=null ? a.position : idx;
     const bp = b.position!=null ? b.position : newIdx;
-    subjects[idx] = {...a, position: bp};
-    subjects[newIdx] = {...b, position: ap};
+    subjects[newIdx] = {...a, position: bp};
+    subjects[idx] = {...b, position: ap};
     renderSubjects();
-    // 尝试持久化到数据库
-    try { await DS.update('subjects', a.id, { position: bp }); } catch(e) { console.warn('move save failed:', e); }
-    try { await DS.update('subjects', b.id, { position: ap }); } catch(e) { console.warn('move save failed:', e); }
+    // 持久化
+    try { await DS.update('subjects', a.id, { position: bp }); } catch(e) {}
+    try { await DS.update('subjects', b.id, { position: ap }); } catch(e) {}
 }
 $('#addSubjectBtn').addEventListener('click', () => {
     modalMode = 'subject'; editId = null;

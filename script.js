@@ -330,19 +330,27 @@ function esc(s) { const d=document.createElement('div'); d.textContent=s; return
 // ==================== 文件导入 ====================
 $('#importBtn').addEventListener('click', () => $('#importFile').click());
 $('#importFile').addEventListener('change', async () => {
+    try {
     const file = $('#importFile').files[0];
     if (!file) return;
 
-    // 从文件中提取文本（支持 .txt .csv .md .docx）
     showToast('读取文件中...', 'info');
     let text;
     if (file.name.endsWith('.docx')) {
+        // 按需加载 mammoth
+        await new Promise((resolve, reject) => {
+            if (window.mammoth) return resolve();
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js';
+            s.onload = resolve; s.onerror = reject;
+            document.head.appendChild(s);
+        });
         try {
             const arrayBuffer = await file.arrayBuffer();
             const result = await mammoth.extractRawText({ arrayBuffer });
             text = result.value;
         } catch (e) {
-            showToast('无法读取 docx 文件', 'error');
+            showToast('无法读取 docx 文件: ' + e.message, 'error');
             $('#importFile').value = ''; return;
         }
     } else {
@@ -351,19 +359,17 @@ $('#importFile').addEventListener('change', async () => {
 
     if (!text.trim()) { showToast('文件内容为空', 'error'); $('#importFile').value = ''; return; }
 
-    // 优先用 AI 解析
     showToast('AI 解析中...', 'info');
     let results = await aiParse(text);
-
-    // AI 失败则回退到本地正则解析
     if (!results) {
         showToast('AI 不可用，使用本地解析', 'info');
         results = parseTXT(text);
     }
 
-    if (!results.length) { showToast('未识别到有效数据，请检查文件格式', 'error'); return; }
+    if (!results.length) { showToast('未识别到有效数据', 'error'); $('#importFile').value = ''; return; }
     await applyImport(results);
     $('#importFile').value = '';
+    } catch(e) { showToast('导入出错: ' + e.message, 'error'); console.error(e); }
 });
 
 /** 调用服务器 DeepSeek API 智能解析 */

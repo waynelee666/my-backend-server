@@ -1,7 +1,7 @@
 /* ============================================================
-   TaskFlow - 学业管理 脚本
+   TaskFlow - 学业管理 脚本  v3.2 (checkbox)
    ============================================================ */
-// 复用 auth.js 的 Supabase 客户端，避免重复实例
+console.log('✅ TaskFlow v3.2');
 const sb = Auth.getClient();
 const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
 

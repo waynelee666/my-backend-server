@@ -502,8 +502,14 @@ async function applyImport(results) {
                 const existing = findSimilarSubject(subjectName);
                 if (existing) {
                     subId = existing.id;
+                    // 合并绩点分配（新旧合并，同名覆盖，新项追加）
+                    const merged = [...(existing.components||[])];
+                    for (const c of (r.components||[])) {
+                        const idx = merged.findIndex(m=>m.name===c.name);
+                        if (idx>=0) merged[idx]=c; else merged.push(c);
+                    }
                     await DS.update('subjects', subId, {
-                        components: r.components || [],
+                        components: merged,
                         ...(credits && !existing.credits ? { credits } : {}),
                     });
                 } else {

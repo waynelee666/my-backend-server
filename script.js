@@ -359,12 +359,13 @@ function parseTXT(text) {
 function parseExamSchedule(lines) {
     const results = [];
     for (const line of lines) {
-        const m = line.match(/^(.+?)，学分\s*[\d.]+\s*，学期\S+期末考试时间：(\d{4})\s*年\s*(\d{2})\s*月\s*(\d{2})\s*日\s*\((\d{2}:\d{2})-(\d{2}:\d{2})\)期末考试地点：(.+?)期末考试座位号：(\d+)/);
+        const m = line.match(/^(.+?)，学分\s*([\d.]+)\s*，学期\S+期末考试时间：(\d{4})\s*年\s*(\d{2})\s*月\s*(\d{2})\s*日\s*\((\d{2}:\d{2})-(\d{2}:\d{2})\)期末考试地点：(.+?)期末考试座位号：(\d+)/);
         if (m) {
-            const [, name, y, mo, d, t1, t2, loc, seat] = m;
+            const [, name, credit, y, mo, d, t1, t2, loc, seat] = m;
             results.push({
                 type: 'exam_event',
                 subjectName: name.trim(),
+                credits: parseFloat(credit),
                 date: `${y}-${mo}-${d}`,
                 timeRange: `${t1}-${t2}`,
                 location: loc.trim(),
@@ -436,11 +437,25 @@ async function applyImport(results) {
                 subjectCount++;
             }
         } else if (r.type === 'exam_event') {
-            // 查找关联科目
+            // 查找或创建关联科目（同时设置学分）
             let subId = createdSubjects[r.subjectName];
             if (!subId) {
                 const existing = subjects.find(s=>s.name===r.subjectName);
-                if (existing) subId = existing.id;
+                if (existing) {
+                    subId = existing.id;
+                    // 如果已有科目但缺少学分，补上
+                    if (!existing.credits && r.credits) {
+                        await DS.update('subjects', subId, { credits: r.credits });
+                    }
+                } else {
+                    const created = await DS.create('subjects', {
+                        name: r.subjectName,
+                        credits: r.credits || 0,
+                    });
+                    subId = created.id;
+                    createdSubjects[r.subjectName] = subId;
+                    subjectCount++;
+                }
             }
             // 创建日历事件
             await DS.create('events', {

@@ -31,7 +31,7 @@ function findSimilarSubject(name) {
 
 // ==================== 数据层 ====================
 const DS = {
-    async loadSubjects() { const { data } = await sb.from('subjects').select('*').order('created_at'); return data||[]; },
+    async loadSubjects() { const { data } = await sb.from('subjects').select('*').order('position',{ascending:true}); return data||[]; },
     async loadEvents() { const { data } = await sb.from('events').select('*').order('date'); return data||[]; },
     async loadTodos() { const { data } = await sb.from('todos').select('*').order('created_at',{ascending:false}); return data||[]; },
     async create(table, row) { const u = await sb.auth.getUser(); row.user_id = u.data.user.id;
@@ -246,16 +246,25 @@ function renderSubjects() {
         </div>`;
     }
 
-    html += subjectGPAs.map(s => {
+    html += subjectGPAs.map((s, idx) => {
         const { gpa } = s;
         const comps = s.components || [];
         const total = comps.reduce((a,c)=>a+(c.percentage||0),0);
+        const isFirst = idx===0, isLast = idx===subjectGPAs.length-1;
         return `<div class="subject-card" data-id="${s.id}" data-action="detail">
-            <div class="subject-card__name">📘 ${esc(s.name)}</div>
-            <div class="subject-card__info">
-                <span>学分 ${s.credits||'-'}</span>
-                ${gpa!=null ? `<span style="color:var(--color-primary);font-weight:600">绩点 ${gpa}</span>` : ''}
-                ${s.target_gpa ? `<span>目标 ${s.target_gpa}</span>` : ''}
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                <div style="flex:1">
+                    <div class="subject-card__name">📘 ${esc(s.name)}</div>
+                    <div class="subject-card__info">
+                        <span>学分 ${s.credits||'-'}</span>
+                        ${gpa!=null ? `<span style="color:var(--color-primary);font-weight:600">绩点 ${gpa}</span>` : ''}
+                        ${s.target_gpa ? `<span>目标 ${s.target_gpa}</span>` : ''}
+                    </div>
+                </div>
+                <div class="subject-card__move">
+                    <button data-action="up" data-id="${s.id}" ${isFirst?'disabled':''} title="上移">▲</button>
+                    <button data-action="down" data-id="${s.id}" ${isLast?'disabled':''} title="下移">▼</button>
+                </div>
             </div>
             ${comps.length ? `<div class="subject-card__progress"><div class="subject-card__bar" style="width:${total}%"></div></div><div style="font-size:.75rem;color:var(--color-text-light);margin-top:4px">已配置 ${total}%</div>` : ''}
         </div>`;
@@ -263,10 +272,31 @@ function renderSubjects() {
     $('#subjectGrid').innerHTML = html;
 }
 
-$('#subjectGrid').addEventListener('click', e => {
+$('#subjectGrid').addEventListener('click', async e => {
+    const btn = e.target.closest('[data-action]');
+    if (btn) {
+        const action = btn.dataset.action;
+        const id = parseInt(btn.dataset.id);
+        if (action === 'up') await moveSubject(id, -1);
+        else if (action === 'down') await moveSubject(id, 1);
+        return;
+    }
     const card = e.target.closest('.subject-card'); if (!card) return;
     const id = parseInt(card.dataset.id); openSubjectDetail(id);
 });
+
+async function moveSubject(id, direction) {
+    const idx = subjects.findIndex(s=>s.id===id); if (idx<0) return;
+    const newIdx = idx + direction;
+    if (newIdx<0 || newIdx>=subjects.length) return;
+    // swap positions
+    const a = subjects[idx], b = subjects[newIdx];
+    await DS.update('subjects', a.id, { position: (b.position||0) });
+    await DS.update('subjects', b.id, { position: (a.position||0) });
+    subjects[idx] = {...a, position: b.position};
+    subjects[newIdx] = {...b, position: a.position};
+    renderSubjects();
+}
 $('#addSubjectBtn').addEventListener('click', () => {
     modalMode = 'subject'; editId = null;
     openModal('添加科目', `
@@ -400,7 +430,7 @@ function updateComponentsFromDOM() {
 async function saveModal() {
     if (modalMode === 'subject') {
         const name = $('#mfName').value.trim(); if (!name) return;
-        const row = { name, credits: parseFloat($('#mfCredits').value)||0, target_gpa: parseFloat($('#mfGPA').value)||null, components:[] };
+        const row = { name, credits: parseFloat($('#mfCredits').value)||0, target_gpa: parseFloat($('#mfGPA').value)||null, components:[], position: subjects.length };
         await DS.create('subjects', row); closeModal(); await refreshAll();
     } else if (modalMode === 'event') {
         const title = $('#mfTitle').value.trim(); if (!title) return;
@@ -588,6 +618,7 @@ async function applyImport(results) {
                 } else {
                     const created = await DS.create('subjects', {
                         name: subjectName,
+                        position: subjects.length,
                         credits: credits || 0,
                         components: r.components || [],
                     });
@@ -609,6 +640,7 @@ async function applyImport(results) {
                 } else {
                     const created = await DS.create('subjects', {
                         name: subjectName,
+                        position: subjects.length,
                         credits: credits || 0,
                     });
                     subId = created.id;

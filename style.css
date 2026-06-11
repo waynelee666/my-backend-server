@@ -138,6 +138,10 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .subject-card__info { font-size:.82rem; color:var(--color-text-light); display:flex; gap:16px; }
 .subject-card__progress { margin-top:10px; height:6px; background:var(--color-bg-alt); border-radius:3px; overflow:hidden; }
 .subject-card__bar { height:100%; background:var(--color-primary); border-radius:3px; transition:width .5s ease; }
+.subject-card__move { display:flex; flex-direction:column; gap:2px; margin-left:8px; }
+.subject-card__move button { border:1px solid var(--color-border); border-radius:4px; background:#fff; cursor:pointer; font-size:.6rem; padding:2px 8px; color:var(--color-text-light); }
+.subject-card__move button:hover:not(:disabled) { background:var(--color-bg-alt); color:var(--color-primary); }
+.subject-card__move button:disabled { opacity:.3; cursor:default; }
 
 /* 绩点分配 */
 .component-list { display:flex; flex-direction:column; gap:8px; }

@@ -212,30 +212,36 @@ function renderDayCard() {
         </div>`).join('');
     if (dayTodos.length) html += dayTodos.map(t => `
         <div class="day-card__event" style="background:#f8fafc;border-left:3px solid var(--color-primary);display:flex;align-items:center;gap:8px;justify-content:space-between;padding:8px 12px;margin-bottom:4px;border-radius:6px;font-size:.85rem">
-            <span style="cursor:pointer" data-toggle-todo="${t.id}">${t.status==='done'?'☑':'☐'} ${esc(t.title)}</span>
+            <span style="cursor:pointer;flex:1" data-toggle-todo="${t.id}">${t.status==='done'?'☑':'☐'} ${esc(t.title)}</span>
             <span class="status-badge status-badge--${t.status}">${labels[t.status]}</span>
+            <button data-del-todo="${t.id}" style="border:none;background:none;cursor:pointer;font-size:.8rem;color:var(--color-text-light)" title="删除">🗑️</button>
         </div>`).join('');
     if (!html) html = '<p style="font-size:.85rem;color:var(--color-text-light)">当天无事件和任务</p>';
     $('#dayCardEvents').innerHTML = html;
 }
 $('#dayCardClose').addEventListener('click', () => { selectedCalDate=null; renderCalendar(); });
 $('#dayCardEvents').addEventListener('click', async e => {
-    const del = e.target.dataset.delEvent;
-    if (del) {
-        if (confirm('删除此事件？')) { await DS.remove('events', parseInt(del)); await refreshAll(); selectedCalDate=null; renderCalendar(); }
+    if (e.target.dataset.delEvent) {
+        if (confirm('删除此事件？')) { await DS.remove('events', parseInt(e.target.dataset.delEvent)); await refreshAll(); renderCalendar(); }
         return;
     }
-    const toggle = e.target.dataset.toggleTodo;
-    if (toggle) {
-        const t = todos.find(x=>x.id===parseInt(toggle));
-        if (t) { const ns = t.status==='done'?'todo':'done'; await DS.update('todos', t.id, {status:ns}); await refreshAll(); renderDayCard(); }
+    if (e.target.dataset.delTodo) {
+        if (confirm('删除此任务？')) { await DS.remove('todos', parseInt(e.target.dataset.delTodo)); await refreshAll(); renderDayCard(); }
+        return;
+    }
+    if (e.target.dataset.toggleTodo || e.target.closest('[data-toggle-todo]')) {
+        const id = parseInt(e.target.dataset.toggleTodo || e.target.closest('[data-toggle-todo]').dataset.toggleTodo);
+        const t = todos.find(x=>x.id===id);
+        if (t) { const ns = t.status==='done'?'todo':'done'; await DS.update('todos', id, {status:ns}); await refreshAll(); renderDayCard(); }
     }
 });
-$('#dayCardGoTodos').addEventListener('click', () => {
+$('#dayCardAddTodo').addEventListener('click', () => {
     todoDate = selectedCalDate; $('#todoDate').value = todoDate;
     currentTab = 'todos'; $$('.nav__tab').forEach(b=>b.classList.remove('active')); $('[data-tab="todos"]').classList.add('active');
     $$('.view').forEach(v=>v.classList.remove('active')); $('#view-todos').classList.add('active');
     renderTodos();
+    // 自动弹出添加任务框
+    $('#addTodoBtn').click();
 });
 $('#dayCardAddEvent').addEventListener('click', () => {
     modalMode = 'event'; editId = null;

@@ -131,6 +131,13 @@ class RequestHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
+        if path == "/api/health":
+            self.send_json({
+                "ok": True,
+                "deepseek": bool(DEEPSEEK_API_KEY),
+            })
+            return
+
         if path == "/":
             path = "/index.html"
 

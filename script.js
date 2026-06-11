@@ -332,12 +332,57 @@ $('#importBtn').addEventListener('click', () => $('#importFile').click());
 $('#importFile').addEventListener('change', async () => {
     const file = $('#importFile').files[0];
     if (!file) return;
-    const text = await file.text();
-    const results = parseTXT(text);
+
+    // 从文件中提取文本（支持 .txt .csv .md .docx）
+    showToast('读取文件中...', 'info');
+    let text;
+    if (file.name.endsWith('.docx')) {
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            text = result.value;
+        } catch (e) {
+            showToast('无法读取 docx 文件', 'error');
+            $('#importFile').value = ''; return;
+        }
+    } else {
+        text = await file.text();
+    }
+
+    if (!text.trim()) { showToast('文件内容为空', 'error'); $('#importFile').value = ''; return; }
+
+    // 优先用 AI 解析
+    showToast('AI 解析中...', 'info');
+    let results = await aiParse(text);
+
+    // AI 失败则回退到本地正则解析
+    if (!results) {
+        showToast('AI 不可用，使用本地解析', 'info');
+        results = parseTXT(text);
+    }
+
     if (!results.length) { showToast('未识别到有效数据，请检查文件格式', 'error'); return; }
     await applyImport(results);
     $('#importFile').value = '';
 });
+
+/** 调用服务器 DeepSeek API 智能解析 */
+async function aiParse(text) {
+    try {
+        const resp = await fetch('/api/parse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text }),
+        });
+        const data = await resp.json();
+        if (data.ok && data.results?.length) return data.results;
+        console.warn('AI parse returned no results');
+        return null;
+    } catch (e) {
+        console.warn('AI parse failed:', e);
+        return null;
+    }
+}
 
 /**
  * 解析 TXT 文件，自动识别内容类型
@@ -418,48 +463,54 @@ async function applyImport(results) {
     const createdSubjects = {}; // name → id mapping
 
     for (const r of results) {
-        if (r.type === 'subject_grade') {
-            // 创建或查找科目
-            let subId = createdSubjects[r.subjectName];
+        const rtype = r.type;
+        const subjectName = r.subjectName || r.subject || r.name;
+        const credits = r.credits || r.credit || null;
+        const eventType = (rtype === 'exam_event' || rtype === 'exam') ? 'exam_event' : rtype;
+
+        if (eventType === 'subject_grade' || rtype === 'subject') {
+            let subId = createdSubjects[subjectName];
             if (!subId) {
-                const existing = subjects.find(s=>s.name===r.subjectName);
+                const existing = subjects.find(s=>s.name===subjectName);
                 if (existing) {
                     subId = existing.id;
-                    // 更新绩点分配
-                    await DS.update('subjects', subId, { components: r.components });
+                    await DS.update('subjects', subId, {
+                        components: r.components || [],
+                        ...(credits ? { credits } : {}),
+                    });
                 } else {
                     const created = await DS.create('subjects', {
-                        name: r.subjectName, components: r.components,
+                        name: subjectName,
+                        credits: credits || 0,
+                        components: r.components || [],
                     });
                     subId = created.id;
                 }
-                createdSubjects[r.subjectName] = subId;
+                createdSubjects[subjectName] = subId;
                 subjectCount++;
             }
-        } else if (r.type === 'exam_event') {
-            // 查找或创建关联科目（同时设置学分）
-            let subId = createdSubjects[r.subjectName];
+        } else if (eventType === 'exam_event') {
+            let subId = createdSubjects[subjectName];
             if (!subId) {
-                const existing = subjects.find(s=>s.name===r.subjectName);
+                const existing = subjects.find(s=>s.name===subjectName);
                 if (existing) {
                     subId = existing.id;
-                    // 如果已有科目但缺少学分，补上
-                    if (!existing.credits && r.credits) {
-                        await DS.update('subjects', subId, { credits: r.credits });
+                    if (!existing.credits && credits) {
+                        await DS.update('subjects', subId, { credits });
                     }
                 } else {
                     const created = await DS.create('subjects', {
-                        name: r.subjectName,
-                        credits: r.credits || 0,
+                        name: subjectName,
+                        credits: credits || 0,
                     });
                     subId = created.id;
-                    createdSubjects[r.subjectName] = subId;
+                    createdSubjects[subjectName] = subId;
                     subjectCount++;
                 }
             }
-            // 创建日历事件
+            const title = r.title || (subjectName + ' 考试');
             await DS.create('events', {
-                date: r.date, title: r.title,
+                date: r.date, title,
                 event_type: 'exam', subject_id: subId,
             });
             examCount++;
@@ -484,7 +535,9 @@ function showToast(message, type) {
         position:'fixed', bottom:'32px', right:'32px', padding:'14px 24px', borderRadius:'10px',
         color:'#fff', fontWeight:600, fontSize:'.9rem', zIndex:9999, opacity:0,
         transform:'translateY(20px)', transition:'all .35s ease',
-        background: type==='success'?'linear-gradient(135deg,#10b981,#059669)':'linear-gradient(135deg,#ef4444,#dc2626)',
+        background: type==='success'?'linear-gradient(135deg,#10b981,#059669)'
+                  : type==='error'?'linear-gradient(135deg,#ef4444,#dc2626)'
+                  : 'linear-gradient(135deg,#3b82f6,#2563eb)',
         boxShadow:'0 6px 20px rgba(0,0,0,.15)'
     });
     document.body.appendChild(t);

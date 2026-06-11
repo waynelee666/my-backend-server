@@ -432,23 +432,25 @@ function parseGradeRules(text) {
         if (!headerMatch) continue;
         const subjectName = headerMatch[2].trim();
 
-        // 提取百分比（两种模式：XX% 或 期末×XX%）
-        const percentPattern = /([一-龥\w()（）]+?)[：:]\s*([\d.]+)%/g;
+        // 提取百分比
+        const percentPattern = /([一-鿿\w()（）]+?)[：:]\s*([\d.]+)%/g;
         const components = [];
-        // 先提取明确百分比的项目
         let m;
         while ((m = percentPattern.exec(sec)) !== null) {
             const name = m[1].trim();
             const pct = parseFloat(m[2]);
             // 过滤明显不是成绩构成的关键词
-            const skipWords = ['学分','合计','占期末','占平时','平时成绩','占平时成绩','折算后','满分','多选','材料分析','论述','卷面','第','平时成绩计算公式','总评计算','空'];
+            const skipWords = ['学分','合计','折算后','满分','多选','材料分析','论述','卷面','第','平时成绩计算公式','总评计算','题型','注：','空'];
             if (!skipWords.some(w=>name.includes(w)) && name.length<30 && pct>0 && pct<=100) {
                 components.push({ name, percentage: pct });
             }
         }
-        // 去重（按名称）
+        // 去重 + 去接近重复（如"平时成绩"和"平时成绩（占期末总评）"）
         const seen = new Set();
-        const unique = components.filter(c => { const k=c.name; if (seen.has(k)) return false; seen.add(k); return true; });
+        const unique = components.filter(c => {
+            const k = c.name.replace(/（[^）]*）/g,'').replace(/\([^)]*\)/g,'');
+            if (seen.has(k)) return false; seen.add(k); return true;
+        });
 
         if (unique.length > 0) {
             results.push({ type: 'subject_grade', subjectName, components: unique });

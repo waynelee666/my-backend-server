@@ -210,11 +210,13 @@ function renderDayCard() {
     const dayTodos = todos.filter(t => t.date === selectedCalDate);
     const labels = {todo:'待办',doing:'进行中',done:'已完成'};
     let html = '';
-    if (dayEvents.length) html += dayEvents.map(e => `
-        <div class="day-card__event day-card__event--${e.event_type}">
-            <span>${eventTypeLabel(e.event_type)==='考试'?'🔴':eventTypeLabel(e.event_type)==='学习'?'🔵':eventTypeLabel(e.event_type)==='生活'?'🟢':eventTypeLabel(e.event_type)==='DDL'?'🟡':'🟣'} ${esc(e.title)}</span>
+    if (dayEvents.length) html += dayEvents.map(e => {
+        const timeStr = e.start_time ? `${e.start_time.slice(0,5)}-${e.end_time?e.end_time.slice(0,5):''}` : '';
+        return `<div class="day-card__event day-card__event--${e.event_type}">
+            <span>${eventTypeLabel(e.event_type)==='考试'?'🔴':eventTypeLabel(e.event_type)==='学习'?'🔵':eventTypeLabel(e.event_type)==='生活'?'🟢':eventTypeLabel(e.event_type)==='DDL'?'🟡':'🟣'} ${esc(e.title)}${timeStr?` <small style="color:var(--color-text-light)">${timeStr}</small>`:''}</span>
             <button data-del-event="${e.id}" title="删除">✕</button>
-        </div>`).join('');
+        </div>`;
+    }).join('');
     if (dayTodos.length) html += dayTodos.map(t => `
         <div class="day-card__event" style="background:#f8fafc;border-left:3px solid var(--color-primary);display:flex;align-items:center;gap:8px;justify-content:space-between;padding:8px 12px;margin-bottom:4px;border-radius:6px;font-size:.85rem">
             <span style="cursor:pointer;flex:1" data-toggle-todo="${t.id}">${t.status==='done'?'☑':'☐'} ${esc(t.title)}</span>
@@ -253,6 +255,10 @@ $('#dayCardAddEvent').addEventListener('click', () => {
     openModal(`添加事件 - ${selectedCalDate}`, `
         <div class="form-group"><label>标题*</label><input class="form-input" id="mfTitle" maxlength="100" required placeholder="事件名称"></div>
         <div class="form-group"><label>类型</label><select class="form-select" id="mfEventType"><option value="exam">🔴 考试</option><option value="class">🔵 学习</option><option value="holiday">🟢 生活</option><option value="deadline">🟡 DDL</option><option value="other">🟣 其他</option></select></div>
+        <div class="form-row">
+            <div class="form-group"><label>开始时间</label><input type="time" class="form-input" id="mfStartTime"></div>
+            <div class="form-group"><label>结束时间</label><input type="time" class="form-input" id="mfEndTime"></div>
+        </div>
         <div class="form-group"><label>关联科目</label><select class="form-select" id="mfSubject"><option value="">无</option>${showSubjectSelect(null)}</select></div>
         <div class="modal__footer">
             <button type="button" class="btn btn--outline" onclick="closeModal()">取消</button>
@@ -480,8 +486,10 @@ async function saveModal() {
     } else if (modalMode === 'event') {
         const title = $('#mfTitle').value.trim(); if (!title) return;
         const event_type = $('#mfEventType').value;
+        const start_time = $('#mfStartTime').value || null;
+        const end_time = $('#mfEndTime').value || null;
         const subject_id = $('#mfSubject').value ? parseInt($('#mfSubject').value) : null;
-        await DS.create('events', { date: selectedCalDate, title, event_type, subject_id });
+        await DS.create('events', { date: selectedCalDate, title, event_type, start_time, end_time, subject_id });
         closeModal(); await refreshAll(); renderCalendar();
     } else if (modalMode === 'todo') {
         const title = $('#mfTitle').value.trim(); if (!title) return;
@@ -701,6 +709,8 @@ async function applyImport(results) {
             await DS.create('events', {
                 date: r.date, title,
                 event_type: 'exam', subject_id: subId,
+                start_time: r.timeRange ? r.timeRange.split('-')[0]+':00' : (r.time ? r.time.split('-')[0] : null),
+                end_time: r.timeRange ? r.timeRange.split('-')[1]+':00' : (r.time ? r.time.split('-')[1] : null),
             });
             examCount++;
         }

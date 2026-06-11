@@ -1,9 +1,8 @@
 /* ============================================================
    TaskFlow - 学业管理 脚本
    ============================================================ */
-const SUPABASE_URL = 'https://swouijpxhujlwlrsmwmo.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3b3VpanB4aHVqbHdscnNtd21vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMjQxMzIsImV4cCI6MjA5NjcwMDEzMn0.VhL4p8yoILq-5nFe2K5TKafoC03vsDwa_MBb-uBp8PQ';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// 复用 auth.js 的 Supabase 客户端，避免重复实例
+const sb = Auth.getClient();
 const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
 
 // ==================== 全局状态 ====================

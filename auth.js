@@ -206,5 +206,6 @@ const Auth = (() => {
         logout,
         getUsername,
         getEmail,
+        getClient: () => sb,
     };
 })();

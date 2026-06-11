@@ -40,25 +40,16 @@ BLOCKED_FILES = {"server.py", ".gitignore"}
 BLOCKED_EXTENSIONS = {".py"}
 
 # DeepSeek 解析提示词
-PARSE_PROMPT = """你是一个学业数据提取助手。用户会上传一段包含考试安排、课程信息、绩点分配等内容的文本。
+PARSE_PROMPT = """你是一个学业助手。从用户上传的文本中提取所有跟课程、考试、成绩相关的结构化信息。
 
-请严格按以下 JSON 格式返回（不要markdown代码块，只要纯JSON数组）：
+返回纯JSON数组，每个元素代表一门课或一场考试：
 
 [
-  { "type": "subject", "name": "科目名", "credits": 学分数字, "components": [
-      { "name": "考核项目名", "percentage": 百分比数字 }
-    ]
-  },
-  { "type": "exam", "subject": "科目名", "date": "YYYY-MM-DD", "time": "HH:MM-HH:MM", "location": "地点", "seat": 座位号 }
+  { "type": "subject", "name": "...", "credits": 数字, "components": [{"name":"...","percentage":数字}] },
+  { "type": "exam", "subject": "...", "date": "YYYY-MM-DD", "start": "HH:MM", "end": "HH:MM", "location": "...", "seat": 数字 }
 ]
 
-规则：
-- 每门科目用一个 subject 对象，components 是其绩点分配（各项百分比之和应为100）
-- 考试信息用 exam 对象，**date 字段必填**，从原文中提取日期
-- 如果某条信息原文缺失日期，不要返回该 exam 对象
-- 提取文本中所有能找到的信息，不遗漏
-- 学分和百分比都转为数字类型
-- 日期统一为 YYYY-MM-DD 格式
+请自行理解文本内容，灵活提取。不确定的字段填null，不要遗漏任何能找到的信息。
 
 文本内容：
 """
@@ -72,7 +63,7 @@ def call_deepseek(text: str) -> list:
     body = json.dumps({
         "model": "deepseek-chat",
         "messages": [
-            {"role": "system", "content": "你是一个精确的数据提取助手，只返回JSON。"},
+            {"role": "system", "content": "你是一个智能助手，擅长从非结构化文本中提取学业相关信息，只返回JSON。"},
             {"role": "user", "content": PARSE_PROMPT + text}
         ],
         "temperature": 0,

@@ -14,18 +14,23 @@ let selectedCalDate = null;
 /** 查找相似科目名（"微积分" ≈ "微积分（甲）Ⅱ"） */
 function findSimilarSubject(name) {
     if (!name) return null;
-    const clean = name.replace(/[（(][^)）]*[)）]/g,'').replace(/[ⅠⅡⅢⅣⅤV]+$/,'').trim();
-    // 精确匹配
-    let s = subjects.find(s=>s.name===name);
+    const simplify = s => s.replace(/[（(][^)）]*[)）]/g,'').replace(/[ⅠⅡⅢⅣⅤV\d]+$/,'').replace(/\s+/g,'').trim();
+    const a = simplify(name);
+    if (!a) return null;
+    // 精确匹配（简化后）
+    let s = subjects.find(s=>simplify(s.name)===a);
     if (s) return s;
-    // 清理括号后匹配
+    // 包含关系
+    s = subjects.find(s=>{ const sb=simplify(s.name); return sb.includes(a) || a.includes(sb); });
+    if (s) return s;
+    // 字符重叠率 ≥ 65%
     s = subjects.find(s=>{
-        const sc = s.name.replace(/[（(][^)）]*[)）]/g,'').replace(/[ⅠⅡⅢⅣⅤV]+$/,'').trim();
-        return sc===clean;
+        const sb = simplify(s.name);
+        if (!sb || !a) return false;
+        const overlap = [...a].filter(c=>sb.includes(c)).length;
+        const ratio = overlap / Math.max(a.length, sb.length);
+        return ratio >= 0.65;
     });
-    if (s) return s;
-    // 包含关系（"微积分" 包含于 "微积分（甲）Ⅱ"）
-    s = subjects.find(s=>s.name.includes(clean) || clean.includes(s.name));
     return s || null;
 }
 
@@ -706,11 +711,15 @@ async function applyImport(results) {
             const alreadyExists = events.some(e => e.date === r.date && (e.title === title || e.title.includes(subjectName)));
             if (alreadyExists) { console.warn('Skipping duplicate event:', title, r.date); continue; }
 
+            // 兼容 DeepSeek 返回的多种时间字段: start/end, time, timeRange
+            let st = (r.start || (r.time||'').split('-')[0] || (r.timeRange||'').split('-')[0] || '').trim();
+            let et = (r.end || (r.time||'').split('-')[1] || (r.timeRange||'').split('-')[1] || '').trim();
+            if (st && !st.includes(':')) st += ':00';
+            if (et && !et.includes(':')) et += ':00';
             await DS.create('events', {
                 date: r.date, title,
                 event_type: 'exam', subject_id: subId,
-                start_time: r.timeRange ? r.timeRange.split('-')[0]+':00' : (r.time ? r.time.split('-')[0] : null),
-                end_time: r.timeRange ? r.timeRange.split('-')[1]+':00' : (r.time ? r.time.split('-')[1] : null),
+                start_time: st || null, end_time: et || null,
             });
             examCount++;
         }

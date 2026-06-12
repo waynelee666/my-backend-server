@@ -130,7 +130,8 @@ function buildUserContext() {
         if (near.length) {
             parts.push(`最近一周的事件：${near.map(e => {
                 const labels = { exam: '考试', class: '学习', holiday: '生活', deadline: 'DDL', other: '其他' };
-                return `${e.date} ${e.title}(${labels[e.event_type] || e.event_type})`;
+                const timeStr = e.start_time ? ` ${e.start_time.slice(0, 5)}${e.end_time ? '-' + e.end_time.slice(0, 5) : ''}` : '';
+                return `${e.date}${timeStr} ${e.title}(${labels[e.event_type] || e.event_type})`;
             }).join('、')}`);
         }
     }

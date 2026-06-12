@@ -2,33 +2,57 @@ import os
 import sys
 import glob
 import numpy as np
-from fastembed import TextEmbedding
+import jieba
 
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-# ============ 模型加载（FastEmbed + ONNX，无需 PyTorch） ============
-model_path = "./local_model"
-_model = None
+# ============ TF-IDF 检索引擎（纯 Python，零模型依赖） ============
+_vocab = {}      # word → index
+_idf = None      # IDF 权重向量
 
-def _get_model():
-    """延迟加载模型，避免启动时 OOM"""
-    global _model
-    if _model is None:
-        if os.path.exists(model_path):
-            _model = TextEmbedding(model_name=model_path, providers=["CPUExecutionProvider"])
-        else:
-            _model = TextEmbedding(model_name="BAAI/bge-small-zh-v1.5", providers=["CPUExecutionProvider"])
-    return _model
+def _tokenize(text):
+    """jieba 中文分词，过滤单字和空白"""
+    return [w.strip() for w in jieba.cut(text) if len(w.strip()) > 1]
 
-def _normalize(vecs):
-    """L2 归一化"""
-    norms = np.linalg.norm(vecs, axis=1, keepdims=True)
-    norms[norms == 0] = 1
-    return vecs / norms
+def _build_vocab(chunk_list):
+    """从文档列表构建词汇表"""
+    vocab = {}
+    for chunk in chunk_list:
+        for word in _tokenize(chunk["text"]):
+            if word not in vocab:
+                vocab[word] = len(vocab)
+    return vocab
 
-# ============ 加载知识库 ============
+def _compute_idf(chunk_list, vocab):
+    """计算每个词的 IDF 值"""
+    n_docs = len(chunk_list)
+    df = np.zeros(len(vocab))
+    for chunk in chunk_list:
+        unique_words = set(_tokenize(chunk["text"]))
+        for w in unique_words:
+            if w in vocab:
+                df[vocab[w]] += 1
+    return np.log((n_docs + 1) / (df + 1)) + 1.0
+
+def _tfidf_vector(text, vocab, idf):
+    """将文本转为归一化 TF-IDF 向量"""
+    words = _tokenize(text)
+    if not words:
+        return np.zeros(len(vocab))
+    tf = np.zeros(len(vocab))
+    for w in words:
+        if w in vocab:
+            tf[vocab[w]] += 1
+    tf = tf / len(words)
+    vec = tf * idf
+    norm = np.linalg.norm(vec)
+    return vec / norm if norm > 0 else vec
+
+# ============ 公开 API（与 server.py 对接） ============
+
 def load_knowledge(folder="knowledge"):
+    """加载知识库，按段落切分"""
     chunks = []
     for path in sorted(glob.glob(os.path.join(folder, "*.txt"))):
         with open(path, encoding="utf-8") as f:
@@ -39,51 +63,31 @@ def load_knowledge(folder="knowledge"):
                 chunks.append({"text": para})
     return chunks
 
-# ============ 批量向量化文档 ============
 def build_vector(chunk_list):
-    text_list = [c["text"] for c in chunk_list]
-    vecs = np.array(list(_get_model().embed(text_list)))
-    return _normalize(vecs)
+    """批量构建所有文档的 TF-IDF 向量矩阵"""
+    global _vocab, _idf
+    _vocab = _build_vocab(chunk_list)
+    _idf = _compute_idf(chunk_list, _vocab)
+    return np.array([_tfidf_vector(c["text"], _vocab, _idf) for c in chunk_list])
 
-# ============ 核心检索：带相似度过滤，保留原索引 ============
-def retrieve_with_score(query, chunks, top_k=3, threshold=0.2):
-    if not chunks:
-        return []
-    doc_vec = build_vector(chunks)
-    q_vec = _normalize(np.array(list(_get_model().embed([query]))))
-    score = np.dot(doc_vec, q_vec.T).flatten()
-    # 按相似度从高到低排序，同时保留原索引
-    idx_score = sorted(enumerate(score), key=lambda x: x[1], reverse=True)
-    results = []
-    for idx, s in idx_score:
-        if s >= threshold:
-            results.append((idx + 1, chunks[idx]["text"]))  # 这里的 idx+1 是知识库中的真实序号
-            if len(results) >= top_k:
-                break
-    return results
-
-# ============ 单条查询向量化（供 server.py 调用） ============
 def encode_query(query: str):
     """将查询文本编码为归一化向量"""
-    vec = np.array(list(_get_model().embed([query])))
-    return _normalize(vec)[0]
-
-# ============ 对接main的固定格式 ============
-def retrieve_with_id(query, top_k=3):
-    all_data = load_knowledge()
-    return retrieve_with_score(query, all_data, top_k=top_k)
+    return _tfidf_vector(query, _vocab, _idf)
 
 # ============ 自测 ============
 if __name__ == "__main__":
-    print("=== 向量检索自测 ===")
+    print("=== TF-IDF 检索自测 ===")
+    chunks = load_knowledge()
+    vecs = build_vector(chunks)
+    print(f"词汇表大小: {len(_vocab)}")
+    print(f"文档数量: {len(chunks)}")
     while True:
         q = input("\n问题（quit退出）：")
         if q.strip().lower() == "quit":
             break
-        ans = retrieve_with_id(q, top_k=3)
-        if not ans:
-            print("没有找到相关资料")
-            continue
-        print(f"相关资料共 {len(ans)} 条：")
-        for no, txt in ans:
-            print(f"【第{no}条】{txt[:150]}...")
+        q_vec = encode_query(q)
+        scores = np.dot(vecs, q_vec)
+        top = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)[:5]
+        for idx, s in top:
+            if s > 0.05:
+                print(f"  相似度 {s:.3f}  [{idx+1}] {chunks[idx]['text'][:120]}...")

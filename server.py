@@ -256,12 +256,12 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         try:
             # 语义检索
-            id_docs = rag_search(question, top_k=5)
+            id_docs = rag_search(question, top_k=10)
 
             # 追问兜底：检索为空时用上一轮问题重新检索
             if not id_docs and history:
                 last_question = history[-1][0]
-                id_docs = rag_search(last_question, top_k=5)
+                id_docs = rag_search(last_question, top_k=10)
 
             if not id_docs:
                 self.send_json({

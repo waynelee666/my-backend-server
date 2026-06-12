@@ -1,5 +1,5 @@
 /* ============================================================
-   TaskFlow - 校园问答  v1.0
+   TaskFlow - 小马问答  v1.1
    ============================================================ */
 console.log('💬 Chat module loaded');
 
@@ -16,17 +16,16 @@ function renderChat() {
 
     if (!chatHistory.length) {
         el.innerHTML = `<div style="text-align:center;color:var(--color-text-light);padding:60px 20px">
-            <div style="font-size:3rem;margin-bottom:12px">💬</div>
-            <p style="font-size:1rem;font-weight:600;margin-bottom:8px">校园体育问答助手</p>
-            <p style="font-size:.85rem">基于学校体育教学规章制度，回答你的疑问</p>
+            <div style="font-size:3rem;margin-bottom:12px">🐴</div>
+            <p style="font-size:1.1rem;font-weight:600;margin-bottom:6px">你好，我是小马！</p>
+            <p style="font-size:.9rem;margin-bottom:20px">有什么我可以帮你的吗？</p>
             <div style="margin-top:20px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center" id="chatHints">
                 <button class="chat-hint">四年制本科生体育课程需要修读多少学分？</button>
                 <button class="chat-hint">大一体育课选课有什么要求？</button>
-                <button class="chat-hint">体测成绩怎么查询？</button>
-                <button class="chat-hint">旷课多少次会不及格？</button>
+                <button class="chat-hint">大三秋学期有什么必修课？</button>
+                <button class="chat-hint">电子信息工程辅修要修哪些课？</button>
             </div>
         </div>`;
-        // 绑定示例点击
         el.querySelectorAll('.chat-hint').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.getElementById('chatInput').value = btn.textContent;
@@ -71,7 +70,7 @@ async function sendChat() {
     chatWaiting = true;
     input.value = '';
     // 显示加载状态
-    chatHistory.push([question, '思考中...']);
+    chatHistory.push([question, '小马思考中...']);
     renderChat();
     input.disabled = true;
     document.getElementById('chatSendBtn').disabled = true;
@@ -114,3 +113,16 @@ function renderChatView() {
     renderChat();
     document.getElementById('chatInput')?.focus();
 }
+
+/** 绑定回车发送 */
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('chatInput');
+    if (input) {
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChat();
+            }
+        });
+    }
+});

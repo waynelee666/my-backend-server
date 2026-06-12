@@ -288,15 +288,30 @@ async function executeActions(actions) {
                 if (e) await DS.remove('events', e.id);
             }
         } else if (entity === 'subject') {
-            if (action === 'update') {
+            if (action === 'add') {
+                const row = {
+                    name: data.name,
+                    credits: data.credits || 0,
+                    target_gpa: data.target_gpa || null,
+                    components: [],
+                    position: (typeof subjects !== 'undefined' ? subjects.length : 0),
+                };
+                await DS.create('subjects', row);
+            } else if (action === 'update') {
                 const s = findSubject(data.name);
                 if (!s) throw new Error(`未找到科目"${data.name}"`);
                 const u = data.updates || {};
                 const fields = {};
+                if (u.new_name) fields.name = u.new_name;
                 if (u.credits !== undefined) fields.credits = u.credits;
                 if (u.target_gpa !== undefined) fields.target_gpa = u.target_gpa;
                 await DS.update('subjects', s.id, fields);
-            } else if (action === 'add_component') {
+            } else if (action === 'delete') {
+                const s = findSubject(data.name);
+                if (s) await DS.remove('subjects', s.id);
+            }
+        } else if (entity === 'component') {
+            if (action === 'add') {
                 const s = findSubject(data.subject_name);
                 if (!s) throw new Error(`未找到科目"${data.subject_name}"`);
                 const comps = [...(s.components || []), {
@@ -304,6 +319,22 @@ async function executeActions(actions) {
                     percentage: data.percentage || 0,
                     score: data.score ?? null,
                 }];
+                await DS.update('subjects', s.id, { components: comps });
+            } else if (action === 'update') {
+                const s = findSubject(data.subject_name);
+                if (!s) throw new Error(`未找到科目"${data.subject_name}"`);
+                const comps = [...(s.components || [])];
+                const idx = comps.findIndex(c => c.name === data.component_name);
+                if (idx < 0) throw new Error(`未找到绩点项"${data.component_name}"`);
+                const u = data.updates || {};
+                if (u.name) comps[idx].name = u.name;
+                if (u.percentage !== undefined) comps[idx].percentage = u.percentage;
+                if (u.score !== undefined) comps[idx].score = u.score;
+                await DS.update('subjects', s.id, { components: comps });
+            } else if (action === 'delete') {
+                const s = findSubject(data.subject_name);
+                if (!s) throw new Error(`未找到科目"${data.subject_name}"`);
+                const comps = (s.components || []).filter(c => c.name !== data.component_name);
                 await DS.update('subjects', s.id, { components: comps });
             }
         }

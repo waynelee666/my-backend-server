@@ -175,8 +175,12 @@ CHAT_PROMPT_MODIFY = CHAT_PROMPT + (
     '- 添加事件: {"entity":"event","action":"add","data":{"title":"...","date":"2026-01-01","event_type":"exam|class|holiday|deadline|other","start_time":"09:00","end_time":"10:00","subject_name":"..."}}\n'
     '- 修改事件: {"entity":"event","action":"update","data":{"title":"现有标题","date":"现有日期","updates":{"new_title":"...","date":"...","event_type":"...","start_time":"...","end_time":"..."}}}\n'
     '- 删除事件: {"entity":"event","action":"delete","data":{"title":"...","date":"..."}}\n'
-    '- 修改科目: {"entity":"subject","action":"update","data":{"name":"科目名","updates":{"credits":3.5,"target_gpa":4.5}}}\n'
-    '- 添加绩点项: {"entity":"subject","action":"add_component","data":{"subject_name":"科目名","name":"项目名","percentage":30,"score":85}}\n'
+    '- 添加科目: {"entity":"subject","action":"add","data":{"name":"科目名","credits":3,"target_gpa":5.0}}\n'
+    '- 修改科目: {"entity":"subject","action":"update","data":{"name":"科目名","updates":{"new_name":"...","credits":3.5,"target_gpa":4.5}}}\n'
+    '- 删除科目: {"entity":"subject","action":"delete","data":{"name":"科目名"}}\n'
+    '- 添加绩点项: {"entity":"component","action":"add","data":{"subject_name":"科目名","name":"项目名","percentage":30,"score":85}}\n'
+    '- 修改绩点项: {"entity":"component","action":"update","data":{"subject_name":"科目名","component_name":"项目名","updates":{"name":"...","percentage":30,"score":90}}}\n'
+    '- 删除绩点项: {"entity":"component","action":"delete","data":{"subject_name":"科目名","component_name":"项目名"}}\n'
     "规则：只在用户明确要求修改时才输出指令；正常聊天时不要输出；指令放在回复末尾。"
 )
 

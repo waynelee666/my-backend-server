@@ -1,28 +1,44 @@
 """
-TaskFlow 静态文件服务器
-======================
-纯 Python 标准库实现。
+TaskFlow 服务器
+==============
 - 静态文件服务
-- /api/parse — 调用 DeepSeek 智能解析文本（考试安排/绩点规则等）
+- /api/parse — DeepSeek 智能解析文本（考试安排/绩点规则等）
+- /api/chat  — 校园体育 RAG 问答助手
 用户认证由 Supabase Auth SDK 在客户端处理。
 
 启动方式：
     python server.py
-    设置环境变量 DEEPSEEK_API_KEY 启用 AI 解析功能
+    需要 config.py 中的 DEEPSEEK_API_KEY
 """
 
 import json
 import os
+import sys
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from urllib.error import URLError
 
+# 设置 HuggingFace 镜像（必须在 import retriever 之前）
+os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+import numpy as np
+import retriever
+import llm
+
 # -------------------- 配置 --------------------
 PORT = int(os.environ.get("PORT", 8080))
 SERVER_DIR = os.path.dirname(os.path.abspath(__file__))
-DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
+
+# 优先从环境变量读取，其次从 config.py（与 llm.py 保持一致）
+try:
+    from config import DEEPSEEK_API_KEY as _cfg_key
+    DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", _cfg_key)
+except ImportError:
+    DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 
 MIME_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -36,8 +52,40 @@ MIME_TYPES = {
     ".ico":  "image/x-icon",
 }
 
-BLOCKED_FILES = {"server.py", ".gitignore"}
+BLOCKED_FILES = {"server.py", ".gitignore", "config.py"}
 BLOCKED_EXTENSIONS = {".py"}
+
+# ==================== RAG 问答缓存 ====================
+_KNOWLEDGE_CHUNKS = None  # 知识库文本列表
+_KNOWLEDGE_VECS = None    # 预计算的向量矩阵
+
+def init_rag():
+    """启动时加载知识库并预计算向量（只做一次）"""
+    global _KNOWLEDGE_CHUNKS, _KNOWLEDGE_VECS
+    try:
+        _KNOWLEDGE_CHUNKS = retriever.load_knowledge()
+        if _KNOWLEDGE_CHUNKS:
+            _KNOWLEDGE_VECS = retriever.build_vector(_KNOWLEDGE_CHUNKS)
+            print(f"[RAG] {len(_KNOWLEDGE_CHUNKS)} 条知识已加载")
+        else:
+            print("[RAG] 警告：知识库为空")
+    except Exception as e:
+        print(f"[RAG] 加载失败: {e}")
+
+def rag_search(query: str, top_k: int = 5, threshold: float = 0.2):
+    """在预计算的知识库向量中检索（每次只编码查询）"""
+    if not _KNOWLEDGE_CHUNKS:
+        return []
+    q_vec = retriever.model.encode([query], normalize_embeddings=True)[0]
+    scores = np.dot(_KNOWLEDGE_VECS, q_vec)
+    idx_score = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)
+    results = []
+    for idx, s in idx_score:
+        if s >= threshold:
+            results.append((idx + 1, _KNOWLEDGE_CHUNKS[idx]["text"]))
+            if len(results) >= top_k:
+                break
+    return results
 
 # DeepSeek 解析提示词
 PARSE_PROMPT = """你是一个学业助手。从用户上传的文本中提取所有跟课程、考试、成绩相关的结构化信息。
@@ -163,6 +211,8 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/parse":
             self.handle_parse()
+        elif parsed.path == "/api/chat":
+            self.handle_chat()
         else:
             self.send_json({"ok": False, "error": "未知接口"}, 404)
 
@@ -188,6 +238,49 @@ class RequestHandler(BaseHTTPRequestHandler):
             print(f"  [AI ERROR] {e}")
             self.send_json({"ok": False, "error": str(e)}, 500)
 
+    def handle_chat(self):
+        """POST /api/chat — RAG 校园体育问答"""
+        body = self.read_json_body()
+        if not body or "question" not in body:
+            self.send_json({"ok": False, "error": "请提供 question 字段"}, 400)
+            return
+
+        question = body["question"].strip()
+        if not question:
+            self.send_json({"ok": False, "error": "问题不能为空"}, 400)
+            return
+
+        history = body.get("history", [])  # [[q1,a1],[q2,a2],...]
+
+        try:
+            # 语义检索
+            id_docs = rag_search(question, top_k=5)
+
+            # 追问兜底：检索为空时用上一轮问题重新检索
+            if not id_docs and history:
+                last_question = history[-1][0]
+                id_docs = rag_search(last_question, top_k=5)
+
+            if not id_docs:
+                self.send_json({
+                    "ok": True,
+                    "answer": "资料中暂无相关信息，建议咨询体艺部（电话：88208813）"
+                })
+                return
+
+            doc_ids, doc_texts = zip(*id_docs)
+            context = "\n".join(doc_texts)
+
+            # 调用 LLM 生成回答
+            answer = llm.get_rag_answer(question, context, list(doc_ids), history=history)
+            print(f"  [Chat] Q: {question[:40]}... → {len(id_docs)} docs")
+
+            self.send_json({"ok": True, "answer": answer})
+
+        except Exception as e:
+            print(f"  [Chat ERROR] {e}")
+            self.send_json({"ok": False, "error": str(e)}, 500)
+
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     allow_reuse_address = True
@@ -195,6 +288,8 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 
 
 def main():
+    print("正在加载 RAG 知识库...")
+    init_rag()
     server = ThreadedHTTPServer(("0.0.0.0", PORT), RequestHandler)
     print(f"Server started at http://localhost:{PORT}")
     print(f"Root dir: {SERVER_DIR}")

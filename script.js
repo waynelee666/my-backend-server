@@ -65,6 +65,7 @@ $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
     if (currentTab === 'calendar') renderCalendar();
     if (currentTab === 'subjects') renderSubjects();
     if (currentTab === 'todos') renderTodos();
+    if (currentTab === 'chat') renderChatView();
 }));
 $('.nav__logo').addEventListener('click', () => { currentTab='todos'; $$('.nav__tab').forEach(b=>b.classList.remove('active')); $('[data-tab="todos"]').classList.add('active'); $$('.view').forEach(v=>v.classList.remove('active')); $('#view-todos').classList.add('active'); renderTodos(); });
 

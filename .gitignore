@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+config.py
+*.sqlite3
+*.sqlite3-journal
+experiment_result.txt

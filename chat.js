@@ -1,0 +1,116 @@
+/* ============================================================
+   TaskFlow - 校园问答  v1.0
+   ============================================================ */
+console.log('💬 Chat module loaded');
+
+let chatHistory = [];  // [[q1,a1],[q2,a2],...]
+let chatWaiting = false;
+
+// Escaped HTML (reuse from script.js if available, otherwise define)
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+/** 渲染聊天消息 */
+function renderChat() {
+    const el = document.getElementById('chatMessages');
+    if (!el) return;
+
+    if (!chatHistory.length) {
+        el.innerHTML = `<div style="text-align:center;color:var(--color-text-light);padding:60px 20px">
+            <div style="font-size:3rem;margin-bottom:12px">💬</div>
+            <p style="font-size:1rem;font-weight:600;margin-bottom:8px">校园体育问答助手</p>
+            <p style="font-size:.85rem">基于学校体育教学规章制度，回答你的疑问</p>
+            <div style="margin-top:20px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center" id="chatHints">
+                <button class="chat-hint">四年制本科生体育课程需要修读多少学分？</button>
+                <button class="chat-hint">大一体育课选课有什么要求？</button>
+                <button class="chat-hint">体测成绩怎么查询？</button>
+                <button class="chat-hint">旷课多少次会不及格？</button>
+            </div>
+        </div>`;
+        // 绑定示例点击
+        el.querySelectorAll('.chat-hint').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('chatInput').value = btn.textContent;
+                sendChat();
+            });
+        });
+        return;
+    }
+
+    el.innerHTML = chatHistory.map(([q, a], i) => `
+        <div class="chat-msg chat-msg--user">
+            <div class="chat-msg__bubble">${escHtml(q)}</div>
+        </div>
+        <div class="chat-msg chat-msg--bot">
+            <div class="chat-msg__bubble">${formatAnswer(a)}</div>
+        </div>
+    `).join('');
+
+    // 滚动到底部
+    el.scrollTop = el.scrollHeight;
+}
+
+/** 简单格式化回答：识别换行和引用标注 */
+function formatAnswer(text) {
+    let html = escHtml(text);
+    // 引用标注高亮: 参考资料：第x条,第y条
+    html = html.replace(/参考资料：(第\d+条(?:,第\d+条)*)/, '<span class="chat-cite">📎 $1</span>');
+    // 信息不足高亮
+    if (html.includes('信息不足') || html.includes('暂无相关信息')) {
+        html = '<span class="chat-uncertain">' + html + '</span>';
+    }
+    return html;
+}
+
+/** 发送消息 */
+async function sendChat() {
+    if (chatWaiting) return;
+    const input = document.getElementById('chatInput');
+    const question = input.value.trim();
+    if (!question) return;
+
+    chatWaiting = true;
+    input.value = '';
+    // 显示加载状态
+    chatHistory.push([question, '思考中...']);
+    renderChat();
+    input.disabled = true;
+    document.getElementById('chatSendBtn').disabled = true;
+
+    try {
+        const resp = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question, history: chatHistory.slice(0, -1) }),
+        });
+        const data = await resp.json();
+
+        if (data.ok) {
+            // 更新最后一条回答
+            chatHistory[chatHistory.length - 1][1] = data.answer;
+        } else {
+            chatHistory[chatHistory.length - 1][1] = '❌ 出错了：' + (data.error || '未知错误');
+        }
+    } catch (e) {
+        chatHistory[chatHistory.length - 1][1] = '❌ 网络错误，请稍后重试';
+        console.error('Chat error:', e);
+    }
+
+    chatWaiting = false;
+    input.disabled = false;
+    document.getElementById('chatSendBtn').disabled = false;
+    input.focus();
+    renderChat();
+}
+
+/** 清空对话 */
+function clearChat() {
+    chatHistory = [];
+    renderChat();
+    document.getElementById('chatInput').value = '';
+}
+
+/** 渲染入口（tab 切换时调用） */
+function renderChatView() {
+    renderChat();
+    document.getElementById('chatInput')?.focus();
+}

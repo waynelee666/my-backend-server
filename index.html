@@ -16,6 +16,7 @@
             <button class="nav__tab active" data-tab="todos">✅ 待办</button>
             <button class="nav__tab" data-tab="calendar">📅 日历</button>
             <button class="nav__tab" data-tab="subjects">📚 科目</button>
+            <button class="nav__tab" data-tab="chat">💬 问答</button>
         </div>
         <ul class="nav__list">
             <li><button class="btn btn--outline btn--sm" id="importBtn">📤 导入</button></li>
@@ -87,6 +88,21 @@
             <p class="empty-text">暂无科目，点击上方按钮添加</p>
         </div>
     </section>
+
+    <!-- ===== 问答视图 ===== -->
+    <section class="view" id="view-chat">
+        <div class="view__header">
+            <h2>💬 校园体育问答</h2>
+            <button class="btn btn--outline btn--sm" id="chatClearBtn">🗑️ 清空对话</button>
+        </div>
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-row">
+                <input type="text" class="chat-input" id="chatInput" placeholder="输入你的问题..." maxlength="500">
+                <button class="btn btn--primary" id="chatSendBtn">发送</button>
+            </div>
+        </div>
+    </section>
 </main>
 
 <!-- ==================== 科目详情模态框 ==================== -->
@@ -126,7 +142,8 @@
 
 <script src="supabase.min.js"></script>
 <script src="auth.js?v=3.2"></script>
-<script src="script.js?v=3.2"></script>
+<script src="script.js?v=3.3"></script>
+<script src="chat.js?v=1.0"></script>
 
 <script>
 function showAuthUI(username) {

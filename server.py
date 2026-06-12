@@ -289,18 +289,18 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream; charset=utf-8")
             self.send_header("Cache-Control", "no-cache")
-            self.send_header("Connection", "keep-alive")
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
 
             def emit(data: dict):
-                payload = json.dumps(data, ensure_ascii=False).encode("utf-8")
-                self.wfile.write(f"data: {payload.decode('utf-8')}\n\n".encode("utf-8"))
+                payload = json.dumps(data, ensure_ascii=False)
+                self.wfile.write(f"data: {payload}\n\n".encode("utf-8"))
                 self.wfile.flush()
 
             for token in generator:
                 emit({"token": token})
             emit({"done": True})
+            self.close_connection = True  # 强制关闭，让客户端 reader 收到 done
 
         except Exception as e:
             print(f"  [Chat ERROR] {e}")

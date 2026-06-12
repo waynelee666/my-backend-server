@@ -107,10 +107,16 @@ async function sendChat() {
                     } else if (data.error) {
                         chatHistory[lastIdx][1] = '❌ ' + data.error;
                     }
-                    // data.done 不需要特殊处理
                 } catch (e) { /* 忽略解析错误 */ }
             }
             renderChat();
+        }
+        // 处理 buffer 中残留的数据
+        if (buffer.startsWith('data: ')) {
+            try {
+                const data = JSON.parse(buffer.slice(6));
+                if (data.token) chatHistory[lastIdx][1] += data.token;
+            } catch (e) {}
         }
     } catch (e) {
         if (!chatHistory[lastIdx][1]) {

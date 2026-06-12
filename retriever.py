@@ -12,7 +12,7 @@ model_path = "./local_model"
 if os.path.exists(model_path):
     model = SentenceTransformer(model_path)
 else:
-    model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
+    model = SentenceTransformer("BAAI/bge-small-zh-v1.5")
 
 # ============ 加载知识库 ============
 def load_knowledge(folder="knowledge"):

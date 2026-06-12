@@ -92,7 +92,13 @@ $('#todoNextDay').addEventListener('click', () => { todoDate = shiftDate(1); $('
 $('#todoToday').addEventListener('click', () => { todoDate=new Date().toISOString().slice(0,10); $('#todoDate').value=todoDate; renderTodos(); });
 
 function renderTodos() {
-    const dayEvents = events.filter(e => e.date === todoDate);
+    const seen = new Set();
+    const dayEvents = events.filter(e => {
+        const k = e.title + '|' + e.event_type + '|' + e.date;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return e.date === todoDate;
+    });
     $('#dayEvents').innerHTML = dayEvents.length ? dayEvents.map(e => `
         <div class="day-event-item day-event-item--${e.event_type}">
             <span class="event-dot event-dot--${e.event_type}"></span>

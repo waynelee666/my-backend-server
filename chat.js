@@ -5,7 +5,7 @@ console.log('💬 Chat module loaded');
 
 let chatHistory = [];  // [[q1,a1],[q2,a2],...]
 let chatWaiting = false;
-let chatMode = 'qa';  // 'qa'=问答(知识库+聊天), 'chat'=纯聊天, 'modify'=修改模式(聊天+修改权限)
+let chatMode = 'chat';  // 'chat'=纯聊天, 'qa'=问答(知识库+聊天), 'modify'=修改模式(聊天+修改权限)
 
 /** 切换模式 */
 function setChatMode(mode) {

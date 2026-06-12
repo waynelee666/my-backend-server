@@ -231,3 +231,21 @@ textarea.form-input { resize:vertical; }
 .chat-input:focus { border-color:var(--color-primary); box-shadow:0 0 0 3px rgba(79,70,229,.12); }
 .chat-hint { padding:8px 14px; border:1px solid var(--color-border); border-radius:20px; background:#fff; cursor:pointer; font-family:inherit; font-size:.8rem; color:var(--color-primary); transition:all var(--transition); }
 .chat-hint:hover { background:var(--color-primary); color:#fff; border-color:var(--color-primary); }
+
+/* ==================== 微积分 ==================== */
+.calc-plan { display:flex; flex-direction:column; gap:6px; }
+.calc-chapter { display:flex; align-items:center; gap:10px; padding:10px 14px; border:1px solid var(--color-border); border-radius:8px; background:#fff; transition:all var(--transition); }
+.calc-chapter:hover { box-shadow:0 1px 6px var(--color-shadow); }
+.calc-chapter--done { opacity:.5; }
+.calc-chapter--done .calc-chapter__name { text-decoration:line-through; }
+.calc-chapter__check { font-size:1.2rem; cursor:pointer; user-select:none; color:#cbd5e1; transition:all var(--transition); }
+.calc-chapter__check:hover { color:var(--color-success); }
+.calc-chapter__name { flex:1; font-size:.9rem; font-weight:500; }
+.calc-chapter__date { padding:4px 8px; border:1px solid var(--color-border); border-radius:4px; font-family:inherit; font-size:.8rem; outline:none; }
+.calc-chapter__date:focus { border-color:var(--color-primary); }
+.calc-tool-card { background:var(--color-bg); border:1px solid var(--color-border); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
+.calc-tool-title { font-size:.9rem; font-weight:600; margin-bottom:4px; }
+
+@media (max-width:768px) {
+    #view-calculus > div { grid-template-columns:1fr !important; }
+}

@@ -55,7 +55,7 @@ async function refreshAll() {
     subjects = s; events = e; todos = t;
     renderCurrent();
 }
-function renderCurrent() { if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else renderSubjects(); }
+function renderCurrent() { if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else if (currentTab==='subjects') renderSubjects(); else if (currentTab==='calculus') renderCalcView(); }
 
 // ==================== Tab 切换 ====================
 $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
@@ -65,6 +65,7 @@ $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
     if (currentTab === 'calendar') renderCalendar();
     if (currentTab === 'subjects') renderSubjects();
     if (currentTab === 'todos') renderTodos();
+    if (currentTab === 'calculus') renderCalcView();
     if (currentTab === 'chat') renderChatView();
 }));
 $('.nav__logo').addEventListener('click', () => { currentTab='todos'; $$('.nav__tab').forEach(b=>b.classList.remove('active')); $('[data-tab="todos"]').classList.add('active'); $$('.view').forEach(v=>v.classList.remove('active')); $('#view-todos').classList.add('active'); renderTodos(); });

@@ -16,7 +16,8 @@
             <button class="nav__tab active" data-tab="todos">✅ 待办</button>
             <button class="nav__tab" data-tab="calendar">📅 日历</button>
             <button class="nav__tab" data-tab="subjects">📚 科目</button>
-            <button class="nav__tab" data-tab="chat">💬 问答</button>
+            <button class="nav__tab" data-tab="calculus">📐 微积分</button>
+            <button class="nav__tab" data-tab="chat">💬 小马</button>
         </div>
         <ul class="nav__list">
             <li><button class="btn btn--outline btn--sm" id="importBtn">📤 导入</button></li>
@@ -89,6 +90,60 @@
         </div>
     </section>
 
+    <!-- ===== 微积分视图 ===== -->
+    <section class="view" id="view-calculus">
+        <div class="view__header">
+            <h2>📐 微积分复习</h2>
+            <div style="display:flex;gap:8px">
+                <a href="https://www.geogebra.org/3d" target="_blank" class="btn btn--outline btn--sm">🌐 GeoGebra 3D</a>
+                <button class="btn btn--outline btn--sm" id="calcResetBtn">🔄 重置进度</button>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+            <!-- 左侧：复习计划 -->
+            <div>
+                <h3 style="font-size:1rem;margin-bottom:12px">📅 复习计划</h3>
+                <div class="calc-plan" id="calcPlan"></div>
+            </div>
+            <!-- 右侧：工具 -->
+            <div>
+                <h3 style="font-size:1rem;margin-bottom:12px">🔧 常用工具</h3>
+                <!-- 导数计算器 -->
+                <div class="calc-tool-card">
+                    <div class="calc-tool-title">📈 导数计算器 <span style="font-weight:400;font-size:.75rem;color:var(--color-text-light)">（支持多项式 如 3x^2+2x+1）</span></div>
+                    <div style="display:flex;gap:8px;margin-top:8px">
+                        <input class="form-input" id="calcDerivativeInput" placeholder="输入函数，如 3x^2+2x+1" style="flex:1">
+                        <button class="btn btn--primary btn--sm" id="calcDerivativeBtn">求导</button>
+                    </div>
+                    <div id="calcDerivativeResult" style="margin-top:8px;font-size:.9rem;min-height:20px"></div>
+                </div>
+                <!-- 积分计算器 -->
+                <div class="calc-tool-card">
+                    <div class="calc-tool-title">📉 不定积分计算器</div>
+                    <div style="display:flex;gap:8px;margin-top:8px">
+                        <input class="form-input" id="calcIntegralInput" placeholder="输入函数，如 3x^2+2x+1" style="flex:1">
+                        <button class="btn btn--primary btn--sm" id="calcIntegralBtn">积分</button>
+                    </div>
+                    <div id="calcIntegralResult" style="margin-top:8px;font-size:.9rem;min-height:20px"></div>
+                </div>
+                <!-- 常用公式速查 -->
+                <div class="calc-tool-card">
+                    <div class="calc-tool-title">📋 常用公式速查</div>
+                    <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+                        <select class="form-select" id="calcFormulaSelect" style="width:100%">
+                            <option value="">-- 选择公式类型 --</option>
+                            <option value="derivative">常用导数公式</option>
+                            <option value="integral">常用积分公式</option>
+                            <option value="trig">三角恒等式</option>
+                            <option value="taylor">常用泰勒展开</option>
+                        </select>
+                        <div id="calcFormulaDisplay" style="font-size:.85rem;line-height:2;background:#f8fafc;border-radius:8px;padding:12px;min-height:40px"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- ===== 问答视图 ===== -->
     <section class="view" id="view-chat">
         <div class="view__header">
@@ -150,6 +205,7 @@
 <script src="supabase.min.js"></script>
 <script src="auth.js?v=3.2"></script>
 <script src="script.js?v=3.3"></script>
+<script src="calc.js?v=1.0"></script>
 <script src="chat.js?v=1.0"></script>
 
 <script>

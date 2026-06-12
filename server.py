@@ -241,7 +241,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_json({"ok": False, "error": str(e)}, 500)
 
     def handle_chat(self):
-        """POST /api/chat — RAG 校园体育问答"""
+        """POST /api/chat — RAG 问答 + 自由聊天，支持流式"""
         body = self.read_json_body()
         if not body or "question" not in body:
             self.send_json({"ok": False, "error": "请提供 question 字段"}, 400)
@@ -252,36 +252,56 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_json({"ok": False, "error": "问题不能为空"}, 400)
             return
 
-        history = body.get("history", [])  # [[q1,a1],[q2,a2],...]
+        history = body.get("history", [])
+        use_stream = body.get("stream", True)  # 默认开启流式
 
         try:
             # 语义检索
             id_docs = rag_search(question, top_k=10)
 
-            # 追问兜底：检索为空时用上一轮问题重新检索
+            # 追问兜底
             if not id_docs and history:
                 last_question = history[-1][0]
                 id_docs = rag_search(last_question, top_k=10)
 
-            if not id_docs:
-                # 知识库没找到相关内容，切换为自由聊天模式
-                answer = llm.chat_answer(question, history=history)
+            if id_docs:
+                doc_ids, doc_texts = zip(*id_docs)
+                context = "\n".join(doc_texts)
+                generator = llm.get_rag_answer_stream(question, context, list(doc_ids), history=history)
+                print(f"  [Chat] Q: {question[:40]}... → {len(id_docs)} docs")
+            else:
+                generator = llm.chat_answer_stream(question, history=history)
                 print(f"  [Chat] Q: {question[:40]}... → 自由聊天")
+
+            if not use_stream:
+                # 非流式：收集全部后一次返回
+                answer = "".join(generator)
                 self.send_json({"ok": True, "answer": answer})
                 return
 
-            doc_ids, doc_texts = zip(*id_docs)
-            context = "\n".join(doc_texts)
+            # === 流式 SSE 输出 ===
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
 
-            # 调用 LLM 生成回答
-            answer = llm.get_rag_answer(question, context, list(doc_ids), history=history)
-            print(f"  [Chat] Q: {question[:40]}... → {len(id_docs)} docs")
+            def emit(data: dict):
+                payload = json.dumps(data, ensure_ascii=False).encode("utf-8")
+                self.wfile.write(f"data: {payload.decode('utf-8')}\n\n".encode("utf-8"))
+                self.wfile.flush()
 
-            self.send_json({"ok": True, "answer": answer})
+            for token in generator:
+                emit({"token": token})
+            emit({"done": True})
 
         except Exception as e:
             print(f"  [Chat ERROR] {e}")
-            self.send_json({"ok": False, "error": str(e)}, 500)
+            try:
+                emit({"error": str(e)})
+            except Exception:
+                self.send_json({"ok": False, "error": str(e)}, 500)
 
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):

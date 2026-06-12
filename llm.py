@@ -226,3 +226,73 @@ def get_rag_answer(user_query, context, doc_ids, history=None):
     else:
         # 无有效引用，直接返回原回答
         return base_ans
+
+
+# ========== 流式输出（SSE，逐字返回） ==========
+
+def _build_history_messages(history):
+    """将统一的历史格式转为 messages 列表"""
+    messages = []
+    if history:
+        for entry in history:
+            if isinstance(entry, (list, tuple)) and len(entry) >= 2:
+                messages.append({"role": "user", "content": entry[0]})
+                messages.append({"role": "assistant", "content": entry[1]})
+            elif isinstance(entry, dict) and "role" in entry:
+                messages.append(entry)
+    return messages
+
+
+def chat_stream(messages, model="deepseek-chat", temperature=0.7, **kwargs):
+    """流式对话生成器，逐步 yield 文本片段"""
+    resp = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=temperature,
+        stream=True,
+        timeout=30,
+        **kwargs,
+    )
+    for chunk in resp:
+        delta = chunk.choices[0].delta
+        if delta.content:
+            yield delta.content
+
+
+def get_rag_answer_stream(user_query, context, doc_ids, history=None):
+    """RAG 流式问答"""
+    prompt = (
+        f"参考资料：{context}\n"
+        f"用户问题：{user_query}\n"
+        "请严格依据上面的参考资料回答问题。\n"
+        "回答规则：\n"
+        "1. 只使用给出的资料作答，无相关内容就回答【信息不足，无法回答】；\n"
+        "2. 回答完毕后，单独一行标注格式：【引用编号：x】，多个编号用逗号分隔，例如【引用编号：1,3】；\n"
+        "3. 完全没用到任何资料则不要加这条标注。"
+    )
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages.extend(_build_history_messages(history))
+    messages.append({"role": "user", "content": prompt})
+
+    full = ""
+    for token in chat_stream(messages):
+        full += token
+        yield token
+
+    # 流结束，处理引用编号
+    pattern = r"【引用编号：(\d+(?:,\d+)*)】"
+    match = re.search(pattern, full)
+    if match:
+        used_nums = match.group(1)
+        ref_text = f"\n参考资料：{','.join([f'第{n}条' for n in used_nums.split(',')])}"
+        yield ref_text
+
+
+def chat_answer_stream(user_query, history=None):
+    """通用聊天流式"""
+    messages = [{"role": "system", "content": CHAT_PROMPT}]
+    messages.extend(_build_history_messages(history))
+    messages.append({"role": "user", "content": user_query})
+    for token in chat_stream(messages):
+        yield token

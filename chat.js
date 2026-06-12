@@ -60,7 +60,7 @@ function formatAnswer(text) {
     return html;
 }
 
-/** 发送消息 */
+/** 发送消息（流式） */
 async function sendChat() {
     if (chatWaiting) return;
     const input = document.getElementById('chatInput');
@@ -69,28 +69,53 @@ async function sendChat() {
 
     chatWaiting = true;
     input.value = '';
-    // 显示加载状态
-    chatHistory.push([question, '小马思考中...']);
+    // 空占位，逐字填充
+    chatHistory.push([question, '']);
     renderChat();
     input.disabled = true;
     document.getElementById('chatSendBtn').disabled = true;
+
+    const lastIdx = chatHistory.length - 1;
 
     try {
         const resp = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question, history: chatHistory.slice(0, -1) }),
+            body: JSON.stringify({ question, history: chatHistory.slice(0, -1), stream: true }),
         });
-        const data = await resp.json();
 
-        if (data.ok) {
-            // 更新最后一条回答
-            chatHistory[chatHistory.length - 1][1] = data.answer;
-        } else {
-            chatHistory[chatHistory.length - 1][1] = '❌ 出错了：' + (data.error || '未知错误');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                try {
+                    const data = JSON.parse(line.slice(6));
+                    if (data.token) {
+                        chatHistory[lastIdx][1] += data.token;
+                    } else if (data.error) {
+                        chatHistory[lastIdx][1] = '❌ ' + data.error;
+                    }
+                    // data.done 不需要特殊处理
+                } catch (e) { /* 忽略解析错误 */ }
+            }
+            renderChat();
         }
     } catch (e) {
-        chatHistory[chatHistory.length - 1][1] = '❌ 网络错误，请稍后重试';
+        if (!chatHistory[lastIdx][1]) {
+            chatHistory[lastIdx][1] = '❌ 网络错误，请稍后重试';
+        }
         console.error('Chat error:', e);
     }
 

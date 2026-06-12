@@ -21,7 +21,9 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError
 
 # 设置 HuggingFace 镜像（必须在 import retriever 之前）
-os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+# 海外服务器直连 HuggingFace 更快；国内可设环境变量 HF_ENDPOINT="https://hf-mirror.com"
+if not os.environ.get("HF_ENDPOINT"):
+    os.environ["HF_ENDPOINT"] = "https://huggingface.co"
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 

@@ -762,6 +762,24 @@ function showToast(message, type) {
         t.addEventListener('transitionend',()=>t.remove()); },3500);
 }
 
+// ==================== 时钟 ====================
+function updateClock() {
+    const el = document.getElementById('navDatetime');
+    if (!el) return;
+    const now = new Date();
+    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const w = weekdays[now.getDay()];
+    const h = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    el.textContent = `${y}-${m}-${d} 星期${w} ${h}:${min}:${s}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
 // ==================== 启动 ====================
 document.addEventListener('DOMContentLoaded', async () => {
     if (!(await Auth.isLoggedIn())) return;

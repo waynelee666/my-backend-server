@@ -39,6 +39,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .nav__tab.active { background:var(--color-primary); color:#fff; }
 .nav__list { display:flex; gap:16px; align-items:center; }
 .nav__username { font-size:.8rem; font-weight:600; color:var(--color-primary); padding:4px 12px; background:rgba(79,70,229,.08); border-radius:20px; }
+.nav__datetime { font-size:.8rem; color:var(--color-text-light); white-space:nowrap; }
 .nav__link--logout { color:var(--color-danger); font-size:.88rem; font-weight:500; }
 .nav__link--logout:hover { color:#dc2626; }
 

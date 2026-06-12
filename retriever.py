@@ -2,17 +2,30 @@ import os
 import sys
 import glob
 import numpy as np
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-# ============ 模型加载（优先本地） ============
+# ============ 模型加载（FastEmbed + ONNX，无需 PyTorch） ============
 model_path = "./local_model"
-if os.path.exists(model_path):
-    model = SentenceTransformer(model_path)
-else:
-    model = SentenceTransformer("BAAI/bge-small-zh-v1.5")
+_model = None
+
+def _get_model():
+    """延迟加载模型，避免启动时 OOM"""
+    global _model
+    if _model is None:
+        if os.path.exists(model_path):
+            _model = TextEmbedding(model_name=model_path, providers=["CPUExecutionProvider"])
+        else:
+            _model = TextEmbedding(model_name="BAAI/bge-small-zh-v1.5", providers=["CPUExecutionProvider"])
+    return _model
+
+def _normalize(vecs):
+    """L2 归一化"""
+    norms = np.linalg.norm(vecs, axis=1, keepdims=True)
+    norms[norms == 0] = 1
+    return vecs / norms
 
 # ============ 加载知识库 ============
 def load_knowledge(folder="knowledge"):
@@ -29,16 +42,16 @@ def load_knowledge(folder="knowledge"):
 # ============ 批量向量化文档 ============
 def build_vector(chunk_list):
     text_list = [c["text"] for c in chunk_list]
-    vecs = model.encode(text_list, normalize_embeddings=True)
-    return vecs
+    vecs = np.array(list(_get_model().embed(text_list)))
+    return _normalize(vecs)
 
 # ============ 核心检索：带相似度过滤，保留原索引 ============
 def retrieve_with_score(query, chunks, top_k=3, threshold=0.2):
     if not chunks:
         return []
     doc_vec = build_vector(chunks)
-    q_vec = model.encode([query], normalize_embeddings=True)[0]
-    score = np.dot(doc_vec, q_vec)
+    q_vec = _normalize(np.array(list(_get_model().embed([query]))))
+    score = np.dot(doc_vec, q_vec.T).flatten()
     # 按相似度从高到低排序，同时保留原索引
     idx_score = sorted(enumerate(score), key=lambda x: x[1], reverse=True)
     results = []
@@ -48,6 +61,12 @@ def retrieve_with_score(query, chunks, top_k=3, threshold=0.2):
             if len(results) >= top_k:
                 break
     return results
+
+# ============ 单条查询向量化（供 server.py 调用） ============
+def encode_query(query: str):
+    """将查询文本编码为归一化向量"""
+    vec = np.array(list(_get_model().embed([query])))
+    return _normalize(vec)[0]
 
 # ============ 对接main的固定格式 ============
 def retrieve_with_id(query, top_k=3):

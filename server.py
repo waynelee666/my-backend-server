@@ -78,7 +78,7 @@ def rag_search(query: str, top_k: int = 5, threshold: float = 0.2):
     """在预计算的知识库向量中检索（每次只编码查询）"""
     if not _KNOWLEDGE_CHUNKS:
         return []
-    q_vec = retriever.model.encode([query], normalize_embeddings=True)[0]
+    q_vec = retriever.encode_query(query)
     scores = np.dot(_KNOWLEDGE_VECS, q_vec)
     idx_score = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)
     results = []

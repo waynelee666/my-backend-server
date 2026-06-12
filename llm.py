@@ -147,6 +147,31 @@ if __name__ == "__main__":
     print("✅ 多轮对话流畅，上下文未丢失。")
 
 
+# ========== 通用聊天 System Prompt ==========
+CHAT_PROMPT = (
+    "你是 TaskFlow 的智能助手，一位热情友好的校园伙伴。\n"
+    "你可以和同学聊天、答疑解惑、倾听烦恼、提供建议。\n"
+    "语气轻松自然，像朋友一样交流，可以适当使用 emoji。\n"
+    "如果同学问到学业、课程、大学生活相关问题，尽力提供有用的信息和建议。\n"
+    "保持对话连贯，记住之前的聊天内容。"
+)
+
+def chat_answer(user_query, history=None):
+    """通用聊天，不依赖知识库，多轮对话"""
+    messages = [{"role": "system", "content": CHAT_PROMPT}]
+
+    if history:
+        for entry in history:
+            if isinstance(entry, (list, tuple)) and len(entry) >= 2:
+                messages.append({"role": "user", "content": entry[0]})
+                messages.append({"role": "assistant", "content": entry[1]})
+            elif isinstance(entry, dict) and "role" in entry:
+                messages.append(entry)
+
+    messages.append({"role": "user", "content": user_query})
+    return chat(messages)
+
+
 # ========== RAG 问答函数（多轮对话 + 精准引用 + 防重复标注） ==========
 def get_rag_answer(user_query, context, doc_ids, history=None):
     """RAG 问答，支持多轮对话历史。

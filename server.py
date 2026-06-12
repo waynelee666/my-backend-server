@@ -264,10 +264,10 @@ class RequestHandler(BaseHTTPRequestHandler):
                 id_docs = rag_search(last_question, top_k=10)
 
             if not id_docs:
-                self.send_json({
-                    "ok": True,
-                    "answer": "资料中暂无相关信息，建议咨询体艺部（电话：88208813）"
-                })
+                # 知识库没找到相关内容，切换为自由聊天模式
+                answer = llm.chat_answer(question, history=history)
+                print(f"  [Chat] Q: {question[:40]}... → 自由聊天")
+                self.send_json({"ok": True, "answer": answer})
                 return
 
             doc_ids, doc_texts = zip(*id_docs)

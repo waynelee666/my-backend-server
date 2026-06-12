@@ -311,7 +311,17 @@ async function executeActions(actions) {
                 if (s) await DS.remove('subjects', s.id);
             }
         } else if (entity === 'component') {
-            if (action === 'add') {
+            if (action === 'set_components') {
+                // 整体替换绩点分布
+                const s = findSubject(data.subject_name);
+                if (!s) throw new Error(`未找到科目"${data.subject_name}"`);
+                const comps = (data.components || []).map(c => ({
+                    name: c.name,
+                    percentage: c.percentage || 0,
+                    score: c.score ?? null,
+                }));
+                await DS.update('subjects', s.id, { components: comps });
+            } else if (action === 'add') {
                 const s = findSubject(data.subject_name);
                 if (!s) throw new Error(`未找到科目"${data.subject_name}"`);
                 const comps = [...(s.components || []), {

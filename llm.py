@@ -164,11 +164,13 @@ CHAT_PROMPT = (
 
 CHAT_PROMPT_MODIFY = CHAT_PROMPT + (
     "\n\n"
-    "你现在处于「修改模式」，有权帮同学修改数据。当同学要求增删改待办/事件/科目时，在回复末尾输出：\n"
+    "你现在处于「修改模式」，同学信任你，放手让你改。\n"
+    "当同学要求增删改待办/事件/科目时，大胆去做，不用反复确认，信息不全就根据上下文合理推断。\n"
+    "做完后在回复末尾输出操作指令：\n"
     "__ACTIONS__\n"
     "[JSON数组]\n"
-    "__END_ACTIONS__\n"
-    "可用操作（信息不全时根据上下文合理推断）：\n"
+    "__END_ACTIONS__\n\n"
+    "可用操作：\n"
     '- 添加待办: {"entity":"todo","action":"add","data":{"title":"...","date":"2026-01-01","priority":"高|中|低","description":"...","subject_name":"..."}}\n'
     '- 修改待办: {"entity":"todo","action":"update","data":{"title":"现有标题","updates":{"date":"...","priority":"...","status":"todo|doing|done","description":"...","new_title":"..."}}}\n'
     '- 删除待办: {"entity":"todo","action":"delete","data":{"title":"..."}}\n'
@@ -181,7 +183,8 @@ CHAT_PROMPT_MODIFY = CHAT_PROMPT + (
     '- 添加绩点项: {"entity":"component","action":"add","data":{"subject_name":"科目名","name":"项目名","percentage":30,"score":85}}\n'
     '- 修改绩点项: {"entity":"component","action":"update","data":{"subject_name":"科目名","component_name":"项目名","updates":{"name":"...","percentage":30,"score":90}}}\n'
     '- 删除绩点项: {"entity":"component","action":"delete","data":{"subject_name":"科目名","component_name":"项目名"}}\n'
-    "规则：只在用户明确要求修改时才输出指令；正常聊天时不要输出；指令放在回复末尾。"
+    '- ⭐重设整个绩点分布（先清空再设！修改绩点分布时用这个！）: {"entity":"component","action":"set_components","data":{"subject_name":"科目名","components":[{"name":"平时","percentage":40,"score":90},{"name":"期中","percentage":30,"score":85},{"name":"期末","percentage":30}]}}\n'
+    "注意：用户说"修改绩点分布"或"改成..."时，必须用 set_components 整体替换，不要用 add 累加！"
 )
 
 def _get_system_prompt(mode):

@@ -135,7 +135,30 @@ function buildUserContext() {
         }
     }
 
+    // 查重
+    const dupTodos = findDuplicates(todos, t => `${t.title}|${t.date}`);
+    const dupEvents = findDuplicates(events, e => `${e.title}|${e.date}|${e.event_type}`);
+    if (dupTodos.length) {
+        parts.push(`⚠️ 待办中有重复项：${dupTodos.map(d => `${d.title}(${d.date})出现${d.count}次`).join('、')}`);
+    }
+    if (dupEvents.length) {
+        parts.push(`⚠️ 事件中有重复项：${dupEvents.map(d => `${d.title}(${d.date})出现${d.count}次`).join('、')}`);
+    }
+
     return parts.join('\n');
+}
+
+function findDuplicates(arr, keyFn) {
+    if (!arr || !arr.length) return [];
+    const map = {};
+    arr.forEach(item => {
+        const k = keyFn(item);
+        map[k] = (map[k] || 0) + 1;
+    });
+    return Object.entries(map).filter(([, c]) => c > 1).map(([k, c]) => {
+        const parts = k.split('|');
+        return { title: parts[0], date: parts[1], count: c };
+    });
 }
 
 /** 发送消息（流式） */
@@ -235,6 +258,35 @@ async function executeActions(actions) {
     const sb = Auth.getClient();
     for (const act of actions) {
         const { entity, action, data } = act;
+
+        // 一键去重
+        if (entity === 'dedup') {
+            const target = data?.target || 'all';
+            if (target === 'todos' || target === 'all') {
+                const dupKeys = {};
+                for (const t of (todos || [])) {
+                    const k = `${t.title}|${t.date}`;
+                    if (dupKeys[k]) {
+                        await DS.remove('todos', t.id);
+                    } else {
+                        dupKeys[k] = true;
+                    }
+                }
+            }
+            if (target === 'events' || target === 'all') {
+                const dupKeys = {};
+                for (const e of (events || [])) {
+                    const k = `${e.title}|${e.date}|${e.event_type}`;
+                    if (dupKeys[k]) {
+                        await DS.remove('events', e.id);
+                    } else {
+                        dupKeys[k] = true;
+                    }
+                }
+            }
+            continue;
+        }
+
         if (entity === 'todo') {
             if (action === 'add') {
                 const row = {

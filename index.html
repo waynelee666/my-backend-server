@@ -93,7 +93,10 @@
     <section class="view" id="view-chat">
         <div class="view__header">
             <h2>💬 小马</h2>
-            <button class="btn btn--outline btn--sm" id="chatClearBtn">🗑️ 清空对话</button>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn--sm" id="chatModeBtn" style="background:#eef2ff;color:#4f46e5;border:none">📚 问答</button>
+                <button class="btn btn--outline btn--sm" id="chatClearBtn">🗑️ 清空对话</button>
+            </div>
         </div>
         <div class="chat-container">
             <div class="chat-messages" id="chatMessages"></div>

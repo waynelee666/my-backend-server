@@ -5,6 +5,29 @@ console.log('💬 Chat module loaded');
 
 let chatHistory = [];  // [[q1,a1],[q2,a2],...]
 let chatWaiting = false;
+let chatMode = 'qa';  // 'qa' = 问答模式（查知识库）, 'chat' = 聊天模式（只看用户数据）
+
+/** 切换问答/聊天模式 */
+function toggleChatMode() {
+    const btn = document.getElementById('chatModeBtn');
+    const input = document.getElementById('chatInput');
+    chatMode = chatMode === 'qa' ? 'chat' : 'qa';
+    if (chatMode === 'qa') {
+        btn.textContent = '📚 问答';
+        btn.style.background = '#eef2ff';
+        btn.style.color = '#4f46e5';
+        input.placeholder = '问小马任何问题...';
+    } else {
+        btn.textContent = '💬 聊天';
+        btn.style.background = '#ecfdf5';
+        btn.style.color = '#065f46';
+        input.placeholder = '和小马随便聊聊...';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('chatModeBtn')?.addEventListener('click', toggleChatMode);
+});
 
 // Escaped HTML (reuse from script.js if available, otherwise define)
 function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
@@ -139,7 +162,7 @@ async function sendChat() {
         const resp = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question, history: chatHistory.slice(0, -1), stream: true, userContext }),
+            body: JSON.stringify({ question, history: chatHistory.slice(0, -1), stream: true, userContext, mode: chatMode }),
         });
 
         if (!resp.ok) throw new Error('HTTP ' + resp.status);

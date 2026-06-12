@@ -255,13 +255,16 @@ class RequestHandler(BaseHTTPRequestHandler):
         history = body.get("history", [])
         use_stream = body.get("stream", True)
         user_context = body.get("userContext", "")
+        mode = body.get("mode", "qa")  # 'qa' 问答模式 | 'chat' 聊天模式
 
         try:
-            # 检索知识库
-            id_docs = rag_search(question, top_k=10)
-            if not id_docs and history:
-                last_question = history[-1][0]
-                id_docs = rag_search(last_question, top_k=10)
+            # 问答模式才检索知识库，聊天模式只看用户数据
+            id_docs = []
+            if mode == "qa":
+                id_docs = rag_search(question, top_k=10)
+                if not id_docs and history:
+                    last_question = history[-1][0]
+                    id_docs = rag_search(last_question, top_k=10)
 
             # 组装背景信息
             context_parts = []
@@ -279,10 +282,10 @@ class RequestHandler(BaseHTTPRequestHandler):
                     f"但不要生硬复述，自然地融入你的回复中：\n"
                     f"{chr(10).join(context_parts)}"
                 )
-                print(f"  [Chat] Q: {question[:40]}... → {len(id_docs) if id_docs else 0} 条资料 + 用户数据")
+                print(f"  [Chat:{mode}] Q: {question[:40]}... → {len(id_docs) if id_docs else 0} 条资料 + 用户数据")
             else:
                 enhanced = question
-                print(f"  [Chat] Q: {question[:40]}... → 自由聊天")
+                print(f"  [Chat:{mode}] Q: {question[:40]}... → 自由聊天")
 
             generator = llm.chat_answer_stream(enhanced, history=history)
 

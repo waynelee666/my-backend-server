@@ -60,6 +60,61 @@ function formatAnswer(text) {
     return html;
 }
 
+/** 收集用户的科目、待办、事件，作为小马的背景知识 */
+function buildUserContext() {
+    const parts = [];
+
+    // 科目
+    if (typeof subjects !== 'undefined' && subjects.length) {
+        const summary = subjects.map(s => {
+            const comps = s.components || [];
+            const total = comps.reduce((a, c) => a + (c.percentage || 0), 0);
+            let gpaStr = '';
+            if (comps.length && total === 100) {
+                let score = 0;
+                for (const c of comps) {
+                    if (c.score != null && c.percentage) score += c.score * (c.percentage / 100);
+                }
+                gpaStr = `，预估总分${Math.round(score)}分`;
+            } else if (total > 0) {
+                gpaStr = `（已配${total}%）`;
+            }
+            return `${s.name}(${s.credits || '?'}学分${gpaStr})`;
+        }).join('、');
+        parts.push(`你正在修读的课程：${summary}`);
+    }
+
+    // 待办（最近的和未完成的）
+    if (typeof todos !== 'undefined' && todos.length) {
+        const active = todos.filter(t => t.status !== 'done');
+        const today = new Date().toISOString().slice(0, 10);
+        const todayTodos = active.filter(t => t.date === today);
+        const upcoming = active.filter(t => t.date > today).sort((a, b) => a.date.localeCompare(b.date));
+
+        if (todayTodos.length) {
+            parts.push(`今天的待办：${todayTodos.map(t => `${t.title}(${t.priority})`).join('、')}`);
+        }
+        if (upcoming.length) {
+            parts.push(`即将到来的待办：${upcoming.slice(0, 5).map(t => `${t.date} ${t.title}`).join('、')}`);
+        }
+    }
+
+    // 事件（最近几天）
+    if (typeof events !== 'undefined' && events.length) {
+        const today = new Date().toISOString().slice(0, 10);
+        const weekLater = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+        const near = events.filter(e => e.date >= today && e.date <= weekLater).sort((a, b) => a.date.localeCompare(b.date));
+        if (near.length) {
+            parts.push(`最近一周的事件：${near.map(e => {
+                const labels = { exam: '考试', class: '学习', holiday: '生活', deadline: 'DDL', other: '其他' };
+                return `${e.date} ${e.title}(${labels[e.event_type] || e.event_type})`;
+            }).join('、')}`);
+        }
+    }
+
+    return parts.join('\n');
+}
+
 /** 发送消息（流式） */
 async function sendChat() {
     if (chatWaiting) return;
@@ -77,11 +132,14 @@ async function sendChat() {
 
     const lastIdx = chatHistory.length - 1;
 
+    // 收集用户数据（科目、待办、事件），作为小马的背景知识
+    const userContext = buildUserContext();
+
     try {
         const resp = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question, history: chatHistory.slice(0, -1), stream: true }),
+            body: JSON.stringify({ question, history: chatHistory.slice(0, -1), stream: true, userContext }),
         });
 
         if (!resp.ok) throw new Error('HTTP ' + resp.status);

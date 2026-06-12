@@ -254,26 +254,32 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         history = body.get("history", [])
         use_stream = body.get("stream", True)
+        user_context = body.get("userContext", "")
 
         try:
-            # 检索知识库，作为背景资料悄悄塞给小马
+            # 检索知识库
             id_docs = rag_search(question, top_k=10)
             if not id_docs and history:
                 last_question = history[-1][0]
                 id_docs = rag_search(last_question, top_k=10)
 
+            # 组装背景信息
+            context_parts = []
             if id_docs:
                 doc_ids, doc_texts = zip(*id_docs)
-                context = "\n".join(doc_texts)
-                # 把知识库内容自然融入问题，让小马自己判断怎么用
+                context_parts.append("学校规定：\n" + "\n".join(doc_texts))
+            if user_context:
+                context_parts.append("用户当前状态：\n" + user_context)
+
+            if context_parts:
                 enhanced = (
                     f"{question}\n\n"
                     f"---\n"
-                    f"以下是一些相关的学校规定，你可以参考这些信息来回答，"
-                    f"但不要生硬复述，自然地融入你的回复中即可：\n"
-                    f"{context}"
+                    f"以下是一些背景信息，你可以参考，"
+                    f"但不要生硬复述，自然地融入你的回复中：\n"
+                    f"{chr(10).join(context_parts)}"
                 )
-                print(f"  [Chat] Q: {question[:40]}... → {len(id_docs)} 条参考资料")
+                print(f"  [Chat] Q: {question[:40]}... → {len(id_docs) if id_docs else 0} 条资料 + 用户数据")
             else:
                 enhanced = question
                 print(f"  [Chat] Q: {question[:40]}... → 自由聊天")

@@ -85,7 +85,10 @@ function formatAnswer(text) {
 
 /** 收集用户的科目、待办、事件，作为小马的背景知识 */
 function buildUserContext() {
-    const parts = [];
+    const now = new Date();
+    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} 星期${weekdays[now.getDay()]}`;
+    const parts = [`今天是 ${todayStr}。`];
 
     // 科目
     if (typeof subjects !== 'undefined' && subjects.length) {

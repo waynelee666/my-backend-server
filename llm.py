@@ -162,9 +162,34 @@ CHAT_PROMPT = (
     "- 当同学的问题里附带了参考资料时，参考但不逐字复述，融入你的回复中"
 )
 
-def chat_answer(user_query, history=None):
+CHAT_PROMPT_MODIFY = CHAT_PROMPT + (
+    "\n\n"
+    "你现在处于「修改模式」，有权帮同学修改数据。当同学要求增删改待办/事件/科目时，在回复末尾输出：\n"
+    "__ACTIONS__\n"
+    "[JSON数组]\n"
+    "__END_ACTIONS__\n"
+    "可用操作（信息不全时根据上下文合理推断）：\n"
+    '- 添加待办: {"entity":"todo","action":"add","data":{"title":"...","date":"2026-01-01","priority":"高|中|低","description":"...","subject_name":"..."}}\n'
+    '- 修改待办: {"entity":"todo","action":"update","data":{"title":"现有标题","updates":{"date":"...","priority":"...","status":"todo|doing|done","description":"...","new_title":"..."}}}\n'
+    '- 删除待办: {"entity":"todo","action":"delete","data":{"title":"..."}}\n'
+    '- 添加事件: {"entity":"event","action":"add","data":{"title":"...","date":"2026-01-01","event_type":"exam|class|holiday|deadline|other","start_time":"09:00","end_time":"10:00","subject_name":"..."}}\n'
+    '- 修改事件: {"entity":"event","action":"update","data":{"title":"现有标题","date":"现有日期","updates":{"new_title":"...","date":"...","event_type":"...","start_time":"...","end_time":"..."}}}\n'
+    '- 删除事件: {"entity":"event","action":"delete","data":{"title":"...","date":"..."}}\n'
+    '- 修改科目: {"entity":"subject","action":"update","data":{"name":"科目名","updates":{"credits":3.5,"target_gpa":4.5}}}\n'
+    '- 添加绩点项: {"entity":"subject","action":"add_component","data":{"subject_name":"科目名","name":"项目名","percentage":30,"score":85}}\n'
+    "规则：只在用户明确要求修改时才输出指令；正常聊天时不要输出；指令放在回复末尾。"
+)
+
+def _get_system_prompt(mode):
+    """根据模式返回对应的系统提示词"""
+    if mode == "modify":
+        return CHAT_PROMPT_MODIFY
+    return CHAT_PROMPT
+
+
+def chat_answer(user_query, history=None, mode="chat"):
     """通用聊天，不依赖知识库，多轮对话"""
-    messages = [{"role": "system", "content": CHAT_PROMPT}]
+    messages = [{"role": "system", "content": _get_system_prompt(mode)}]
 
     if history:
         for entry in history:
@@ -295,9 +320,9 @@ def get_rag_answer_stream(user_query, context, doc_ids, history=None):
         yield ref_text
 
 
-def chat_answer_stream(user_query, history=None):
+def chat_answer_stream(user_query, history=None, mode="chat"):
     """通用聊天流式"""
-    messages = [{"role": "system", "content": CHAT_PROMPT}]
+    messages = [{"role": "system", "content": _get_system_prompt(mode)}]
     messages.extend(_build_history_messages(history))
     messages.append({"role": "user", "content": user_query})
     for token in chat_stream(messages):

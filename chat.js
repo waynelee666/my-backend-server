@@ -5,28 +5,28 @@ console.log('💬 Chat module loaded');
 
 let chatHistory = [];  // [[q1,a1],[q2,a2],...]
 let chatWaiting = false;
-let chatMode = 'qa';  // 'qa' = 问答模式（查知识库）, 'chat' = 聊天模式（只看用户数据）
+let chatMode = 'qa';  // 'qa'=问答(知识库+聊天), 'chat'=纯聊天, 'modify'=修改模式(聊天+修改权限)
 
-/** 切换问答/聊天模式 */
-function toggleChatMode() {
-    const btn = document.getElementById('chatModeBtn');
+/** 切换模式 */
+function setChatMode(mode) {
+    chatMode = mode;
     const input = document.getElementById('chatInput');
-    chatMode = chatMode === 'qa' ? 'chat' : 'qa';
-    if (chatMode === 'qa') {
-        btn.textContent = '📚 问答';
-        btn.style.background = '#eef2ff';
-        btn.style.color = '#4f46e5';
-        input.placeholder = '问小马任何问题...';
-    } else {
-        btn.textContent = '💬 聊天';
-        btn.style.background = '#ecfdf5';
-        btn.style.color = '#065f46';
-        input.placeholder = '和小马随便聊聊...';
-    }
+    document.querySelectorAll('.chat-mode-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.querySelector(`.chat-mode-btn[data-mode="${mode}"]`);
+    if (btn) btn.classList.add('active');
+
+    const placeholders = {
+        qa: '问小马学校规定、课程问题...',
+        chat: '和小马随便聊聊...',
+        modify: '让小马帮你改待办、加事件...',
+    };
+    input.placeholder = placeholders[mode] || placeholders.qa;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('chatModeBtn')?.addEventListener('click', toggleChatMode);
+    document.querySelectorAll('.chat-mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => setChatMode(btn.dataset.mode));
+    });
 });
 
 // Escaped HTML (reuse from script.js if available, otherwise define)
@@ -206,11 +206,130 @@ async function sendChat() {
         console.error('Chat error:', e);
     }
 
+    // 解析并执行操作指令
+    const fullAnswer = chatHistory[lastIdx][1];
+    const actionMatch = fullAnswer.match(/__ACTIONS__\s*([\s\S]*?)\s*__END_ACTIONS__/);
+    if (actionMatch) {
+        try {
+            const actions = JSON.parse(actionMatch[1]);
+            await executeActions(actions);
+            // 从显示中移除操作指令块
+            chatHistory[lastIdx][1] = fullAnswer.replace(/__ACTIONS__[\s\S]*?__END_ACTIONS__/, '').trim();
+        } catch (e) {
+            console.error('执行操作失败:', e);
+            chatHistory[lastIdx][1] = fullAnswer.replace(/__ACTIONS__[\s\S]*?__END_ACTIONS__/, '') + '\n\n⚠️ 操作执行失败：' + e.message;
+        }
+    }
+
     chatWaiting = false;
     input.disabled = false;
     document.getElementById('chatSendBtn').disabled = false;
     input.focus();
     renderChat();
+    // 刷新全局数据
+    if (actionMatch && typeof refreshAll === 'function') refreshAll();
+}
+
+/** 执行小马返回的操作指令 */
+async function executeActions(actions) {
+    const sb = Auth.getClient();
+    for (const act of actions) {
+        const { entity, action, data } = act;
+        if (entity === 'todo') {
+            if (action === 'add') {
+                const row = {
+                    title: data.title,
+                    date: data.date || new Date().toISOString().slice(0, 10),
+                    priority: data.priority || '中',
+                    status: 'todo',
+                    description: data.description || '',
+                    subject_id: findSubjectId(data.subject_name),
+                };
+                await DS.create('todos', row);
+            } else if (action === 'update') {
+                const t = findTodo(data.title);
+                if (!t) throw new Error(`未找到待办"${data.title}"`);
+                const u = data.updates || {};
+                const fields = {};
+                if (u.date) fields.date = u.date;
+                if (u.priority) fields.priority = u.priority;
+                if (u.status) fields.status = u.status;
+                if (u.description !== undefined) fields.description = u.description;
+                if (u.new_title) fields.title = u.new_title;
+                await DS.update('todos', t.id, fields);
+            } else if (action === 'delete') {
+                const t = findTodo(data.title);
+                if (t) await DS.remove('todos', t.id);
+            }
+        } else if (entity === 'event') {
+            if (action === 'add') {
+                const row = {
+                    title: data.title,
+                    date: data.date || new Date().toISOString().slice(0, 10),
+                    event_type: data.event_type || 'other',
+                    start_time: data.start_time || null,
+                    end_time: data.end_time || null,
+                    subject_id: findSubjectId(data.subject_name),
+                };
+                await DS.create('events', row);
+            } else if (action === 'update') {
+                const e = findEvent(data.title, data.date);
+                if (!e) throw new Error(`未找到事件"${data.title}"`);
+                const u = data.updates || {};
+                const fields = {};
+                if (u.new_title) fields.title = u.new_title;
+                if (u.date) fields.date = u.date;
+                if (u.event_type) fields.event_type = u.event_type;
+                if (u.start_time !== undefined) fields.start_time = u.start_time;
+                if (u.end_time !== undefined) fields.end_time = u.end_time;
+                await DS.update('events', e.id, fields);
+            } else if (action === 'delete') {
+                const e = findEvent(data.title, data.date);
+                if (e) await DS.remove('events', e.id);
+            }
+        } else if (entity === 'subject') {
+            if (action === 'update') {
+                const s = findSubject(data.name);
+                if (!s) throw new Error(`未找到科目"${data.name}"`);
+                const u = data.updates || {};
+                const fields = {};
+                if (u.credits !== undefined) fields.credits = u.credits;
+                if (u.target_gpa !== undefined) fields.target_gpa = u.target_gpa;
+                await DS.update('subjects', s.id, fields);
+            } else if (action === 'add_component') {
+                const s = findSubject(data.subject_name);
+                if (!s) throw new Error(`未找到科目"${data.subject_name}"`);
+                const comps = [...(s.components || []), {
+                    name: data.name,
+                    percentage: data.percentage || 0,
+                    score: data.score ?? null,
+                }];
+                await DS.update('subjects', s.id, { components: comps });
+            }
+        }
+    }
+}
+
+function findTodo(title) {
+    if (typeof todos === 'undefined') return null;
+    const t = title.toLowerCase();
+    return todos.find(x => x.title.toLowerCase().includes(t) || t.includes(x.title.toLowerCase()));
+}
+function findEvent(title, date) {
+    if (typeof events === 'undefined') return null;
+    const t = title.toLowerCase();
+    if (date) return events.find(x => x.title.toLowerCase().includes(t) && x.date === date);
+    return events.find(x => x.title.toLowerCase().includes(t) || t.includes(x.title.toLowerCase()));
+}
+function findSubject(name) {
+    if (typeof subjects === 'undefined') return null;
+    const n = name.toLowerCase();
+    return subjects.find(x => x.name.toLowerCase().includes(n) || n.includes(x.name.toLowerCase()));
+}
+function findSubjectId(name) {
+    if (!name) return null;
+    const s = findSubject(name);
+    return s ? s.id : null;
 }
 
 /** 清空对话 */

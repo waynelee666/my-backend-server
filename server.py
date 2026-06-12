@@ -287,7 +287,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 enhanced = question
                 print(f"  [Chat:{mode}] Q: {question[:40]}... → 自由聊天")
 
-            generator = llm.chat_answer_stream(enhanced, history=history)
+            generator = llm.chat_answer_stream(enhanced, history=history, mode=mode)
 
             if not use_stream:
                 answer = "".join(generator)

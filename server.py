@@ -241,7 +241,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_json({"ok": False, "error": str(e)}, 500)
 
     def handle_chat(self):
-        """POST /api/chat — RAG 问答 + 自由聊天，支持流式"""
+        """POST /api/chat — 小马聊天（知识库作为背景资料）"""
         body = self.read_json_body()
         if not body or "question" not in body:
             self.send_json({"ok": False, "error": "请提供 question 字段"}, 400)
@@ -253,13 +253,11 @@ class RequestHandler(BaseHTTPRequestHandler):
             return
 
         history = body.get("history", [])
-        use_stream = body.get("stream", True)  # 默认开启流式
+        use_stream = body.get("stream", True)
 
         try:
-            # 语义检索
+            # 检索知识库，作为背景资料悄悄塞给小马
             id_docs = rag_search(question, top_k=10)
-
-            # 追问兜底
             if not id_docs and history:
                 last_question = history[-1][0]
                 id_docs = rag_search(last_question, top_k=10)
@@ -267,14 +265,22 @@ class RequestHandler(BaseHTTPRequestHandler):
             if id_docs:
                 doc_ids, doc_texts = zip(*id_docs)
                 context = "\n".join(doc_texts)
-                generator = llm.get_rag_answer_stream(question, context, list(doc_ids), history=history)
-                print(f"  [Chat] Q: {question[:40]}... → {len(id_docs)} docs")
+                # 把知识库内容自然融入问题，让小马自己判断怎么用
+                enhanced = (
+                    f"{question}\n\n"
+                    f"---\n"
+                    f"以下是一些相关的学校规定，你可以参考这些信息来回答，"
+                    f"但不要生硬复述，自然地融入你的回复中即可：\n"
+                    f"{context}"
+                )
+                print(f"  [Chat] Q: {question[:40]}... → {len(id_docs)} 条参考资料")
             else:
-                generator = llm.chat_answer_stream(question, history=history)
+                enhanced = question
                 print(f"  [Chat] Q: {question[:40]}... → 自由聊天")
 
+            generator = llm.chat_answer_stream(enhanced, history=history)
+
             if not use_stream:
-                # 非流式：收集全部后一次返回
                 answer = "".join(generator)
                 self.send_json({"ok": True, "answer": answer})
                 return

@@ -200,7 +200,7 @@ textarea.form-input { resize:vertical; }
     .nav__tab { padding: 6px 10px; font-size: .75rem; white-space: nowrap; flex-shrink: 0; }
     .nav__list { gap: 6px; }
     .nav__datetime { display: none; }
-    #importBtn { padding: 6px 10px; font-size: .78rem; }
+    #importBtn { display: none; }
 
     /* 主区域 */
     .main { margin-top: 76px; }

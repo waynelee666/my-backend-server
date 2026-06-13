@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#667eea"/>
+      <stop offset="100%" stop-color="#764ba2"/>
+    </linearGradient>
+  </defs>
+  <!-- 背景圆角方形 -->
+  <rect width="512" height="512" rx="110" fill="url(#bg)"/>
+  <!-- 剪贴板 -->
+  <rect x="140" y="100" width="232" height="310" rx="28" fill="white" opacity="0.95"/>
+  <!-- 剪贴板顶部横条 -->
+  <rect x="170" y="80" width="172" height="50" rx="14" fill="white" opacity="0.9"/>
+  <!-- 夹子 -->
+  <rect x="210" y="60" width="92" height="36" rx="12" fill="rgba(255,255,255,0.7)"/>
+  <!-- 勾选框 1 -->
+  <rect x="175" y="155" width="28" height="28" rx="7" fill="#667eea"/>
+  <polyline points="183,170 190,177 203,164" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="220" y="158" width="110" height="12" rx="6" fill="#c4b5fd"/>
+  <!-- 勾选框 2 -->
+  <rect x="175" y="212" width="28" height="28" rx="7" fill="#e0e7ff"/>
+  <rect x="183" y="220" width="12" height="4" rx="2" fill="#667eea"/>
+  <rect x="220" y="215" width="90" height="12" rx="6" fill="#c4b5fd"/>
+  <!-- 勾选框 3 -->
+  <rect x="175" y="269" width="28" height="28" rx="7" fill="#e0e7ff"/>
+  <rect x="183" y="277" width="12" height="4" rx="2" fill="#667eea"/>
+  <rect x="220" y="272" width="100" height="12" rx="6" fill="#c4b5fd"/>
+  <!-- 底线 -->
+  <rect x="185" y="340" width="80" height="6" rx="3" fill="#c4b5fd"/>
+</svg>

@@ -68,7 +68,25 @@ $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
     if (currentTab === 'calculus') renderCalcView();
     if (currentTab === 'chat') renderChatView();
 }));
-$('.nav__logo').addEventListener('click', () => { currentTab='todos'; $$('.nav__tab').forEach(b=>b.classList.remove('active')); $('[data-tab="todos"]').classList.add('active'); $$('.view').forEach(v=>v.classList.remove('active')); $('#view-todos').classList.add('active'); renderTodos(); });
+$('.nav__logo').addEventListener('click', (e) => {
+    if (window.innerWidth < 768) {
+        e.preventDefault();
+        document.querySelector('.nav__tabs').classList.toggle('nav__tabs--open');
+        return;
+    }
+    currentTab='todos'; $$('.nav__tab').forEach(b=>b.classList.remove('active')); $('[data-tab="todos"]').classList.add('active'); $$('.view').forEach(v=>v.classList.remove('active')); $('#view-todos').classList.add('active'); renderTodos();
+});
+// 手机端：点 tab 按钮后自动收起
+$$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelector('.nav__tabs').classList.remove('nav__tabs--open');
+}));
+// 点页面其他位置收起
+document.addEventListener('click', (e) => {
+    if (window.innerWidth >= 768) return;
+    if (!e.target.closest('.nav__tabs') && !e.target.closest('.nav__logo')) {
+        document.querySelector('.nav__tabs').classList.remove('nav__tabs--open');
+    }
+});
 
 // ==================== 通用模态框 ====================
 function openModal(title, formHTML) { $('#modalTitle').textContent = title; $('#modalForm').innerHTML = formHTML; $('#modalOverlay').style.display = ''; }

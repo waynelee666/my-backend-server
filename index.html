@@ -19,7 +19,8 @@
     <nav class="nav container">
         <a href="#" class="nav__logo" data-tab="todos">📋 TaskFlow</a>
         <div class="nav__tabs">
-            <button class="nav__tab active" data-tab="todos">✅ 待办</button>
+            <button class="nav__tab active" data-tab="home">🏠 首页</button>
+            <button class="nav__tab" data-tab="todos">✅ 待办</button>
             <button class="nav__tab" data-tab="calendar">📅 日历</button>
             <button class="nav__tab" data-tab="subjects">📚 科目</button>
             <button class="nav__tab" data-tab="chat">💬 小马</button>
@@ -48,10 +49,42 @@
 <!-- ==================== 主内容区 ==================== -->
 <main class="main container">
 
+    <!-- ===== 首页视图 ===== -->
+    <section class="view active" id="view-home">
+        <div class="home-header">
+            <h1 class="home-greeting" id="homeGreeting"></h1>
+            <p class="home-date" id="homeDate"></p>
+        </div>
+        <div class="home-countdowns" id="homeCountdowns"></div>
+        <div class="home-nav">
+            <button class="home-nav-card" data-tab="todos">
+                <span class="home-nav-card__icon">✅</span>
+                <span class="home-nav-card__label">待办</span>
+            </button>
+            <button class="home-nav-card" data-tab="calendar">
+                <span class="home-nav-card__icon">📅</span>
+                <span class="home-nav-card__label">日历</span>
+            </button>
+            <button class="home-nav-card" data-tab="subjects">
+                <span class="home-nav-card__icon">📚</span>
+                <span class="home-nav-card__label">科目</span>
+            </button>
+            <button class="home-nav-card" data-tab="chat">
+                <span class="home-nav-card__icon">💬</span>
+                <span class="home-nav-card__label">小马</span>
+            </button>
+            <button class="home-nav-card" data-tab="calculus">
+                <span class="home-nav-card__icon">📐</span>
+                <span class="home-nav-card__label">微积分</span>
+            </button>
+        </div>
+    </section>
+
     <!-- ===== 待办视图 ===== -->
-    <section class="view active" id="view-todos">
+    <section class="view" id="view-todos">
         <div class="view__header">
             <div class="view__header-left">
+                <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
                 <h2>✅ 待办清单</h2>
                 <div class="date-picker">
                     <button class="btn btn--icon" id="todoPrevDay">◀</button>
@@ -73,6 +106,7 @@
     <!-- ===== 日历视图 ===== -->
     <section class="view" id="view-calendar">
         <div class="view__header">
+            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
             <h2>📅 日历</h2>
             <div class="cal__nav">
                 <button class="btn btn--icon" id="calPrev">◀</button>
@@ -99,6 +133,7 @@
     <!-- ===== 科目视图 ===== -->
     <section class="view" id="view-subjects">
         <div class="view__header">
+            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
             <h2>📚 科目管理</h2>
             <button class="btn btn--primary btn--sm" id="addSubjectBtn">+ 添加科目</button>
         </div>
@@ -110,6 +145,7 @@
     <!-- ===== 微积分视图 ===== -->
     <section class="view" id="view-calculus">
         <div class="view__header">
+            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
             <h2>📐 微积分复习</h2>
             <div style="display:flex;gap:8px">
                 <a href="https://www.geogebra.org/3d" target="_blank" class="btn btn--outline btn--sm">🌐 GeoGebra 3D</a>
@@ -164,6 +200,7 @@
     <!-- ===== 问答视图 ===== -->
     <section class="view" id="view-chat">
         <div class="view__header">
+            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
             <h2>💬 小马</h2>
             <div style="display:flex;gap:6px;align-items:center">
                 <div style="display:flex;gap:2px;background:#f1f5f9;border-radius:8px;padding:3px" id="modeGroup">

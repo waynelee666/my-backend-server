@@ -186,6 +186,39 @@ textarea.form-input { resize:vertical; }
 }
 .gpa-summary strong { font-size: 1.8rem; margin: 0 4px; }
 
+/* ==================== 首页 ==================== */
+.back-btn { font-weight: 700; font-size: 1rem; padding: 6px 12px; margin-right: 4px; }
+.home-header { text-align: center; padding: 24px 0 8px; }
+.home-greeting { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
+.home-date { font-size: .9rem; color: var(--color-text-light); }
+
+.home-countdowns { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin: 20px 0; }
+.home-countdown-card {
+    background: #fff; border: 1px solid var(--color-border); border-radius: var(--radius);
+    padding: 18px 20px; display: flex; align-items: center; gap: 16px;
+    transition: all var(--transition);
+}
+.home-countdown-card:hover { box-shadow: 0 2px 12px var(--color-shadow); }
+.home-countdown-card__icon { font-size: 2.2rem; flex-shrink: 0; }
+.home-countdown-card__info { flex: 1; min-width: 0; }
+.home-countdown-card__title { font-size: .95rem; font-weight: 600; margin-bottom: 4px; }
+.home-countdown-card__meta { font-size: .8rem; color: var(--color-text-light); }
+.home-countdown-card__countdown { font-size: 1.3rem; font-weight: 700; color: var(--color-primary); text-align: right; min-width: 110px; flex-shrink: 0; }
+.home-countdown-card--soon .home-countdown-card__countdown { color: var(--color-danger); animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .6; } }
+.home-countdown-empty { text-align: center; color: var(--color-text-light); padding: 30px; font-size: .9rem; }
+
+.home-nav { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; margin-top: 24px; }
+.home-nav-card {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 20px 12px; background: #fff; border: 1px solid var(--color-border);
+    border-radius: var(--radius); cursor: pointer; font-family: inherit;
+    transition: all var(--transition);
+}
+.home-nav-card:hover { box-shadow: 0 2px 12px var(--color-shadow); transform: translateY(-2px); border-color: var(--color-primary); }
+.home-nav-card__icon { font-size: 1.8rem; }
+.home-nav-card__label { font-size: .85rem; font-weight: 600; color: var(--color-text); }
+
 /* ==================== 响应式 ==================== */
 
 /* ---- 触摸设备：始终显示操作按钮（无 hover）---- */
@@ -283,6 +316,15 @@ textarea.form-input { resize:vertical; }
     .calc-chapter__name { font-size: .82rem; }
     .calc-tool-card { padding: 12px; }
 
+    /* 首页 */
+    .home-greeting { font-size: 1.3rem; }
+    .home-countdowns { grid-template-columns: 1fr; gap: 10px; }
+    .home-countdown-card { padding: 14px 16px; }
+    .home-countdown-card__countdown { font-size: 1.1rem; min-width: 90px; }
+    .home-nav { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .home-nav-card { padding: 14px 8px; }
+    .home-nav-card__icon { font-size: 1.4rem; }
+
     /* Toast */
     .toast { left: 16px; right: 16px; bottom: 16px; text-align: center; }
 }
@@ -347,6 +389,15 @@ textarea.form-input { resize:vertical; }
     .auth-bg__circle--1 { width: 300px; height: 300px; }
     .auth-bg__circle--2 { width: 180px; height: 180px; }
     .auth-bg__circle--3 { width: 120px; height: 120px; }
+
+    /* 首页 */
+    .home-greeting { font-size: 1.1rem; }
+    .home-countdown-card__icon { font-size: 1.6rem; }
+    .home-countdown-card__countdown { font-size: 1rem; min-width: 80px; }
+    .home-nav { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .home-nav-card { padding: 12px 6px; }
+    .home-nav-card__icon { font-size: 1.2rem; }
+    .home-nav-card__label { font-size: .75rem; }
 
     /* 模态框底部按钮 */
     .modal__footer { flex-direction: column; }

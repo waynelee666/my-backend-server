@@ -7,7 +7,7 @@ const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s)
 
 // ==================== 全局状态 ====================
 let subjects = [], events = [], todos = [];
-let currentTab = 'todos';
+let currentTab = 'home';
 let todoDate = new Date().toISOString().slice(0, 10);
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 let selectedCalDate = null;
@@ -55,14 +55,15 @@ async function refreshAll() {
     subjects = s; events = e; todos = t;
     renderCurrent();
 }
-function renderCurrent() { if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else if (currentTab==='subjects') renderSubjects(); else if (currentTab==='calculus') renderCalcView(); }
+function renderCurrent() { if (currentTab==='home') renderHome(); else if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else if (currentTab==='subjects') renderSubjects(); else if (currentTab==='calculus') renderCalcView(); else if (currentTab==='chat') renderChatView(); }
 
 // ==================== Tab 切换 ====================
 $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
     currentTab = btn.dataset.tab;
     $$('.nav__tab').forEach(b => b.classList.remove('active')); btn.classList.add('active');
     $$('.view').forEach(v => v.classList.remove('active')); $(`#view-${currentTab}`).classList.add('active');
-    if (currentTab === 'calendar') renderCalendar();
+    if (currentTab === 'home') renderHome();
+	    if (currentTab === 'calendar') renderCalendar();
     if (currentTab === 'subjects') renderSubjects();
     if (currentTab === 'todos') renderTodos();
     if (currentTab === 'calculus') renderCalcView();
@@ -74,7 +75,7 @@ $('.nav__logo').addEventListener('click', (e) => {
         document.querySelector('.nav__tabs').classList.toggle('nav__tabs--open');
         return;
     }
-    currentTab='todos'; $$('.nav__tab').forEach(b=>b.classList.remove('active')); $('[data-tab="todos"]').classList.add('active'); $$('.view').forEach(v=>v.classList.remove('active')); $('#view-todos').classList.add('active'); renderTodos();
+    currentTab='home'; $$('.nav__tab').forEach(b=>b.classList.remove('active')); $('[data-tab="home"]').classList.add('active'); $$('.view').forEach(v=>v.classList.remove('active')); $('#view-home').classList.add('active'); renderHome();
 });
 // 手机端：点 tab 按钮后自动收起
 $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
@@ -798,10 +799,128 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
+// ==================== 首页倒计时 ====================
+let countdownTimer = null;
+
+function renderHome() {
+    // 问候语
+    const h = new Date().getHours();
+    let greet = '🌙 晚上好';
+    if (h < 6) greet = '🌙 夜深了';
+    else if (h < 12) greet = '☀️ 早上好';
+    else if (h < 14) greet = '🌤 中午好';
+    else if (h < 18) greet = '🌤 下午好';
+    $('#homeGreeting').textContent = greet;
+
+    // 日期
+    const now = new Date();
+    const weekdays = ['日','一','二','三','四','五','六'];
+    $('#homeDate').textContent =
+        `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 星期${weekdays[now.getDay()]}`;
+
+    // 倒计时卡片
+    renderCountdowns();
+
+    // 每30秒刷新
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(renderCountdowns, 30000);
+}
+
+function renderCountdowns() {
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const weekLater = new Date(now.getTime() + 14 * 86400000).toISOString().slice(0, 10);
+
+    // 取未来14天内的事件（不含已过 + 今天还没开始的）
+    const upcoming = events
+        .filter(e => (e.date > today || (e.date === today && e.start_time && e.start_time > now.toTimeString().slice(0, 5))))
+        .sort((a, b) => {
+            if (a.date !== b.date) return a.date.localeCompare(b.date);
+            return (a.start_time || '').localeCompare(b.start_time || '');
+        })
+        .slice(0, 8);
+
+    const el = document.getElementById('homeCountdowns');
+    if (!upcoming.length) {
+        el.innerHTML = '<div class="home-countdown-empty">📭 近期没有即将到来的事件<br><small>在日历中添加考试、DDL 等事件吧</small></div>';
+        return;
+    }
+
+    el.innerHTML = upcoming.map(e => {
+        const labels = { exam: '考试', class: '学习', holiday: '生活', deadline: 'DDL', other: '其他' };
+        const icons = { exam: '📝', class: '📖', holiday: '🎉', deadline: '⏰', other: '📌' };
+        const eventDate = new Date(e.date);
+        if (e.start_time) {
+            const [h, m] = e.start_time.split(':');
+            eventDate.setHours(parseInt(h), parseInt(m), 0, 0);
+        }
+        const diffMs = eventDate - now;
+        const diffTotalMin = Math.floor(diffMs / 60000);
+        const days = Math.floor(diffTotalMin / 1440);
+        const hours = Math.floor((diffTotalMin % 1440) / 60);
+        const minutes = diffTotalMin % 60;
+
+        let countdownStr;
+        if (days > 0) countdownStr = `${days}天 ${hours}小时`;
+        else if (hours > 0) countdownStr = `${hours}小时 ${minutes}分钟`;
+        else if (minutes > 0) countdownStr = `${minutes}分钟`;
+        else countdownStr = '现在';
+
+        const isSoon = days === 0 && hours < 24;
+        const soonClass = isSoon ? ' home-countdown-card--soon' : '';
+
+        return `<div class="home-countdown-card${soonClass}">
+            <div class="home-countdown-card__icon">${icons[e.event_type] || '📌'}</div>
+            <div class="home-countdown-card__info">
+                <div class="home-countdown-card__title">${esc(e.title)}</div>
+                <div class="home-countdown-card__meta">
+                    ${e.date} ${e.start_time ? e.start_time.slice(0,5) : '全天'}
+                    · ${labels[e.event_type] || e.event_type}
+                </div>
+            </div>
+            <div class="home-countdown-card__countdown">${countdownStr}</div>
+        </div>`;
+    }).join('');
+}
+
+// ==================== 返回按钮 ====================
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.back-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.back;
+            if (target === 'home') switchToTab('home');
+        });
+    });
+    // 首页导航卡片
+    document.querySelectorAll('.home-nav-card').forEach(card => {
+        card.addEventListener('click', () => {
+            switchToTab(card.dataset.tab);
+        });
+    });
+});
+
+function switchToTab(tab) {
+    currentTab = tab;
+    $$('.nav__tab').forEach(b => b.classList.remove('active'));
+    const tabBtn = document.querySelector(`.nav__tab[data-tab="${tab}"]`);
+    if (tabBtn) tabBtn.classList.add('active');
+    $$('.view').forEach(v => v.classList.remove('active'));
+    const view = document.getElementById(`view-${tab}`);
+    if (view) view.classList.add('active');
+    if (tab === 'home') renderHome();
+    if (tab === 'todos') renderTodos();
+    if (tab === 'calendar') renderCalendar();
+    if (tab === 'subjects') renderSubjects();
+    if (tab === 'calculus') renderCalcView();
+    if (tab === 'chat') renderChatView();
+    // 手机端收起 tabs
+    document.querySelector('.nav__tabs').classList.remove('nav__tabs--open');
+}
+
 // ==================== 启动 ====================
 document.addEventListener('DOMContentLoaded', async () => {
     if (!(await Auth.isLoggedIn())) return;
     await refreshAll();
-    renderTodos();
+    renderHome();
     renderCalendar();
 });

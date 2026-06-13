@@ -29,8 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Escaped HTML (reuse from script.js if available, otherwise define)
-function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+// esc() is provided by script.js (loaded before us)
 
 /** 渲染聊天消息 */
 function renderChat() {
@@ -60,7 +59,7 @@ function renderChat() {
 
     el.innerHTML = chatHistory.map(([q, a], i) => `
         <div class="chat-msg chat-msg--user">
-            <div class="chat-msg__bubble">${escHtml(q)}</div>
+            <div class="chat-msg__bubble">${esc(q)}</div>
         </div>
         <div class="chat-msg chat-msg--bot">
             <div class="chat-msg__bubble">${formatAnswer(a)}</div>
@@ -73,7 +72,7 @@ function renderChat() {
 
 /** 简单格式化回答：识别换行和引用标注 */
 function formatAnswer(text) {
-    let html = escHtml(text);
+    let html = esc(text);
     // 引用标注高亮: 参考资料：第x条,第y条
     html = html.replace(/参考资料：(第\d+条(?:,第\d+条)*)/, '<span class="chat-cite">📎 $1</span>');
     // 信息不足高亮
@@ -110,26 +109,40 @@ function buildUserContext() {
         parts.push(`你正在修读的课程：${summary}`);
     }
 
-    // 待办（最近的和未完成的）
+    // 待办（今天 + 昨天 + 未来 + 近期遗留）
     if (typeof todos !== 'undefined' && todos.length) {
         const active = todos.filter(t => t.status !== 'done');
         const today = new Date().toISOString().slice(0, 10);
+        const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+
         const todayTodos = active.filter(t => t.date === today);
-        const upcoming = active.filter(t => t.date > today).sort((a, b) => a.date.localeCompare(b.date));
+        const yesterdayTodos = active.filter(t => t.date === yesterday);
+        const overdueTodos = active.filter(t => t.date >= weekAgo && t.date < yesterday)
+            .sort((a, b) => a.date.localeCompare(b.date));
+        const upcoming = active.filter(t => t.date > today)
+            .sort((a, b) => a.date.localeCompare(b.date));
 
         if (todayTodos.length) {
             parts.push(`今天的待办：${todayTodos.map(t => `${t.title}(${t.priority})`).join('、')}`);
+        }
+        if (yesterdayTodos.length) {
+            parts.push(`昨天的待办：${yesterdayTodos.map(t => `${t.title}(${t.priority})`).join('、')}`);
+        }
+        if (overdueTodos.length) {
+            parts.push(`近7天遗留待办（还未完成）：${overdueTodos.map(t => `${t.date} ${t.title}(${t.priority})`).join('、')}`);
         }
         if (upcoming.length) {
             parts.push(`即将到来的待办：${upcoming.slice(0, 5).map(t => `${t.date} ${t.title}`).join('、')}`);
         }
     }
 
-    // 事件（最近几天）
+    // 事件（近两周：过去7天 + 未来7天）
     if (typeof events !== 'undefined' && events.length) {
         const today = new Date().toISOString().slice(0, 10);
+        const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
         const weekLater = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-        const near = events.filter(e => e.date >= today && e.date <= weekLater).sort((a, b) => a.date.localeCompare(b.date));
+        const near = events.filter(e => e.date >= weekAgo && e.date <= weekLater).sort((a, b) => a.date.localeCompare(b.date));
         if (near.length) {
             parts.push(`最近一周的事件：${near.map(e => {
                 const labels = { exam: '考试', class: '学习', holiday: '生活', deadline: 'DDL', other: '其他' };

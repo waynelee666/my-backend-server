@@ -230,4 +230,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+// esc() is provided by script.js (loaded before us)

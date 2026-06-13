@@ -35,6 +35,7 @@
                 <button class="nav__more-btn" id="navMoreBtn" aria-label="菜单">⋮</button>
                 <div class="nav__dropdown" id="navDropdown" style="display:none;">
                     <div class="nav__dropdown-user" id="navDropdownUser"></div>
+                    <a href="#" id="navDropdownInstall" style="display:none;">📲 添加到桌面</a>
                     <hr class="nav__dropdown-divider">
                     <a href="#" id="navDropdownLogout">🚪 退出登录</a>
                 </div>
@@ -266,30 +267,31 @@ if ('serviceWorker' in navigator) {
 // 安装按钮（PWA / 手动添加指引）
 let deferredPrompt = null;
 const installBtn = document.getElementById('installBtn');
+const installDrop = document.getElementById('navDropdownInstall');
 const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+function showInstallBtn(label) {
+    if (installBtn) { installBtn.style.display = ''; installBtn.textContent = label; }
+    if (installDrop) { installDrop.style.display = ''; installDrop.textContent = label; }
+}
 
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    installBtn.style.display = '';
-    installBtn.textContent = '📲 安装应用';
+    showInstallBtn('📲 安装应用');
 });
 
-// 手机浏览器不支持自动安装时，也显示按钮
 if (isMobile && !deferredPrompt) {
-    setTimeout(() => {
-        installBtn.style.display = '';
-        installBtn.textContent = '📲 添加到桌面';
-    }, 1500);
+    setTimeout(() => { showInstallBtn('📲 添加到桌面'); }, 1500);
 }
 
-installBtn.addEventListener('click', async () => {
+async function doInstall() {
     if (deferredPrompt) {
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
-            installBtn.textContent = '✅ 已安装';
-            installBtn.disabled = true;
+            if (installBtn) { installBtn.textContent = '✅ 已安装'; installBtn.disabled = true; }
+            if (installDrop) { installDrop.textContent = '✅ 已安装'; }
         }
         deferredPrompt = null;
     } else {
@@ -302,11 +304,14 @@ installBtn.addEventListener('click', async () => {
             '💡 Chrome 浏览器体验更好'
         );
     }
-});
+}
+
+installBtn && installBtn.addEventListener('click', doInstall);
+installDrop && installDrop.addEventListener('click', (e) => { e.preventDefault(); doInstall(); });
 
 window.addEventListener('appinstalled', () => {
-    installBtn.textContent = '✅ 已安装';
-    installBtn.disabled = true;
+    if (installBtn) { installBtn.textContent = '✅ 已安装'; installBtn.disabled = true; }
+    if (installDrop) { installDrop.textContent = '✅ 已安装'; }
 });
 </script>
 </body>

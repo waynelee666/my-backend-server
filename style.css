@@ -210,7 +210,7 @@ textarea.form-input { resize:vertical; }
     .nav__tab { padding: 8px 14px; font-size: .82rem; white-space: nowrap; flex-shrink: 0; }
     .nav__list { gap: 6px; }
     .nav__datetime { display: none; }
-    #importBtn { display: none; }
+    #importBtn, #installBtn { display: none; }
     .nav__username, .nav__logout, .nav__link--logout { display: none !important; }
     .nav__more-btn { display: flex; align-items: center; justify-content: center; }
 

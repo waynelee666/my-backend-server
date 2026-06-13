@@ -29,8 +29,16 @@
             <li><span class="nav__datetime" id="navDatetime"></span></li>
             <li><button class="btn btn--outline btn--sm" id="importBtn">📤 导入</button></li>
             <li><button class="btn btn--primary btn--sm" id="installBtn" style="display:none;">📲 安装应用</button></li>
-            <li><span id="nav-username" class="nav__username" style="display:none;"></span></li>
-            <li><a href="#" id="nav-logout" class="nav__link nav__link--logout" style="display:none;">退出</a></li>
+            <li class="nav__user">
+                <span id="nav-username" class="nav__username" style="display:none;"></span>
+                <a href="#" id="nav-logout" class="nav__link nav__link--logout" style="display:none;">退出</a>
+                <button class="nav__more-btn" id="navMoreBtn" aria-label="菜单">⋮</button>
+                <div class="nav__dropdown" id="navDropdown" style="display:none;">
+                    <div class="nav__dropdown-user" id="navDropdownUser"></div>
+                    <hr class="nav__dropdown-divider">
+                    <a href="#" id="navDropdownLogout">🚪 退出登录</a>
+                </div>
+            </li>
         </ul>
     </nav>
 </header>
@@ -221,7 +229,24 @@ function showAuthUI(username) {
     const ue = document.getElementById('nav-username'), le = document.getElementById('nav-logout');
     if (ue) { ue.textContent = username; ue.style.display = ''; }
     if (le) { le.style.display = ''; le.addEventListener('click', e => { e.preventDefault(); Auth.logout(); }); }
+    // 下拉菜单（手机端）
+    const du = document.getElementById('navDropdownUser'), dl = document.getElementById('navDropdownLogout');
+    if (du) { du.textContent = '👤 ' + username; }
+    if (dl) { dl.addEventListener('click', e => { e.preventDefault(); Auth.logout(); }); }
 }
+
+// 三点菜单开关
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('navMoreBtn'), dropdown = document.getElementById('navDropdown');
+    if (btn && dropdown) {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const show = dropdown.style.display === 'none';
+            dropdown.style.display = show ? '' : 'none';
+        });
+        document.addEventListener('click', () => { dropdown.style.display = 'none'; });
+    }
+});
 (async () => {
     if (!(await Auth.isLoggedIn())) { window.location.href = '/login.html'; return; }
     let r;

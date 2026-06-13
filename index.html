@@ -28,6 +28,7 @@
         <ul class="nav__list">
             <li><span class="nav__datetime" id="navDatetime"></span></li>
             <li><button class="btn btn--outline btn--sm" id="importBtn">📤 导入</button></li>
+            <li><button class="btn btn--primary btn--sm" id="installBtn" style="display:none;">📲 安装应用</button></li>
             <li><span id="nav-username" class="nav__username" style="display:none;"></span></li>
             <li><a href="#" id="nav-logout" class="nav__link nav__link--logout" style="display:none;">退出</a></li>
         </ul>
@@ -232,9 +233,36 @@ function showAuthUI(username) {
 })();
 </script>
 <script>
+// Service Worker
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js');
 }
+
+// 安装按钮（PWA）
+let deferredPrompt = null;
+const installBtn = document.getElementById('installBtn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.style.display = '';
+});
+
+installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+        installBtn.textContent = '✅ 已安装';
+        installBtn.disabled = true;
+    }
+    deferredPrompt = null;
+});
+
+window.addEventListener('appinstalled', () => {
+    installBtn.textContent = '✅ 已安装';
+    installBtn.disabled = true;
+});
 </script>
 </body>
 </html>

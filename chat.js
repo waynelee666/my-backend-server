@@ -253,11 +253,10 @@ async function sendChat() {
         try {
             const actions = JSON.parse(actionMatch[1]);
             await executeActions(actions);
-            // 从显示中移除操作指令块
             chatHistory[lastIdx][1] = fullAnswer.replace(/__ACTIONS__[\s\S]*?__END_ACTIONS__/, '').trim();
         } catch (e) {
-            console.error('执行操作失败:', e);
-            chatHistory[lastIdx][1] = fullAnswer.replace(/__ACTIONS__[\s\S]*?__END_ACTIONS__/, '') + '\n\n⚠️ 操作执行失败：' + e.message;
+            console.warn('操作指令解析失败（已忽略）:', e.message);
+            chatHistory[lastIdx][1] = fullAnswer.replace(/__ACTIONS__[\s\S]*?__END_ACTIONS__/, '').trim();
         }
     }
 

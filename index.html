@@ -238,25 +238,45 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js');
 }
 
-// 安装按钮（PWA）
+// 安装按钮（PWA / 手动添加指引）
 let deferredPrompt = null;
 const installBtn = document.getElementById('installBtn');
+const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
 
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
     installBtn.style.display = '';
+    installBtn.textContent = '📲 安装应用';
 });
 
+// 手机浏览器不支持自动安装时，也显示按钮
+if (isMobile && !deferredPrompt) {
+    setTimeout(() => {
+        installBtn.style.display = '';
+        installBtn.textContent = '📲 添加到桌面';
+    }, 1500);
+}
+
 installBtn.addEventListener('click', async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-        installBtn.textContent = '✅ 已安装';
-        installBtn.disabled = true;
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            installBtn.textContent = '✅ 已安装';
+            installBtn.disabled = true;
+        }
+        deferredPrompt = null;
+    } else {
+        alert(
+            '📲 添加到桌面步骤：\n\n' +
+            '1. 点浏览器底部「分享」按钮\n' +
+            '   （或右上角 ⋮ 菜单）\n' +
+            '2. 找到「添加到主屏幕」\n' +
+            '3. 点「添加」完成\n\n' +
+            '💡 Chrome 浏览器体验更好'
+        );
     }
-    deferredPrompt = null;
 });
 
 window.addEventListener('appinstalled', () => {

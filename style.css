@@ -207,7 +207,7 @@ textarea.form-input { resize:vertical; }
         scrollbar-width: none;
     }
     .nav__tabs::-webkit-scrollbar { display: none; }
-    .nav__tab { padding: 8px 14px; font-size: .82rem; white-space: nowrap; flex-shrink: 0; }
+    .nav__tab { padding: 10px 18px; font-size: .85rem; white-space: nowrap; flex-shrink: 0; }
     .nav__list { gap: 6px; }
     .nav__datetime { display: none; }
     #importBtn, #installBtn { display: none; }
@@ -283,7 +283,7 @@ textarea.form-input { resize:vertical; }
     .container { padding: 0 10px; }
 
     /* 导航 */
-    .nav__tab { padding: 8px 12px; font-size: .78rem; }
+    .nav__tab { padding: 10px 16px; font-size: .82rem; }
     .nav__logo { font-size: .9rem; }
     .nav__more-btn { width: 40px; height: 40px; font-size: 1.5rem; }
     .nav__dropdown { min-width: 140px; padding: 10px; }

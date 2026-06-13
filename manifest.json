@@ -1,0 +1,19 @@
+{
+  "name": "TaskFlow - 学业管理",
+  "short_name": "TaskFlow",
+  "description": "待办、日历、科目、绩点计算与 AI 助手",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

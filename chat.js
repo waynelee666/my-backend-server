@@ -152,6 +152,14 @@ function buildUserContext() {
         }
     }
 
+    // 想法
+    if (typeof thoughts !== 'undefined' && thoughts.length) {
+        const recentThoughts = thoughts.slice(0, 20);
+        if (recentThoughts.length) {
+            parts.push(`用户最近的想法：${recentThoughts.map(t => `[${t.id}] ${t.content}`).join('；')}`);
+        }
+    }
+
     // 查重
     const dupTodos = findDuplicates(todos, t => `${t.title}|${t.date}`);
     const dupEvents = findDuplicates(events, e => `${e.title}|${e.date}|${e.event_type}`);
@@ -414,6 +422,18 @@ async function executeActions(actions) {
                 if (!s) throw new Error(`未找到科目"${data.subject_name}"`);
                 const comps = (s.components || []).filter(c => c.name !== data.component_name);
                 await DS.update('subjects', s.id, { components: comps });
+            }
+        } else if (entity === 'thought') {
+            if (action === 'add') {
+                await DS.create('thoughts', { content: data.content });
+            } else if (action === 'delete') {
+                // 支持按 id 或按内容匹配删除
+                if (data.id) {
+                    await DS.remove('thoughts', data.id);
+                } else if (data.content) {
+                    const match = (thoughts || []).find(t => t.content.includes(data.content) || data.content.includes(t.content));
+                    if (match) await DS.remove('thoughts', match.id);
+                }
             }
         }
     }

@@ -6,7 +6,7 @@ const sb = Auth.getClient();
 const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
 
 // ==================== 全局状态 ====================
-let subjects = [], events = [], todos = [];
+let subjects = [], events = [], todos = [], thoughts = [];
 let currentTab = 'home';
 let todoDate = new Date().toISOString().slice(0, 10);
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
@@ -39,6 +39,7 @@ const DS = {
     async loadSubjects() { try { const { data } = await sb.from('subjects').select('*').order('position',{ascending:true}).order('created_at'); return data||[]; } catch(e) { console.warn('subjects:',e); const { data } = await sb.from('subjects').select('*').order('created_at'); return data||[]; } },
     async loadEvents() { const { data } = await sb.from('events').select('*').order('date'); return data||[]; },
     async loadTodos() { const { data } = await sb.from('todos').select('*').order('created_at',{ascending:false}); return data||[]; },
+    async loadThoughts() { const { data } = await sb.from('thoughts').select('*').order('created_at',{ascending:false}); return data||[]; },
     async create(table, row) { const u = await sb.auth.getUser(); row.user_id = u.data.user.id;
         const { data, error } = await sb.from(table).insert(row).select().single(); if (error) throw error; return data; },
     async update(table, id, fields) {
@@ -47,15 +48,16 @@ const DS = {
 };
 
 async function refreshAll() {
-    const [s, e, t] = await Promise.all([
+    const [s, e, t, th] = await Promise.all([
         DS.loadSubjects().catch(e=>(console.warn(e),[])),
         DS.loadEvents().catch(e=>(console.warn(e),[])),
-        DS.loadTodos().catch(e=>(console.warn(e),[]))
+        DS.loadTodos().catch(e=>(console.warn(e),[])),
+        DS.loadThoughts().catch(e=>(console.warn(e),[]))
     ]);
-    subjects = s; events = e; todos = t;
+    subjects = s; events = e; todos = t; thoughts = th;
     renderCurrent();
 }
-function renderCurrent() { if (currentTab==='home') renderHome(); else if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else if (currentTab==='subjects') renderSubjects(); else if (currentTab==='calculus') renderCalcView(); else if (currentTab==='chat') renderChatView(); }
+function renderCurrent() { if (currentTab==='home') renderHome(); else if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else if (currentTab==='subjects') renderSubjects(); else if (currentTab==='thoughts') renderThoughts(); else if (currentTab==='calculus') renderCalcView(); else if (currentTab==='chat') renderChatView(); }
 
 // ==================== Tab 切换 ====================
 $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
@@ -66,6 +68,7 @@ $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
 	    if (currentTab === 'calendar') renderCalendar();
     if (currentTab === 'subjects') renderSubjects();
     if (currentTab === 'todos') renderTodos();
+    if (currentTab === 'thoughts') renderThoughts();
     if (currentTab === 'calculus') renderCalcView();
     if (currentTab === 'chat') renderChatView();
 }));
@@ -298,6 +301,89 @@ $('#dayCardAddEvent').addEventListener('click', () => {
         </div>
     `);
     $('#modalForm').onsubmit = async e => { e.preventDefault(); await saveModal(); };
+});
+
+// ==================== 想法视图 ====================
+function renderThoughts() {
+    const countEl = document.getElementById('thoughtCount');
+    if (countEl) countEl.textContent = thoughts.length ? `共 ${thoughts.length} 条` : '';
+
+    const listEl = document.getElementById('thoughtsList');
+    if (!listEl) return;
+
+    if (!thoughts.length) {
+        listEl.innerHTML = '<p class="empty-text">暂无想法，在上方输入框记录吧 ✨</p>';
+        return;
+    }
+
+    listEl.innerHTML = thoughts.map(t => {
+        const time = t.created_at ? new Date(t.created_at).toLocaleString('zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+        return `<div class="thought-card" data-id="${t.id}">
+            <div class="thought-card__content">${esc(t.content)}</div>
+            <div class="thought-card__footer">
+                <span class="thought-card__time">${time}</span>
+                <button class="thought-card__del" data-action="delete" data-id="${t.id}" title="删除">🗑️</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// 添加想法
+async function addThought() {
+    const input = document.getElementById('thoughtInput');
+    const content = input.value.trim();
+    if (!content) return;
+    input.value = '';
+    input.disabled = true;
+    document.getElementById('thoughtAddBtn').disabled = true;
+    try {
+        await DS.create('thoughts', { content });
+        await refreshAll();
+    } catch (e) {
+        console.error('添加想法失败:', e);
+        showToast('添加失败: ' + e.message, 'error');
+    }
+    input.disabled = false;
+    document.getElementById('thoughtAddBtn').disabled = false;
+    input.focus();
+}
+
+// 删除想法
+async function deleteThought(id) {
+    if (!confirm('确定删除这条想法吗？')) return;
+    try {
+        await DS.remove('thoughts', id);
+        thoughts = thoughts.filter(t => t.id !== id);
+        renderThoughts();
+    } catch (e) {
+        console.error('删除想法失败:', e);
+    }
+}
+
+// 事件绑定（DOMContentLoaded 中统一处理）
+document.addEventListener('DOMContentLoaded', () => {
+    const thoughtInput = document.getElementById('thoughtInput');
+    const thoughtAddBtn = document.getElementById('thoughtAddBtn');
+    if (thoughtAddBtn) thoughtAddBtn.addEventListener('click', addThought);
+    if (thoughtInput) {
+        thoughtInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                addThought();
+            }
+        });
+    }
+
+    const thoughtsList = document.getElementById('thoughtsList');
+    if (thoughtsList) {
+        thoughtsList.addEventListener('click', (e) => {
+            const delBtn = e.target.closest('[data-action="delete"]');
+            if (delBtn) {
+                const id = parseInt(delBtn.dataset.id);
+                if (id) deleteThought(id);
+            }
+        });
+    }
 });
 
 // ==================== 科目视图 ====================
@@ -911,6 +997,7 @@ function switchToTab(tab) {
     if (tab === 'todos') renderTodos();
     if (tab === 'calendar') renderCalendar();
     if (tab === 'subjects') renderSubjects();
+    if (tab === 'thoughts') renderThoughts();
     if (tab === 'calculus') renderCalcView();
     if (tab === 'chat') renderChatView();
     // 手机端收起 tabs

@@ -62,6 +62,7 @@ CHAT_PROMPT_MODIFY = CHAT_PROMPT + (
     '- ⭐重设整个绩点分布（先清空再设！修改绩点分布时用这个！）: {"entity":"component","action":"set_components","data":{"subject_name":"科目名","components":[{"name":"平时","percentage":40,"score":90},{"name":"期中","percentage":30,"score":85},{"name":"期末","percentage":30}]}}\n'
     '- 去重（删除重复的待办和事件）: {"entity":"dedup","action":"run","data":{"target":"todos|events|all"}}\n'
     '- 记录想法: {"entity":"thought","action":"add","data":{"content":"想法内容"}}\n'
+    '- 修改想法: {"entity":"thought","action":"update","data":{"id":123,"new_content":"新内容"}} 或 {"entity":"thought","action":"update","data":{"old_content":"匹配旧内容","new_content":"新内容"}}\n'
     '- 删除想法: {"entity":"thought","action":"delete","data":{"id":123}} 或 {"entity":"thought","action":"delete","data":{"content":"匹配内容"}}\n'
     '注意：用户说「修改绩点分布」或「改成...」时，必须用 set_components 整体替换，不要用 add 累加！\n'
     '背景信息中会标注重复项（⚠️），同学说「清理重复」或「去重」时，直接执行 dedup！'

@@ -463,8 +463,12 @@ textarea.form-input { resize:vertical; }
 .thought-card__content { font-size:.9rem; line-height:1.6; white-space:pre-wrap; word-break:break-word; padding-right:30px; }
 .thought-card__footer { display:flex; align-items:center; justify-content:space-between; }
 .thought-card__time { font-size:.75rem; color:var(--color-text-light); }
-.thought-card__del { border:none; background:none; cursor:pointer; font-size:.85rem; padding:2px 6px; border-radius:4px; opacity:.4; transition:all var(--transition); }
+.thought-card__actions { display:flex; gap:4px; }
+.thought-card__btn { border:none; background:none; cursor:pointer; font-size:.85rem; padding:2px 6px; border-radius:4px; opacity:.4; transition:all var(--transition); }
+.thought-card__btn:hover { opacity:1; background:#f1f5f9; }
 .thought-card__del:hover { opacity:1; background:#fee2e2; }
+.thought-edit-area { width:100%; min-height:80px; padding:10px 12px; border:1px solid var(--color-primary); border-radius:8px; font-family:inherit; font-size:.9rem; line-height:1.6; resize:vertical; outline:none; }
+.thought-edit-actions { display:flex; gap:6px; justify-content:flex-end; margin-top:8px; }
 
 /* ==================== 微积分 ==================== */
 .calc-plan { display:flex; flex-direction:column; gap:6px; }

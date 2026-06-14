@@ -426,8 +426,16 @@ async function executeActions(actions) {
         } else if (entity === 'thought') {
             if (action === 'add') {
                 await DS.create('thoughts', { content: data.content });
+            } else if (action === 'update') {
+                // 支持按 id 或按旧内容匹配修改
+                let match;
+                if (data.id) {
+                    match = (thoughts || []).find(t => t.id === data.id);
+                } else if (data.old_content) {
+                    match = (thoughts || []).find(t => t.content.includes(data.old_content) || data.old_content.includes(t.content));
+                }
+                if (match) await DS.update('thoughts', match.id, { content: data.new_content });
             } else if (action === 'delete') {
-                // 支持按 id 或按内容匹配删除
                 if (data.id) {
                     await DS.remove('thoughts', data.id);
                 } else if (data.content) {

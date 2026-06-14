@@ -319,10 +319,13 @@ function renderThoughts() {
     listEl.innerHTML = thoughts.map(t => {
         const time = t.created_at ? new Date(t.created_at).toLocaleString('zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
         return `<div class="thought-card" data-id="${t.id}">
-            <div class="thought-card__content">${esc(t.content)}</div>
+            <div class="thought-card__content" data-id="${t.id}">${esc(t.content)}</div>
             <div class="thought-card__footer">
                 <span class="thought-card__time">${time}</span>
-                <button class="thought-card__del" data-action="delete" data-id="${t.id}" title="删除">🗑️</button>
+                <div class="thought-card__actions">
+                    <button class="thought-card__btn" data-action="edit" data-id="${t.id}" title="编辑">✏️</button>
+                    <button class="thought-card__btn thought-card__del" data-action="delete" data-id="${t.id}" title="删除">🗑️</button>
+                </div>
             </div>
         </div>`;
     }).join('');
@@ -360,6 +363,52 @@ async function deleteThought(id) {
     }
 }
 
+// 进入编辑模式
+function enterEditThought(id) {
+    const t = thoughts.find(x => x.id === id);
+    if (!t) return;
+    const contentEl = document.querySelector(`.thought-card__content[data-id="${id}"]`);
+    if (!contentEl) return;
+    contentEl.innerHTML = `<textarea class="thought-edit-area" id="thoughtEditArea">${esc(t.content)}</textarea>
+        <div class="thought-edit-actions">
+            <button class="btn btn--outline btn--sm" id="thoughtCancelBtn">取消</button>
+            <button class="btn btn--primary btn--sm" id="thoughtSaveBtn">保存</button>
+        </div>`;
+    const textarea = document.getElementById('thoughtEditArea');
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    // 保存
+    document.getElementById('thoughtSaveBtn').addEventListener('click', () => saveEditThought(id));
+    // 取消
+    document.getElementById('thoughtCancelBtn').addEventListener('click', () => renderThoughts());
+    // 快捷键
+    textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.ctrlKey) {
+            e.preventDefault();
+            saveEditThought(id);
+        } else if (e.key === 'Escape') {
+            renderThoughts();
+        }
+    });
+}
+
+// 保存编辑
+async function saveEditThought(id) {
+    const textarea = document.getElementById('thoughtEditArea');
+    const content = textarea.value.trim();
+    if (!content) return;
+    try {
+        await DS.update('thoughts', id, { content });
+        const t = thoughts.find(x => x.id === id);
+        if (t) t.content = content;
+        renderThoughts();
+    } catch (e) {
+        console.error('更新想法失败:', e);
+        showToast('更新失败: ' + e.message, 'error');
+    }
+}
+
 // 事件绑定（DOMContentLoaded 中统一处理）
 document.addEventListener('DOMContentLoaded', () => {
     const thoughtInput = document.getElementById('thoughtInput');
@@ -377,6 +426,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const thoughtsList = document.getElementById('thoughtsList');
     if (thoughtsList) {
         thoughtsList.addEventListener('click', (e) => {
+            const editBtn = e.target.closest('[data-action="edit"]');
+            if (editBtn) {
+                const id = parseInt(editBtn.dataset.id);
+                if (id) enterEditThought(id);
+                return;
+            }
             const delBtn = e.target.closest('[data-action="delete"]');
             if (delBtn) {
                 const id = parseInt(delBtn.dataset.id);

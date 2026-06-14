@@ -678,6 +678,19 @@ function esc(s) { const d=document.createElement('div'); d.textContent=s; return
 
 // ==================== 文件导入 ====================
 $('#importBtn').addEventListener('click', () => $('#importFile').click());
+async function doRefresh() {
+    const btn = $('#refreshBtn');
+    if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+    await refreshAll();
+    if (btn) { btn.textContent = '🔄'; btn.disabled = false; }
+    showToast('已刷新', 'success');
+}
+$('#refreshBtn').addEventListener('click', doRefresh);
+$('#navDropdownRefresh').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('navDropdown').style.display = 'none';
+    doRefresh();
+});
 $('#importFile').addEventListener('change', async () => {
     try {
     const file = $('#importFile').files[0];

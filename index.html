@@ -30,6 +30,7 @@
         <ul class="nav__list">
             <li><span class="nav__datetime" id="navDatetime"></span></li>
             <li><button class="btn btn--outline btn--sm" id="importBtn">📤 导入</button></li>
+            <li><button class="btn btn--outline btn--sm" id="refreshBtn" title="刷新数据">🔄</button></li>
             <li><button class="btn btn--primary btn--sm" id="installBtn" style="display:none;">📲 安装应用</button></li>
             <li class="nav__user">
                 <span id="nav-username" class="nav__username" style="display:none;"></span>
@@ -37,6 +38,7 @@
                 <button class="nav__more-btn" id="navMoreBtn" aria-label="菜单">⋮</button>
                 <div class="nav__dropdown" id="navDropdown" style="display:none;">
                     <div class="nav__dropdown-user" id="navDropdownUser"></div>
+                    <a href="#" id="navDropdownRefresh">🔄 刷新数据</a>
                     <a href="#" id="navDropdownInstall" style="display:none;">📲 添加到桌面</a>
                     <hr class="nav__dropdown-divider">
                     <a href="#" id="navDropdownLogout">🚪 退出登录</a>

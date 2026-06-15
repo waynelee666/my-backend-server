@@ -321,9 +321,31 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 <script>
-// Service Worker
+// Service Worker（带自动更新检测）
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+        // 检测到新版本 → 自动刷新
+        reg.addEventListener('updatefound', () => {
+            const newSW = reg.installing;
+            if (!newSW) return;
+            newSW.addEventListener('statechange', () => {
+                if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                    // 新 SW 已就绪，提示用户刷新
+                    showToast('🔄 有新版本，正在更新...', 'info');
+                    setTimeout(() => {
+                        newSW.postMessage('skipWaiting');
+                        window.location.reload();
+                    }, 800);
+                }
+            });
+        });
+    });
+    // 定期检查更新（每 30 分钟）
+    setInterval(() => {
+        navigator.serviceWorker.getRegistration().then(reg => {
+            if (reg) reg.update();
+        });
+    }, 30 * 60 * 1000);
 }
 
 // 安装按钮（PWA / 手动添加指引）

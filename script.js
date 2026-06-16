@@ -37,7 +37,7 @@ function findSimilarSubject(name) {
 // ==================== 数据层 ====================
 const DS = {
     async loadSubjects() { try { const { data } = await sb.from('subjects').select('*').order('position',{ascending:true}).order('created_at'); return data||[]; } catch(e) { console.warn('subjects:',e); const { data } = await sb.from('subjects').select('*').order('created_at'); return data||[]; } },
-    async loadEvents() { const { data } = await sb.from('events').select('*').order('date'); return data||[]; },
+    async loadEvents() { const { data } = await sb.from('events').select('*').order('date').order('start_time'); return data||[]; },
     async loadTodos() { const { data } = await sb.from('todos').select('*').order('created_at',{ascending:false}); return data||[]; },
     async loadThoughts() { const { data } = await sb.from('thoughts').select('*').order('created_at',{ascending:false}); return data||[]; },
     async create(table, row) { const u = await sb.auth.getUser(); row.user_id = u.data.user.id;
@@ -54,7 +54,12 @@ async function refreshAll() {
         DS.loadTodos().catch(e=>(console.warn(e),[])),
         DS.loadThoughts().catch(e=>(console.warn(e),[]))
     ]);
-    subjects = s; events = e; todos = t; thoughts = th;
+    subjects = s; todos = t; thoughts = th;
+    // 事件默认按日期→时间排序（同一天内从早到晚）
+    events = e.sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return (a.start_time || '99:99').localeCompare(b.start_time || '99:99');
+    });
     renderCurrent();
 }
 function renderCurrent() { if (currentTab==='home') renderHome(); else if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else if (currentTab==='subjects') renderSubjects(); else if (currentTab==='thoughts') renderThoughts(); else if (currentTab==='calculus') renderCalcView(); else if (currentTab==='chat') renderChatView(); }

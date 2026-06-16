@@ -237,6 +237,11 @@
                     <button class="chat-mode-btn active" data-mode="chat">💬 聊天</button>
                     <button class="chat-mode-btn" data-mode="qa">📚 问答</button>
                     <button class="chat-mode-btn" data-mode="modify">✏️ 修改</button>
+                    <button class="chat-mode-btn" data-mode="calc">📐 微积小马</button>
+                </div>
+                <div style="display:none;gap:2px;background:#eef2ff;border-radius:8px;padding:3px" id="calcSubMode">
+                    <button class="chat-mode-btn calc-sub-btn active" data-calc-mode="calc-learn">🎓 学习</button>
+                    <button class="chat-mode-btn calc-sub-btn" data-calc-mode="calc-review">🔗 复习</button>
                 </div>
                 <button class="btn btn--outline btn--sm" id="chatClearBtn">🗑️ 清空对话</button>
             </div>
@@ -289,8 +294,8 @@
 <script src="supabase.min.js"></script>
 <script src="auth.js?v=3.2"></script>
 <script src="script.js?v=3.3"></script>
-<script src="calc.js?v=2.0"></script>
-<script src="chat.js?v=1.0"></script>
+<script src="calc.js?v=2.1"></script>
+<script src="chat.js?v=1.2"></script>
 
 <script>
 function showAuthUI(username) {

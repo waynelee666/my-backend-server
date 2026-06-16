@@ -79,18 +79,56 @@ const CALC_CHAPTERS = [
     },
 ];
 
-// ==================== 进度管理 ====================
-function loadCalcProgress() {
-    try { return JSON.parse(localStorage.getItem('calc_progress') || '{}'); }
-    catch (e) { return {}; }
+// ==================== 进度管理（Supabase 持久化 + localStorage 兜底） ====================
+const CALC_KEY = 'calc_progress';
+let _progressCache = null;  // 内存缓存，避免反复 async
+
+async function initProgress() {
+    // 先读 localStorage（秒开）
+    let local = {};
+    try { local = JSON.parse(localStorage.getItem(CALC_KEY) || '{}'); } catch (e) {}
+    _progressCache = local;
+
+    // 异步从 Supabase 同步
+    try {
+        const { data } = await Auth.getClient().from('calc_progress').select('progress').single();
+        if (data && data.progress) {
+            _progressCache = data.progress;
+            localStorage.setItem(CALC_KEY, JSON.stringify(data.progress));
+        }
+    } catch (e) { /* 表不存在或网络错误，用本地数据 */ }
 }
-function saveCalcProgress(prog) {
-    localStorage.setItem('calc_progress', JSON.stringify(prog));
+
+function getProgress() {
+    if (!_progressCache) {
+        try { _progressCache = JSON.parse(localStorage.getItem(CALC_KEY) || '{}'); } catch (e) { _progressCache = {}; }
+    }
+    return _progressCache;
+}
+
+function saveProgress(prog) {
+    _progressCache = prog;
+    // 同步写 localStorage（离线可用）
+    localStorage.setItem(CALC_KEY, JSON.stringify(prog));
+    // 异步写 Supabase（不阻塞 UI）
+    (async () => {
+        try {
+            const sb = Auth.getClient();
+            const u = await sb.auth.getUser();
+            const userId = u.data.user.id;
+            const { data: existing } = await sb.from('calc_progress').select('id').eq('user_id', userId).maybeSingle();
+            if (existing) {
+                await sb.from('calc_progress').update({ progress: prog, updated_at: new Date().toISOString() }).eq('user_id', userId);
+            } else {
+                await sb.from('calc_progress').insert({ user_id: userId, progress: prog });
+            }
+        } catch (e) { /* 静默忽略 */ }
+    })();
 }
 
 /** 章节进度统计 */
 function chapterStats(ch) {
-    const progress = loadCalcProgress();
+    const progress = getProgress();
     const chData = progress[ch.name] || {};
     const total = ch.sections.length;
     const done = ch.sections.filter(s => chData[s] && chData[s].done).length;
@@ -101,7 +139,7 @@ function chapterStats(ch) {
 function renderCalcPlan() {
     const el = document.getElementById('calcPlan');
     if (!el) return;
-    const progress = loadCalcProgress();
+    const progress = getProgress();
 
     el.innerHTML = CALC_CHAPTERS.map((ch, i) => {
         const stats = chapterStats(ch);
@@ -158,7 +196,7 @@ function bindCalcEvents() {
             const chName = header.dataset.ch;
             const body = header.nextElementSibling;
             const arrow = header.querySelector('.calc-chapter__arrow');
-            const progress = loadCalcProgress();
+            const progress = getProgress();
             const chData = progress[chName] || {};
             const expanded = body.style.display !== 'none';
 
@@ -172,7 +210,7 @@ function bindCalcEvents() {
                 chData._expanded = true;
             }
             progress[chName] = chData;
-            saveCalcProgress(progress);
+            saveProgress(progress);
         });
     });
 
@@ -183,7 +221,7 @@ function bindCalcEvents() {
             const chName = btn.dataset.ch;
             const ch = CALC_CHAPTERS.find(c => c.name === chName);
             if (!ch) return;
-            const progress = loadCalcProgress();
+            const progress = getProgress();
             const chData = progress[chName] || {};
             const stats = chapterStats(ch);
             const allDone = stats.done === stats.total;
@@ -195,7 +233,7 @@ function bindCalcEvents() {
                 chData[sec].done = newVal;
             });
             progress[chName] = chData;
-            saveCalcProgress(progress);
+            saveProgress(progress);
             renderCalcPlan();
         });
     });
@@ -205,12 +243,12 @@ function bindCalcEvents() {
         btn.addEventListener('click', () => {
             const chName = btn.dataset.ch;
             const secName = btn.dataset.sec;
-            const progress = loadCalcProgress();
+            const progress = getProgress();
             const chData = progress[chName] || {};
             if (!chData[secName]) chData[secName] = {};
             chData[secName].done = !chData[secName].done;
             progress[chName] = chData;
-            saveCalcProgress(progress);
+            saveProgress(progress);
             renderCalcPlan();
         });
     });
@@ -221,12 +259,12 @@ function bindCalcEvents() {
             e.stopPropagation();
             const chName = input.dataset.ch;
             const secName = input.dataset.sec;
-            const progress = loadCalcProgress();
+            const progress = getProgress();
             const chData = progress[chName] || {};
             if (!chData[secName]) chData[secName] = {};
             chData[secName].date = input.value;
             progress[chName] = chData;
-            saveCalcProgress(progress);
+            saveProgress(progress);
         });
     });
 
@@ -235,11 +273,11 @@ function bindCalcEvents() {
         input.addEventListener('change', (e) => {
             e.stopPropagation();
             const chName = input.dataset.ch;
-            const progress = loadCalcProgress();
+            const progress = getProgress();
             const chData = progress[chName] || {};
             chData._date = input.value;
             progress[chName] = chData;
-            saveCalcProgress(progress);
+            saveProgress(progress);
         });
     });
 }
@@ -411,7 +449,8 @@ const FORMULAS = {
 };
 
 // ==================== 渲染入口 ====================
-function renderCalcView() {
+async function renderCalcView() {
+    await initProgress();
     renderCalcPlan();
 }
 
@@ -444,7 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 重置进度
     document.getElementById('calcResetBtn')?.addEventListener('click', () => {
         if (confirm('确定重置所有复习进度？')) {
-            localStorage.removeItem('calc_progress');
+            saveProgress({});
             renderCalcPlan();
         }
     });

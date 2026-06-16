@@ -1,31 +1,84 @@
 /* ============================================================
-   TaskFlow - 小马问答  v1.1
+   TaskFlow - 小马问答  v1.2 — 新增微积小马（学习+复习）
    ============================================================ */
 console.log('💬 Chat module loaded');
 
 let chatHistory = [];  // [[q1,a1],[q2,a2],...]
 let chatWaiting = false;
-let chatMode = 'chat';  // 'chat'=纯聊天, 'qa'=问答(知识库+聊天), 'modify'=修改模式(聊天+修改权限)
+let chatMode = 'chat';       // 'chat' | 'qa' | 'modify' | 'calc-learn' | 'calc-review'
+let calcSubMode = 'calc-learn'; // 微积小马子模式：'calc-learn' 学习 | 'calc-review' 复习
 
 /** 切换模式 */
 function setChatMode(mode) {
     chatMode = mode;
     const input = document.getElementById('chatInput');
-    document.querySelectorAll('.chat-mode-btn').forEach(b => b.classList.remove('active'));
-    const btn = document.querySelector(`.chat-mode-btn[data-mode="${mode}"]`);
-    if (btn) btn.classList.add('active');
+    const subGroup = document.getElementById('calcSubMode');
+
+    // 清除主按钮 active
+    document.querySelectorAll('#modeGroup .chat-mode-btn').forEach(b => b.classList.remove('active'));
+
+    // 微积小马：激活主按钮 + 显示子模式
+    if (mode === 'calc' || mode === 'calc-learn' || mode === 'calc-review') {
+        const calcBtn = document.querySelector('.chat-mode-btn[data-mode="calc"]');
+        if (calcBtn) calcBtn.classList.add('active');
+        if (subGroup) subGroup.style.display = '';
+        // 设置子模式 active
+        document.querySelectorAll('.calc-sub-btn').forEach(b => b.classList.remove('active'));
+        const subBtn = document.querySelector(`.calc-sub-btn[data-calc-mode="${mode}"]`);
+        if (subBtn) subBtn.classList.add('active');
+        chatMode = mode;
+    } else {
+        // 非微积模式：隐藏子模式
+        if (subGroup) subGroup.style.display = 'none';
+        const btn = document.querySelector(`.chat-mode-btn[data-mode="${mode}"]`);
+        if (btn) btn.classList.add('active');
+    }
 
     const placeholders = {
         qa: '问小马学校规定、课程问题...',
         chat: '和小马随便聊聊...',
         modify: '让小马帮你改待办、加事件...',
+        'calc-learn': '问微积小马概念、题目、证明...（导师模式）',
+        'calc-review': '让微积小马帮你串联知识点...（串讲模式）',
     };
-    input.placeholder = placeholders[mode] || placeholders.qa;
+    input.placeholder = placeholders[mode] || placeholders.chat;
+}
+
+/** 切换微积小马子模式 */
+function setCalcSubMode(subMode) {
+    chatMode = subMode;
+    calcSubMode = subMode;
+    document.querySelectorAll('.calc-sub-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.querySelector(`.calc-sub-btn[data-calc-mode="${subMode}"]`);
+    if (btn) btn.classList.add('active');
+
+    const input = document.getElementById('chatInput');
+    const placeholders = {
+        'calc-learn': '问微积小马概念、题目、证明...（导师模式）',
+        'calc-review': '让微积小马帮你串联知识点...（串讲模式）',
+    };
+    input.placeholder = placeholders[subMode] || '';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.chat-mode-btn').forEach(btn => {
-        btn.addEventListener('click', () => setChatMode(btn.dataset.mode));
+    // 主模式按钮
+    document.querySelectorAll('#modeGroup .chat-mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const mode = btn.dataset.mode;
+            if (mode === 'calc') {
+                // 点击微积小马 → 进入当前子模式
+                setChatMode(calcSubMode);
+            } else {
+                setChatMode(mode);
+            }
+        });
+    });
+
+    // 微积子模式按钮
+    document.querySelectorAll('.calc-sub-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setCalcSubMode(btn.dataset.calcMode);
+        });
     });
 });
 
@@ -159,6 +212,32 @@ function buildUserContext() {
             parts.push(`用户最近的想法：${recentThoughts.map(t => `[${t.id}] ${t.content}`).join('；')}`);
         }
     }
+
+    // 微积分复习进度（从 localStorage 读取）
+    try {
+        const calcProgress = JSON.parse(localStorage.getItem('calc_progress') || '{}');
+        const chapterNames = Object.keys(calcProgress).filter(k => !k.startsWith('_'));
+        if (chapterNames.length > 0) {
+            const calcSummary = chapterNames.map(chName => {
+                const chData = calcProgress[chName] || {};
+                const sections = Object.keys(chData).filter(k => !k.startsWith('_'));
+                const doneCount = sections.filter(s => chData[s] && chData[s].done).length;
+                const total = sections.length || 0;
+                const chDate = chData._date || '';
+                // 小节详情：列出未完成的
+                const undone = sections.filter(s => !(chData[s] && chData[s].done));
+                let detail = `${chName}：${doneCount}/${total} 已完成`;
+                if (chDate) detail += `，计划${chDate}复习`;
+                if (undone.length > 0 && undone.length <= 5) {
+                    detail += `，待完成：${undone.join('、')}`;
+                } else if (undone.length > 5) {
+                    detail += `，${undone.length}个小节待完成`;
+                }
+                return detail;
+            }).join('\n');
+            parts.push(`微积分（甲）Ⅱ 复习进度：\n${calcSummary}`);
+        }
+    } catch (e) {}
 
     // 查重
     const dupTodos = findDuplicates(todos, t => `${t.title}|${t.date}`);

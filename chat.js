@@ -482,9 +482,10 @@ function renderChatView() {
     document.getElementById('chatInput')?.focus();
 }
 
-/** 绑定回车发送 */
+/** 绑定回车发送 + 按钮点击 */
 document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('chatSendBtn');
     if (input) {
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -492,5 +493,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 sendChat();
             }
         });
+    }
+    if (sendBtn) {
+        sendBtn.addEventListener('click', sendChat);
     }
 });

@@ -246,7 +246,9 @@ function renderDayCard() {
     $('#dayCard').style.display = '';
     $('#dayCardDate').textContent = selectedCalDate;
     const seen = new Set();
-    const dayEvents = events.filter(e=>{ const k=e.title+'|'+e.event_type; if (seen.has(k)) return false; seen.add(k); return e.date===selectedCalDate; });
+    const dayEvents = events
+        .filter(e=>{ const k=e.title+'|'+e.event_type; if (seen.has(k)) return false; seen.add(k); return e.date===selectedCalDate; })
+        .sort((a, b) => (a.start_time || '99:99').localeCompare(b.start_time || '99:99'));
     const dayTodos = todos.filter(t => t.date === selectedCalDate);
     const labels = {todo:'待办',doing:'进行中',done:'已完成'};
     let html = '';

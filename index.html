@@ -25,7 +25,7 @@
             <button class="nav__tab" data-tab="calendar">📅 日历</button>
             <button class="nav__tab" data-tab="subjects">📚 科目</button>
             <button class="nav__tab" data-tab="chat">💬 小马</button>
-            <button class="nav__tab" data-tab="thoughts">💡 想法</button>
+            <button class="nav__tab" data-tab="thoughts">🎬 脚本</button>
             <button class="nav__tab" data-tab="calculus">📐 微积分</button>
         </div>
         <ul class="nav__list">
@@ -78,8 +78,8 @@
                 <span class="home-nav-card__label">小马</span>
             </button>
             <button class="home-nav-card" data-tab="thoughts">
-                <span class="home-nav-card__icon">💡</span>
-                <span class="home-nav-card__label">想法</span>
+                <span class="home-nav-card__icon">🎬</span>
+                <span class="home-nav-card__label">脚本</span>
             </button>
             <button class="home-nav-card" data-tab="calculus">
                 <span class="home-nav-card__icon">📐</span>
@@ -150,20 +150,20 @@
         </div>
     </section>
 
-    <!-- ===== 想法视图 ===== -->
+    <!-- ===== 脚本视图 ===== -->
     <section class="view" id="view-thoughts">
         <div class="view__header">
             <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
-            <h2>💡 想法</h2>
+            <h2>🎬 脚本</h2>
             <span style="font-size:.85rem;color:var(--color-text-light)" id="thoughtCount"></span>
         </div>
         <div class="thoughts-container">
             <div class="thoughts-input-row">
-                <input type="text" class="thoughts-input" id="thoughtInput" placeholder="记录此刻的想法..." maxlength="500">
-                <button class="btn btn--primary btn--sm" id="thoughtAddBtn">记录</button>
+                <textarea class="thoughts-input" id="thoughtInput" placeholder="写一段视频脚本..." maxlength="2000" rows="3"></textarea>
+                <button class="btn btn--primary btn--sm" id="thoughtAddBtn">保存</button>
             </div>
             <div class="thoughts-list" id="thoughtsList">
-                <p class="empty-text">暂无想法，在上方输入框记录吧 ✨</p>
+                <p class="empty-text">暂无脚本，在上方写一段吧 🎬</p>
             </div>
         </div>
     </section>

@@ -224,11 +224,11 @@ function buildUserContext() {
         }
     }
 
-    // 想法
+    // 脚本
     if (typeof thoughts !== 'undefined' && thoughts.length) {
         const recentThoughts = thoughts.slice(0, 20);
         if (recentThoughts.length) {
-            parts.push(`用户最近的想法：${recentThoughts.map(t => `[${t.id}] ${t.content}`).join('；')}`);
+            parts.push(`用户最近的脚本：${recentThoughts.map(t => `[${t.id}] ${t.content}`).join('；')}`);
         }
     }
 

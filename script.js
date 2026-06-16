@@ -317,7 +317,7 @@ function renderThoughts() {
     if (!listEl) return;
 
     if (!thoughts.length) {
-        listEl.innerHTML = '<p class="empty-text">暂无想法，在上方输入框记录吧 ✨</p>';
+        listEl.innerHTML = '<p class="empty-text">暂无脚本，在上方写一段吧 🎬</p>';
         return;
     }
 
@@ -336,7 +336,7 @@ function renderThoughts() {
     }).join('');
 }
 
-// 添加想法
+// 添加脚本
 async function addThought() {
     const input = document.getElementById('thoughtInput');
     const content = input.value.trim();
@@ -348,7 +348,7 @@ async function addThought() {
         await DS.create('thoughts', { content });
         await refreshAll();
     } catch (e) {
-        console.error('添加想法失败:', e);
+        console.error('添加脚本失败:', e);
         showToast('添加失败: ' + e.message, 'error');
     }
     input.disabled = false;
@@ -356,15 +356,15 @@ async function addThought() {
     input.focus();
 }
 
-// 删除想法
+// 删除脚本
 async function deleteThought(id) {
-    if (!confirm('确定删除这条想法吗？')) return;
+    if (!confirm('确定删除这条脚本吗？')) return;
     try {
         await DS.remove('thoughts', id);
         thoughts = thoughts.filter(t => t.id !== id);
         renderThoughts();
     } catch (e) {
-        console.error('删除想法失败:', e);
+        console.error('删除脚本失败:', e);
     }
 }
 
@@ -409,7 +409,7 @@ async function saveEditThought(id) {
         if (t) t.content = content;
         renderThoughts();
     } catch (e) {
-        console.error('更新想法失败:', e);
+        console.error('更新脚本失败:', e);
         showToast('更新失败: ' + e.message, 'error');
     }
 }

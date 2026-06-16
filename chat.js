@@ -209,14 +209,14 @@ function buildUserContext() {
         }
     }
 
-    // 事件（近两周：过去7天 + 未来7天）
+    // 事件（近一个月：过去7天 + 未来30天）
     if (typeof events !== 'undefined' && events.length) {
         const today = new Date().toISOString().slice(0, 10);
         const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-        const weekLater = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-        const near = events.filter(e => e.date >= weekAgo && e.date <= weekLater).sort((a, b) => a.date.localeCompare(b.date));
+        const monthLater = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+        const near = events.filter(e => e.date >= weekAgo && e.date <= monthLater).sort((a, b) => a.date.localeCompare(b.date));
         if (near.length) {
-            parts.push(`最近一周的事件：${near.map(e => {
+            parts.push(`最近一个月的事件：${near.map(e => {
                 const labels = { exam: '考试', class: '学习', holiday: '生活', deadline: 'DDL', other: '其他' };
                 const timeStr = e.start_time ? ` ${e.start_time.slice(0, 5)}${e.end_time ? '-' + e.end_time.slice(0, 5) : ''}` : '';
                 return `${e.date}${timeStr} ${e.title}(${labels[e.event_type] || e.event_type})`;

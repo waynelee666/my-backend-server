@@ -1,64 +1,251 @@
 /* ============================================================
-   微积分复习模块  v1.0
+   微积分复习模块  v2.0 — 章节可展开，逐节追踪
    ============================================================ */
 
-// ==================== 复习章节 ====================
-// 仅保留微积分（甲）Ⅱ — 第7-12章
+// ==================== 复习章节（含小节） ====================
 const CALC_CHAPTERS = [
-    '第7章 向量代数与空间解析几何',        // 行列式·矢量·平面直线·曲面曲线·二次曲面
-    '第8章 多元函数微分学',                 // 极限连续·偏导数全微分·复合隐函数·方向导数梯度·极值·泰勒·几何应用
-    '第9章 二重积分与三重积分',             // 直角坐标/极坐标/柱面坐标/球面坐标
-    '第10章 曲线积分与曲面积分',            // 第一类+第二类·格林公式·高斯公式·斯托克斯公式
-    '第11章 无穷级数',                      // 数项级数·正项级数·交错级数·函数项级数·幂级数·傅里叶级数
-    '第12章 含参量积分',                    // 含参量常义积分·反常积分·Γ函数·B函数
+    {
+        name: '第7章 向量代数与空间解析几何',
+        sections: [
+            '§7.1 行列式及线性方程组',
+            '§7.2 矢量概念及矢量的线性运算',
+            '§7.3 空间直角坐标系与矢量的坐标表达式',
+            '§7.4 两矢量的数量积与矢量积',
+            '§7.5 矢量的线性组合与矢量的分解',
+            '§7.6 平面与直线方程',
+            '§7.7 曲面方程与空间曲线方程',
+            '§7.8 二次曲面',
+        ]
+    },
+    {
+        name: '第8章 多元函数微分学',
+        sections: [
+            '§8.1 多元函数的极限与连续性',
+            '§8.2 偏导数与全微分',
+            '§8.3 复合函数微分法',
+            '§8.4 隐函数的偏导数',
+            '§8.5 场的方向导数与梯度',
+            '§8.6 多元函数的极值及应用',
+            '§8.7 偏导数在几何上的应用',
+            '§8.8 多元函数的泰勒公式',
+        ]
+    },
+    {
+        name: '第9章 二重积分与三重积分',
+        sections: [
+            '§9.1 二重积分的概念与性质',
+            '§9.2 二重积分的计算（直角坐标）',
+            '§9.3 二重积分的计算（极坐标）',
+            '§9.4 三重积分的概念',
+            '§9.5 三重积分的计算（直角坐标）',
+            '§9.6 三重积分的计算（柱面/球面坐标）',
+        ]
+    },
+    {
+        name: '第10章 曲线积分与曲面积分',
+        sections: [
+            '§10.1 第一类曲线积分',
+            '§10.2 第一类曲面积分',
+            '§10.3 第二类曲线积分',
+            '§10.4 格林公式',
+            '§10.5 平面曲线积分与路径无关性',
+            '§10.6 第二类曲面积分',
+            '§10.7 高斯公式与散度场',
+            '§10.8 斯托克斯公式与旋度场',
+        ]
+    },
+    {
+        name: '第11章 无穷级数',
+        sections: [
+            '§11.1 数项级数的基本概念与性质',
+            '§11.2 正项级数敛散性的判别法',
+            '§11.3 交错级数与绝对收敛',
+            '§11.4 函数项级数与一致收敛性',
+            '§11.5 幂级数及其收敛半径',
+            '§11.6 幂级数的性质与和函数',
+            '§11.7 函数展成幂级数',
+            '§11.8 幂级数的应用',
+            '§11.9 函数的傅里叶展开',
+        ]
+    },
+    {
+        name: '第12章 含参量积分',
+        sections: [
+            '§12.1 含参量的常义积分',
+            '§12.2 含参量的反常积分',
+            '§12.3 Γ函数',
+            '§12.4 B函数与Γ-B关系',
+        ]
+    },
 ];
 
-// 从 localStorage 加载复习进度
+// ==================== 进度管理 ====================
 function loadCalcProgress() {
-    try {
-        return JSON.parse(localStorage.getItem('calc_progress') || '{}');
-    } catch (e) { return {}; }
+    try { return JSON.parse(localStorage.getItem('calc_progress') || '{}'); }
+    catch (e) { return {}; }
 }
 function saveCalcProgress(prog) {
     localStorage.setItem('calc_progress', JSON.stringify(prog));
 }
 
+/** 章节进度统计 */
+function chapterStats(ch) {
+    const progress = loadCalcProgress();
+    const chData = progress[ch.name] || {};
+    const total = ch.sections.length;
+    const done = ch.sections.filter(s => chData[s] && chData[s].done).length;
+    return { total, done, pct: total ? Math.round(done / total * 100) : 0 };
+}
+
+// ==================== 渲染复习计划 ====================
 function renderCalcPlan() {
     const el = document.getElementById('calcPlan');
     if (!el) return;
     const progress = loadCalcProgress();
 
     el.innerHTML = CALC_CHAPTERS.map((ch, i) => {
-        const p = progress[ch] || {};
-        const date = p.date || '';
-        const done = p.done || false;
-        return `<div class="calc-chapter ${done ? 'calc-chapter--done' : ''}">
-            <div class="calc-chapter__check" data-ch="${ch}" title="标记完成">${done ? '☑' : '☐'}</div>
-            <div class="calc-chapter__name">${i + 1}. ${ch}</div>
-            <input type="date" class="calc-chapter__date" data-ch="${ch}" value="${date}" title="计划复习日期">
+        const stats = chapterStats(ch);
+        const chData = progress[ch.name] || {};
+        const expanded = chData._expanded !== false; // 默认展开
+        const chDone = stats.done === stats.total && stats.total > 0;
+
+        const sectionHTML = ch.sections.map(sec => {
+            const sData = chData[sec] || {};
+            const sDone = sData.done || false;
+            const sDate = sData.date || '';
+            return `<div class="calc-section ${sDone ? 'calc-section--done' : ''}">
+                <div class="calc-section__check" data-ch="${escAttr(ch.name)}" data-sec="${escAttr(sec)}">${sDone ? '☑' : '☐'}</div>
+                <span class="calc-section__name">${esc(sec)}</span>
+                <input type="date" class="calc-section__date" data-ch="${escAttr(ch.name)}" data-sec="${escAttr(sec)}" value="${sDate}" title="计划日期">
+            </div>`;
+        }).join('');
+
+        // 章节日期（用于整章规划）
+        const chDate = chData._date || '';
+
+        return `<div class="calc-chapter ${chDone ? 'calc-chapter--done' : ''}">
+            <div class="calc-chapter__header" data-ch="${escAttr(ch.name)}">
+                <div class="calc-chapter__arrow">${expanded ? '▼' : '▶'}</div>
+                <div class="calc-chapter__check" data-ch="${escAttr(ch.name)}" data-action="toggle-chapter">${chDone ? '☑' : '☐'}</div>
+                <div class="calc-chapter__info">
+                    <div class="calc-chapter__name">${esc(ch.name)}</div>
+                    <div class="calc-chapter__progress">
+                        <div class="calc-chapter__bar"><div class="calc-chapter__fill" style="width:${stats.pct}%"></div></div>
+                        <span class="calc-chapter__stat">${stats.done}/${stats.total}</span>
+                    </div>
+                </div>
+                <input type="date" class="calc-chapter__date" data-ch="${escAttr(ch.name)}" value="${chDate}" title="整章计划日期" onclick="event.stopPropagation()">
+            </div>
+            <div class="calc-chapter__body" style="${expanded ? '' : 'display:none'}">
+                ${sectionHTML}
+            </div>
         </div>`;
     }).join('');
 
-    // 绑定事件
-    el.querySelectorAll('.calc-chapter__check').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const ch = btn.dataset.ch;
-            const p = loadCalcProgress();
-            p[ch] = p[ch] || {};
-            p[ch].done = !p[ch].done;
-            saveCalcProgress(p);
+    bindCalcEvents();
+}
+
+function bindCalcEvents() {
+    const el = document.getElementById('calcPlan');
+    if (!el) return;
+
+    // 展开/折叠章节
+    el.querySelectorAll('.calc-chapter__header').forEach(header => {
+        header.addEventListener('click', (e) => {
+            // 不拦截 checkbox 和 date input 的点击
+            if (e.target.closest('.calc-chapter__check') || e.target.closest('.calc-chapter__date')) return;
+
+            const chName = header.dataset.ch;
+            const body = header.nextElementSibling;
+            const arrow = header.querySelector('.calc-chapter__arrow');
+            const progress = loadCalcProgress();
+            const chData = progress[chName] || {};
+            const expanded = body.style.display !== 'none';
+
+            if (expanded) {
+                body.style.display = 'none';
+                arrow.textContent = '▶';
+                chData._expanded = false;
+            } else {
+                body.style.display = '';
+                arrow.textContent = '▼';
+                chData._expanded = true;
+            }
+            progress[chName] = chData;
+            saveCalcProgress(progress);
+        });
+    });
+
+    // 整章勾选
+    el.querySelectorAll('.calc-chapter__check[data-action="toggle-chapter"]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const chName = btn.dataset.ch;
+            const ch = CALC_CHAPTERS.find(c => c.name === chName);
+            if (!ch) return;
+            const progress = loadCalcProgress();
+            const chData = progress[chName] || {};
+            const stats = chapterStats(ch);
+            const allDone = stats.done === stats.total;
+
+            // 全部完成 → 全部取消；否则 → 全部完成
+            const newVal = !allDone;
+            ch.sections.forEach(sec => {
+                if (!chData[sec]) chData[sec] = {};
+                chData[sec].done = newVal;
+            });
+            progress[chName] = chData;
+            saveCalcProgress(progress);
             renderCalcPlan();
         });
     });
-    el.querySelectorAll('.calc-chapter__date').forEach(input => {
-        input.addEventListener('change', () => {
-            const ch = input.dataset.ch;
-            const p = loadCalcProgress();
-            p[ch] = p[ch] || {};
-            p[ch].date = input.value;
-            saveCalcProgress(p);
+
+    // 小节勾选
+    el.querySelectorAll('.calc-section__check').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const chName = btn.dataset.ch;
+            const secName = btn.dataset.sec;
+            const progress = loadCalcProgress();
+            const chData = progress[chName] || {};
+            if (!chData[secName]) chData[secName] = {};
+            chData[secName].done = !chData[secName].done;
+            progress[chName] = chData;
+            saveCalcProgress(progress);
+            renderCalcPlan();
         });
     });
+
+    // 小节日期
+    el.querySelectorAll('.calc-section__date').forEach(input => {
+        input.addEventListener('change', (e) => {
+            e.stopPropagation();
+            const chName = input.dataset.ch;
+            const secName = input.dataset.sec;
+            const progress = loadCalcProgress();
+            const chData = progress[chName] || {};
+            if (!chData[secName]) chData[secName] = {};
+            chData[secName].date = input.value;
+            progress[chName] = chData;
+            saveCalcProgress(progress);
+        });
+    });
+
+    // 整章日期
+    el.querySelectorAll('.calc-chapter__date').forEach(input => {
+        input.addEventListener('change', (e) => {
+            e.stopPropagation();
+            const chName = input.dataset.ch;
+            const progress = loadCalcProgress();
+            const chData = progress[chName] || {};
+            chData._date = input.value;
+            progress[chName] = chData;
+            saveCalcProgress(progress);
+        });
+    });
+}
+
+function escAttr(s) {
+    return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // ==================== 多项式求导 ====================

@@ -6,7 +6,7 @@ console.log('💬 Chat module loaded');
 let chatHistory = [];  // [[q1,a1],[q2,a2],...]
 let chatWaiting = false;
 let chatMode = 'chat';       // 'chat' | 'qa' | 'modify' | 'calc-learn' | 'calc-review'
-let calcSubMode = 'calc-learn'; // 微积小马子模式：'calc-learn' 学习 | 'calc-review' 复习
+let calcSubMode = 'calc-learn'; // 微积小马子模式：'calc-learn' 学习 | 'calc-review' 复习 | 'calc-knowledge' 知识
 
 /** 切换模式 */
 function setChatMode(mode) {
@@ -18,7 +18,7 @@ function setChatMode(mode) {
     document.querySelectorAll('#modeGroup .chat-mode-btn').forEach(b => b.classList.remove('active'));
 
     // 微积小马：激活主按钮 + 显示子模式
-    if (mode === 'calc' || mode === 'calc-learn' || mode === 'calc-review') {
+    if (mode === 'calc' || mode === 'calc-learn' || mode === 'calc-review' || mode === 'calc-knowledge') {
         const calcBtn = document.querySelector('.chat-mode-btn[data-mode="calc"]');
         if (calcBtn) calcBtn.classList.add('active');
         if (subGroup) subGroup.style.display = '';
@@ -40,6 +40,7 @@ function setChatMode(mode) {
         modify: '让小马帮你改待办、加事件...',
         'calc-learn': '问微积小马概念、题目、证明...（导师模式）',
         'calc-review': '让微积小马帮你串联知识点...（串讲模式）',
+        'calc-knowledge': '问任何微积分知识点，微积小马给你超详细讲解...（知识模式）',
     };
     input.placeholder = placeholders[mode] || placeholders.chat;
 }
@@ -56,6 +57,7 @@ function setCalcSubMode(subMode) {
     const placeholders = {
         'calc-learn': '问微积小马概念、题目、证明...（导师模式）',
         'calc-review': '让微积小马帮你串联知识点...（串讲模式）',
+        'calc-knowledge': '问任何微积分知识点，微积小马给你超详细讲解...（知识模式）',
     };
     input.placeholder = placeholders[subMode] || '';
 }

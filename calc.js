@@ -456,6 +456,22 @@ async function renderCalcView() {
 
 // ==================== 事件绑定 ====================
 document.addEventListener('DOMContentLoaded', () => {
+    // 工具折叠
+    const toolsToggle = document.getElementById('calcToolsToggle');
+    const toolsBody = document.getElementById('calcToolsBody');
+    const toolsArrow = document.querySelector('.calc-tools-arrow');
+    if (toolsToggle && toolsBody) {
+        toolsToggle.addEventListener('click', () => {
+            if (toolsBody.style.display === 'none') {
+                toolsBody.style.display = '';
+                if (toolsArrow) toolsArrow.textContent = '▼';
+            } else {
+                toolsBody.style.display = 'none';
+                if (toolsArrow) toolsArrow.textContent = '▶';
+            }
+        });
+    }
+
     // 导数计算
     document.getElementById('calcDerivativeBtn')?.addEventListener('click', () => {
         const input = document.getElementById('calcDerivativeInput').value.trim();

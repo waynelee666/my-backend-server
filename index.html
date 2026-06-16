@@ -159,11 +159,26 @@
         </div>
         <div class="thoughts-container">
             <div class="thoughts-input-row">
-                <textarea class="thoughts-input" id="thoughtInput" placeholder="写一段视频脚本..." maxlength="2000" rows="3"></textarea>
-                <button class="btn btn--primary btn--sm" id="thoughtAddBtn">保存</button>
+                <div class="thoughts-input-area">
+                    <input type="text" class="thought-title-input" id="thoughtTitleInput" placeholder="视频标题，如：产品开箱测评 v3" maxlength="100">
+                    <textarea class="thoughts-input" id="thoughtInput" placeholder="写视频脚本..."
+                              maxlength="3000" rows="4"
+                              title="用 --- 分隔不同场景"></textarea>
+                    <div class="script-stats-row">
+                        <span class="script-stats" id="scriptStats">📊 0 个场景 · 0 字</span>
+                        <div class="script-actions">
+                            <select class="thought-status-select" id="thoughtStatusSelect">
+                                <option value="draft">🏷️ 草稿</option>
+                                <option value="filming">🎥 拍摄中</option>
+                                <option value="done">✅ 已完成</option>
+                            </select>
+                            <button class="btn btn--primary btn--sm" id="thoughtAddBtn">保存</button>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="thoughts-list" id="thoughtsList">
-                <p class="empty-text">暂无脚本，在上方写一段吧 🎬</p>
+                <p class="empty-text">暂无脚本，在上方开始写吧 🎬</p>
             </div>
         </div>
     </section>

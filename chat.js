@@ -228,7 +228,10 @@ function buildUserContext() {
     if (typeof thoughts !== 'undefined' && thoughts.length) {
         const recentThoughts = thoughts.slice(0, 20);
         if (recentThoughts.length) {
-            parts.push(`用户最近的脚本：${recentThoughts.map(t => `[${t.id}] ${t.content}`).join('；')}`);
+            parts.push(`用户最近的视频脚本：${recentThoughts.map(t => {
+                const statusLabels = { draft: '草稿', filming: '拍摄中', done: '已完成' };
+                return `《${t.title || '未命名'}》[${statusLabels[t.status] || '草稿'}]：${t.content}`;
+            }).join('；')}`);
         }
     }
 
@@ -523,7 +526,7 @@ async function executeActions(actions) {
             }
         } else if (entity === 'thought') {
             if (action === 'add') {
-                await DS.create('thoughts', { content: data.content });
+                await DS.create('thoughts', { title: data.title || null, content: data.content, status: data.status || 'draft' });
             } else if (action === 'update') {
                 // 支持按 id 或按旧内容匹配修改
                 let match;
@@ -532,7 +535,12 @@ async function executeActions(actions) {
                 } else if (data.old_content) {
                     match = (thoughts || []).find(t => t.content.includes(data.old_content) || data.old_content.includes(t.content));
                 }
-                if (match) await DS.update('thoughts', match.id, { content: data.new_content });
+                if (match) {
+                    const fields = { content: data.new_content };
+                    if (data.title) fields.title = data.title;
+                    if (data.status) fields.status = data.status;
+                    await DS.update('thoughts', match.id, fields);
+                }
             } else if (action === 'delete') {
                 if (data.id) {
                     await DS.remove('thoughts', data.id);

@@ -310,7 +310,20 @@ $('#dayCardAddEvent').addEventListener('click', () => {
     $('#modalForm').onsubmit = async e => { e.preventDefault(); await saveModal(); };
 });
 
-// ==================== 想法视图 ====================
+// ==================== 脚本视图 ====================
+
+/** 计算脚本统计：场景数、字数、预估时长 */
+function updateScriptStats() {
+    const content = document.getElementById('thoughtInput')?.value || '';
+    const scenes = content.split('\n---\n').filter(s => s.trim());
+    const sceneCount = scenes.length;
+    const charCount = content.replace(/\s/g, '').length;
+    const secs = Math.round(charCount / 250 * 60);
+    const duration = secs < 60 ? `${secs} 秒` : `${Math.floor(secs / 60)} 分 ${secs % 60} 秒`;
+    const el = document.getElementById('scriptStats');
+    if (el) el.innerHTML = `📊 ${sceneCount} 个场景 · ${charCount} 字 · 约 ${duration}`;
+}
+
 function renderThoughts() {
     const countEl = document.getElementById('thoughtCount');
     if (countEl) countEl.textContent = thoughts.length ? `共 ${thoughts.length} 条` : '';
@@ -319,15 +332,34 @@ function renderThoughts() {
     if (!listEl) return;
 
     if (!thoughts.length) {
-        listEl.innerHTML = '<p class="empty-text">暂无脚本，在上方写一段吧 🎬</p>';
+        listEl.innerHTML = '<p class="empty-text">暂无脚本，在上方开始写吧 🎬</p>';
         return;
     }
 
     listEl.innerHTML = thoughts.map(t => {
         const time = t.created_at ? new Date(t.created_at).toLocaleString('zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+        const statusLabels = { draft: '草稿', filming: '🎥 拍摄中', done: '✅ 已完成' };
+        const statusLabel = statusLabels[t.status] || '草稿';
+        const title = t.title || '未命名脚本';
+        const content = t.content || '';
+        const scenes = content.split('\n---\n').filter(s => s.trim());
+        const sceneCount = scenes.length;
+        const charCount = content.replace(/\s/g, '').length;
+        const secs = Math.round(charCount / 250 * 60);
+        const duration = secs < 60 ? `${secs} 秒` : `${Math.floor(secs / 60)} 分 ${secs % 60} 秒`;
+        // 内容预览：取前 3 行，每行最多 30 字
+        const preview = scenes.slice(0, 3).map(s => s.split('\n')[0].slice(0, 30)).join('\n');
+
         return `<div class="thought-card" data-id="${t.id}">
-            <div class="thought-card__content" data-id="${t.id}">${esc(t.content)}</div>
+            <div class="thought-card__header">
+                <span class="thought-card__title">🎬 ${esc(title)}</span>
+                <span class="thought-card__status thought-card__status--${t.status || 'draft'}">${statusLabel}</span>
+            </div>
+            <div class="thought-card__content" data-id="${t.id}">
+                <div class="thought-card__preview">${esc(preview)}</div>
+            </div>
             <div class="thought-card__footer">
+                <span class="thought-card__meta">📊 ${sceneCount} 个场景 · ${charCount} 字 · 约 ${duration}</span>
                 <span class="thought-card__time">${time}</span>
                 <div class="thought-card__actions">
                     <button class="thought-card__btn" data-action="edit" data-id="${t.id}" title="编辑">✏️</button>
@@ -340,22 +372,30 @@ function renderThoughts() {
 
 // 添加脚本
 async function addThought() {
-    const input = document.getElementById('thoughtInput');
-    const content = input.value.trim();
+    const titleInput = document.getElementById('thoughtTitleInput');
+    const contentInput = document.getElementById('thoughtInput');
+    const statusSelect = document.getElementById('thoughtStatusSelect');
+    const title = titleInput.value.trim();
+    const content = contentInput.value.trim();
     if (!content) return;
-    input.value = '';
-    input.disabled = true;
+    titleInput.value = '';
+    contentInput.value = '';
+    titleInput.disabled = true;
+    contentInput.disabled = true;
     document.getElementById('thoughtAddBtn').disabled = true;
     try {
-        await DS.create('thoughts', { content });
+        await DS.create('thoughts', { title: title || null, content, status: statusSelect.value });
         await refreshAll();
+        statusSelect.value = 'draft';
+        updateScriptStats();
     } catch (e) {
         console.error('添加脚本失败:', e);
         showToast('添加失败: ' + e.message, 'error');
     }
-    input.disabled = false;
+    titleInput.disabled = false;
+    contentInput.disabled = false;
     document.getElementById('thoughtAddBtn').disabled = false;
-    input.focus();
+    contentInput.focus();
 }
 
 // 删除脚本
@@ -374,41 +414,47 @@ async function deleteThought(id) {
 function enterEditThought(id) {
     const t = thoughts.find(x => x.id === id);
     if (!t) return;
-    const contentEl = document.querySelector(`.thought-card__content[data-id="${id}"]`);
-    if (!contentEl) return;
-    contentEl.innerHTML = `<textarea class="thought-edit-area" id="thoughtEditArea">${esc(t.content)}</textarea>
-        <div class="thought-edit-actions">
-            <button class="btn btn--outline btn--sm" id="thoughtCancelBtn">取消</button>
-            <button class="btn btn--primary btn--sm" id="thoughtSaveBtn">保存</button>
+    const card = document.querySelector(`.thought-card[data-id="${id}"]`);
+    if (!card) return;
+    const statusLabels = { draft: '草稿', filming: '🎥 拍摄中', done: '✅ 已完成' };
+    card.innerHTML = `
+        <div class="thought-edit-area-wrap">
+            <input type="text" class="thought-title-input thought-edit-title" id="thoughtEditTitle" value="${esc(t.title || '')}" placeholder="视频标题" maxlength="100">
+            <textarea class="thought-edit-area" id="thoughtEditArea">${esc(t.content)}</textarea>
+            <div class="thought-edit-actions">
+                <select class="thought-status-select" id="thoughtEditStatus">
+                    <option value="draft" ${(t.status||'draft')==='draft'?'selected':''}>🏷️ 草稿</option>
+                    <option value="filming" ${t.status==='filming'?'selected':''}>🎥 拍摄中</option>
+                    <option value="done" ${t.status==='done'?'selected':''}>✅ 已完成</option>
+                </select>
+                <button class="btn btn--outline btn--sm" id="thoughtCancelBtn">取消</button>
+                <button class="btn btn--primary btn--sm" id="thoughtSaveBtn">保存</button>
+            </div>
         </div>`;
     const textarea = document.getElementById('thoughtEditArea');
     textarea.focus();
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 
-    // 保存
     document.getElementById('thoughtSaveBtn').addEventListener('click', () => saveEditThought(id));
-    // 取消
     document.getElementById('thoughtCancelBtn').addEventListener('click', () => renderThoughts());
-    // 快捷键
     textarea.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && e.ctrlKey) {
-            e.preventDefault();
-            saveEditThought(id);
-        } else if (e.key === 'Escape') {
-            renderThoughts();
-        }
+        if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); saveEditThought(id); }
+        else if (e.key === 'Escape') { renderThoughts(); }
     });
 }
 
 // 保存编辑
 async function saveEditThought(id) {
+    const titleInput = document.getElementById('thoughtEditTitle');
     const textarea = document.getElementById('thoughtEditArea');
+    const statusSelect = document.getElementById('thoughtEditStatus');
+    const title = titleInput?.value.trim() || null;
     const content = textarea.value.trim();
     if (!content) return;
     try {
-        await DS.update('thoughts', id, { content });
+        await DS.update('thoughts', id, { title, content, status: statusSelect?.value || 'draft' });
         const t = thoughts.find(x => x.id === id);
-        if (t) t.content = content;
+        if (t) { t.title = title; t.content = content; t.status = statusSelect?.value || 'draft'; }
         renderThoughts();
     } catch (e) {
         console.error('更新脚本失败:', e);
@@ -416,18 +462,23 @@ async function saveEditThought(id) {
     }
 }
 
-// 事件绑定（DOMContentLoaded 中统一处理）
+// 事件绑定
 document.addEventListener('DOMContentLoaded', () => {
+    const titleInput = document.getElementById('thoughtTitleInput');
     const thoughtInput = document.getElementById('thoughtInput');
     const thoughtAddBtn = document.getElementById('thoughtAddBtn');
+
     if (thoughtAddBtn) thoughtAddBtn.addEventListener('click', addThought);
+    if (titleInput) {
+        titleInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); thoughtInput?.focus(); }
+        });
+    }
     if (thoughtInput) {
         thoughtInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                addThought();
-            }
+            if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); addThought(); }
         });
+        thoughtInput.addEventListener('input', updateScriptStats);
     }
 
     const thoughtsList = document.getElementById('thoughtsList');

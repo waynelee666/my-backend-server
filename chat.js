@@ -121,6 +121,21 @@ function renderChat() {
 
     // 滚动到底部
     el.scrollTop = el.scrollHeight;
+
+    // 渲染 KaTeX 数学公式
+    if (typeof renderMathInElement !== 'undefined') {
+        try {
+            renderMathInElement(el, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                    { left: '\\(', right: '\\)', display: false },
+                    { left: '\\[', right: '\\]', display: true },
+                ],
+                throwOnError: false,
+            });
+        } catch (e) {}
+    }
 }
 
 /** 简单格式化回答：识别换行和引用标注 */

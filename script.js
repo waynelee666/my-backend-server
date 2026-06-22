@@ -468,30 +468,48 @@ async function saveEditThought(id) {
 
 // ==================== 单词视图 ====================
 function renderVocabView() {
-    const filtered = vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
+    const isReview = vocabUnit === '__review__';
+    const filtered = isReview
+        ? vocabs.filter(v => v.review === true)
+        : vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
     const countEl = $('#vocabCount');
-    if (countEl) countEl.textContent = filtered.length ? `${vocabUnit} ${vocabPart} · ${filtered.length} 词` : '';
+    const label = isReview ? '🔄 复习' : `${vocabUnit} ${vocabPart}`;
+    if (countEl) countEl.textContent = filtered.length ? `${label} · ${filtered.length} 词` : '';
 
+    // Unit 选择器：最前面加复习按钮
+    const reviewCount = vocabs.filter(v => v.review === true).length;
+    const reviewCls = isReview ? ' vocab-unit-btn--review vocab-unit-btn--active' : ' vocab-unit-btn--review';
+    let unitHTML = `<button class="vocab-unit-btn${reviewCls}" data-unit="__review__">🔄 复习<span class="vocab-unit-count">${reviewCount}</span></button>`;
     const units = ['U1','U2','U3','U4','U5','U6','U7','U8'];
-    $('#vocabUnitRow').innerHTML = units.map(u => {
+    unitHTML += units.map(u => {
         const cnt = vocabs.filter(v => v.unit === u).length;
         const cls = u === vocabUnit ? ' vocab-unit-btn--active' : '';
         return `<button class="vocab-unit-btn${cls}" data-unit="${u}">${u}<span class="vocab-unit-count">${cnt}</span></button>`;
     }).join('');
+    $('#vocabUnitRow').innerHTML = unitHTML;
 
-    $('#vocabPartRow').innerHTML = ['P1','P2'].map(p => {
-        const cls = p === vocabPart ? ' vocab-part-btn--active' : '';
-        return `<button class="vocab-part-btn${cls}" data-part="${p}">${p}</button>`;
-    }).join('');
+    // Part 选择器：复习模式隐藏
+    if (isReview) {
+        $('#vocabPartRow').style.display = 'none';
+    } else {
+        $('#vocabPartRow').style.display = '';
+        $('#vocabPartRow').innerHTML = ['P1','P2'].map(p => {
+            const cls = p === vocabPart ? ' vocab-part-btn--active' : '';
+            return `<button class="vocab-part-btn${cls}" data-part="${p}">${p}</button>`;
+        }).join('');
+    }
 
     const listEl = $('#vocabList');
     if (!filtered.length) {
-        listEl.innerHTML = '<p class="empty-text">还没有单词，点击上方添加或导入 📖</p>';
+        listEl.innerHTML = isReview
+            ? '<p class="empty-text">🎉 复习表已清空，没有需要复习的单词</p>'
+            : '<p class="empty-text">还没有单词，点击上方添加或导入 📖</p>';
     } else {
         listEl.innerHTML = filtered.map(v => `
             <div class="vocab-word-card" data-id="${v.id}">
                 <div class="vocab-word-card__word">${esc(v.word)}</div>
                 <div class="vocab-word-card__meaning">${esc(v.meaning)}</div>
+                <div class="vocab-word-card__unit-label">${v.unit} ${v.part}</div>
                 <div class="vocab-word-card__actions">
                     <button data-action="edit-vocab" data-id="${v.id}" title="编辑">✏️</button>
                     <button class="btn-del" data-action="delete-vocab" data-id="${v.id}" title="删除">🗑️</button>
@@ -505,7 +523,8 @@ function openVocabEditModal(vocab) {
     const isEdit = !!vocab;
     vocabEditId = vocab ? vocab.id : null;
     $('#vocabEditTitle').textContent = isEdit ? '编辑单词' : '添加单词';
-    $('#vocabEditUnit').value = vocab ? vocab.unit : vocabUnit;
+    const defaultUnit = vocabUnit === '__review__' ? 'U1' : vocabUnit;
+    $('#vocabEditUnit').value = vocab ? vocab.unit : defaultUnit;
     $('#vocabEditPart').value = vocab ? vocab.part : vocabPart;
     $('#vocabEditWord').value = vocab ? vocab.word : '';
     $('#vocabEditMeaning').value = vocab ? vocab.meaning : '';
@@ -598,7 +617,7 @@ $('#vocabEditModal').addEventListener('click', e => {
 
 // 批量导入
 $('#vocabImportBtn').addEventListener('click', () => {
-    $('#vocabImportUnit').value = vocabUnit;
+    $('#vocabImportUnit').value = vocabUnit === '__review__' ? 'U1' : vocabUnit;
     $('#vocabImportPart').value = vocabPart;
     $('#vocabImportText').value = '';
     $('#vocabImportModal').style.display = '';

@@ -8,14 +8,20 @@ let studyIndex = 0;
 let studyFlipped = false;
 let studyKnown = 0;
 let studyUnknown = 0;
+let studyIsReview = false;  // 是否在复习模式
 
 function startVocabStudy() {
-    const filtered = vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
+    studyIsReview = vocabUnit === '__review__';
+    const filtered = studyIsReview
+        ? vocabs.filter(v => v.review === true)
+        : vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
     if (!filtered.length) {
-        showToast('当前单元没有单词，请先添加或导入', 'error');
+        showToast(studyIsReview ? '复习表已清空 🎉' : '当前单元没有单词，请先添加或导入', 'error');
         return;
     }
-    studyWords = [...filtered];
+    // 取指定数量
+    const count = parseInt($('#vocabStudyCount')?.value || '0');
+    studyWords = count > 0 ? [...filtered].slice(0, count) : [...filtered];
     studyIndex = 0;
     studyFlipped = false;
     studyKnown = 0;
@@ -77,9 +83,30 @@ function flipCard() {
     renderStudyCard();
 }
 
-function answerCard(known) {
-    if (known) studyKnown++;
-    else studyUnknown++;
+async function answerCard(known) {
+    const word = studyWords[studyIndex];
+    if (known) {
+        studyKnown++;
+        // 复习模式：认识了 → 移出复习表
+        if (studyIsReview && word && word.id) {
+            try {
+                await DS.update('vocabulary', word.id, { review: false });
+                // 同步本地数据
+                const v = vocabs.find(x => x.id === word.id);
+                if (v) v.review = false;
+            } catch (e) { console.warn('更新复习状态失败:', e); }
+        }
+    } else {
+        studyUnknown++;
+        // 普通模式：不认识 → 加入复习表
+        if (!studyIsReview && word && word.id) {
+            try {
+                await DS.update('vocabulary', word.id, { review: true });
+                const v = vocabs.find(x => x.id === word.id);
+                if (v) v.review = true;
+            } catch (e) { console.warn('更新复习状态失败:', e); }
+        }
+    }
     studyFlipped = false;
     studyIndex++;
     renderStudyCard();
@@ -126,12 +153,13 @@ function renderStudyEnd() {
     document.getElementById('vocabStudyBack').addEventListener('click', exitStudyMode);
 }
 
-function exitStudyMode() {
+async function exitStudyMode() {
     $('#vocabList').style.display = '';
     $('#vocabUnitRow').style.display = '';
     $('#vocabPartRow').style.display = '';
     document.querySelector('.vocab-actions').style.display = '';
     $('#vocabStudy').style.display = 'none';
+    await refreshAll();
     renderVocabView();
 }
 

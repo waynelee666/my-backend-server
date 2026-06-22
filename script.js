@@ -620,7 +620,26 @@ $('#vocabImportBtn').addEventListener('click', () => {
     $('#vocabImportUnit').value = vocabUnit === '__review__' ? 'U1' : vocabUnit;
     $('#vocabImportPart').value = vocabPart;
     $('#vocabImportText').value = '';
+    $('#vocabImportFileName').textContent = '未选择文件';
+    $('#vocabImportFile').value = '';
     $('#vocabImportModal').style.display = '';
+});
+
+// 文件选择按钮 → 触发隐藏的 file input
+$('#vocabImportFileBtn').addEventListener('click', () => {
+    $('#vocabImportFile').click();
+});
+
+// 文件选择后读取内容到文本框
+$('#vocabImportFile').addEventListener('change', () => {
+    const file = $('#vocabImportFile').files[0];
+    if (!file) return;
+    $('#vocabImportFileName').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = () => {
+        $('#vocabImportText').value = reader.result;
+    };
+    reader.readAsText(file);
 });
 $('#vocabImportCancel').addEventListener('click', () => {
     $('#vocabImportModal').style.display = 'none';

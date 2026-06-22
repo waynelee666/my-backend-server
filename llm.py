@@ -13,14 +13,14 @@ except ImportError:
 
 from openai import OpenAI
 
-if not DEEPSEEK_API_KEY:
-    raise RuntimeError(
-        "未找到 DeepSeek API Key。\n"
-        "请将 config.example.py 复制为 config.py，并在其中填入你的 Key。\n"
-        "或者设置环境变量 DEEPSEEK_API_KEY。"
-    )
+_llm_available = bool(DEEPSEEK_API_KEY)
+_client = None
 
-client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url=BASE_URL)
+if _llm_available:
+    _client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url=BASE_URL)
+else:
+    print("[llm] 警告：未配置 DEEPSEEK_API_KEY，AI 聊天功能不可用。"
+          "请在 Render 环境变量或 config.py 中设置 DEEPSEEK_API_KEY。")
 
 
 # ========== 通用聊天 System Prompt ==========
@@ -234,9 +234,18 @@ def _build_history_messages(history):
     return messages
 
 
+class LLMNotAvailable(Exception):
+    """DeepSeek API 不可用时抛出的异常"""
+    pass
+
 def chat_stream(messages, model="deepseek-chat", temperature=0.7, **kwargs):
     """流式对话生成器，逐步 yield 文本片段"""
-    resp = client.chat.completions.create(
+    if not _llm_available or _client is None:
+        raise LLMNotAvailable(
+            "AI 聊天功能未配置。请在 Render Dashboard → Environment → "
+            "添加环境变量 DEEPSEEK_API_KEY，然后重新部署。"
+        )
+    resp = _client.chat.completions.create(
         model=model,
         messages=messages,
         temperature=temperature,

@@ -29,7 +29,13 @@ if sys.platform == "win32":
 
 import numpy as np
 import retriever
-import llm
+try:
+    import llm
+    _llm_available = getattr(llm, '_llm_available', True)
+except Exception as e:
+    print(f"[server] 警告：llm 模块加载失败: {e}")
+    llm = None
+    _llm_available = False
 
 # -------------------- 配置 --------------------
 PORT = int(os.environ.get("PORT", 8080))
@@ -175,7 +181,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         if path == "/api/health":
             self.send_json({
                 "ok": True,
-                "deepseek": bool(DEEPSEEK_API_KEY),
+                "deepseek": bool(_llm_available and DEEPSEEK_API_KEY),
             })
             return
 
@@ -242,6 +248,13 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def handle_chat(self):
         """POST /api/chat — 小马聊天（知识库作为背景资料）"""
+        if not _llm_available or llm is None:
+            self.send_json({
+                "ok": False,
+                "error": "AI 聊天功能未配置。请在 Render 环境变量中设置 DEEPSEEK_API_KEY。"
+            }, 503)
+            return
+
         body = self.read_json_body()
         if not body or "question" not in body:
             self.send_json({"ok": False, "error": "请提供 question 字段"}, 400)

@@ -1,0 +1,16 @@
+# TaskFlow - Render 部署配置
+# 文档: https://render.com/docs/infrastructure-as-code
+
+services:
+  - type: web
+    name: taskflow
+    runtime: python
+    region: oregon  # 免费层默认 Oregon；亚洲用户可改 singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    healthCheckPath: /api/health
+    envVars:
+      - key: DEEPSEEK_API_KEY
+        sync: false  # ⚠️ 必须在 Render Dashboard → Environment 手动填入你的 Key
+      - key: HF_ENDPOINT
+        value: https://huggingface.co

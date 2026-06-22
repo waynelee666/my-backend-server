@@ -496,15 +496,13 @@ async function autoDedupVocab(unit, part) {
     }
 }
 
-async function renderVocabView() {
+function renderVocabView() {
     const isReview = vocabUnit === '__review__';
-    // 自动去重（仅在非复习模式）；如有变更则 vocabs 已更新，继续渲染
+    // 后台自动去重，不阻塞渲染；完成后自动刷新
     if (!isReview) {
-        try {
-            await autoDedupVocab(vocabUnit, vocabPart);
-        } catch (e) {
-            console.warn('[去重] 跳过自动去重:', e);
-        }
+        autoDedupVocab(vocabUnit, vocabPart).then(changed => {
+            if (changed) renderVocabView();
+        }).catch(e => console.warn('[去重] 后台去重失败:', e));
     }
     const filtered = isReview
         ? vocabs.filter(v => v.review === true)

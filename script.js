@@ -542,6 +542,7 @@ function renderVocabView() {
     } else {
         listEl.innerHTML = filtered.map(v => `
             <div class="vocab-word-card" data-id="${v.id}">
+                <input type="checkbox" class="vocab-word-card__check" data-id="${v.id}" title="选中">
                 <div class="vocab-word-card__word">${esc(v.word)}</div>
                 <div class="vocab-word-card__meaning">${esc(v.meaning)}</div>
                 <div class="vocab-word-card__unit-label">${v.unit} ${v.part}</div>
@@ -708,6 +709,63 @@ $('#vocabRetranslateBtn').addEventListener('click', async () => {
     btn.disabled = false;
     btn.textContent = '🤖 重译';
     showToast(`重译完成：${updated} 条更新${failed ? `，${failed} 条失败` : ''}`, failed ? 'error' : 'success');
+});
+
+// 全选 / 取消全选
+let vocabSelected = new Set();
+$('#vocabSelectAllBtn').addEventListener('click', () => {
+    const checks = document.querySelectorAll('.vocab-word-card__check');
+    if (!checks.length) return;
+    const allChecked = [...checks].every(c => c.checked);
+    checks.forEach(c => { c.checked = !allChecked; });
+    updateVocabSelection();
+});
+
+// 列表点击 → 更新选中状态
+$('#vocabList').addEventListener('change', e => {
+    if (e.target.classList.contains('vocab-word-card__check')) {
+        updateVocabSelection();
+    }
+});
+
+function updateVocabSelection() {
+    vocabSelected = new Set();
+    document.querySelectorAll('.vocab-word-card__check:checked').forEach(c => {
+        vocabSelected.add(parseInt(c.dataset.id));
+    });
+    const btn = $('#vocabDeleteSelectedBtn');
+    const selBtn = $('#vocabSelectAllBtn');
+    if (vocabSelected.size > 0) {
+        btn.style.display = '';
+        btn.textContent = `🗑️ 删除选中 (${vocabSelected.size})`;
+        selBtn.textContent = '☑ 取消全选';
+    } else {
+        btn.style.display = 'none';
+        selBtn.textContent = '☐ 全选';
+    }
+}
+
+// 删除选中
+$('#vocabDeleteSelectedBtn').addEventListener('click', async () => {
+    if (!vocabSelected.size) return;
+    if (!confirm(`确认删除选中的 ${vocabSelected.size} 个单词？`)) return;
+    const btn = $('#vocabDeleteSelectedBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ 删除中...';
+    try {
+        for (const id of vocabSelected) {
+            await DS.remove('vocabulary', id);
+        }
+        vocabs = vocabs.filter(v => !vocabSelected.has(v.id));
+        vocabSelected.clear();
+        renderVocabView();
+        showToast('删除完成', 'success');
+    } catch (e) {
+        showToast('删除失败: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        updateVocabSelection();
+    }
 });
 
 // 添加/编辑保存

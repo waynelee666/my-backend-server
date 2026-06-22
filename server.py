@@ -110,6 +110,31 @@ PARSE_PROMPT = """你是一个学业助手。从用户上传的文本中提取�
 文本内容：
 """
 
+TRANSLATE_PROMPT = """你是一个英汉词典。请将以下英文单词翻译成中文，给出每个单词最常用的1-3个中文释义。
+
+规则：
+- 优先给出最常见、最核心的释义（不要冷门释义）
+- 多个释义用分号；分隔
+- 标注词性时用缩写：n. v. adj. adv. prep. conj.
+- 词性标注放在释义前面
+
+示例输入：
+apple
+book
+run
+
+示例输出：
+[
+  {"word": "apple", "meaning": "n. 苹果"},
+  {"word": "book", "meaning": "n. 书；v. 预订"},
+  {"word": "run", "meaning": "v. 跑；n. 跑步；v. 运行"}
+]
+
+请只返回纯JSON数组，不要任何额外文字。
+
+单词列表：
+"""
+
 
 def call_deepseek(text: str) -> list:
     """调用 DeepSeek API 解析文本"""
@@ -140,6 +165,48 @@ def call_deepseek(text: str) -> list:
             data = json.loads(resp.read().decode("utf-8"))
             content = data["choices"][0]["message"]["content"].strip()
             # 去除可能的 markdown 代码块标记
+            if content.startswith("```"):
+                content = content.split("\n", 1)[1]
+                if content.endswith("```"):
+                    content = content[:-3]
+            return json.loads(content)
+    except URLError as e:
+        raise RuntimeError(f"DeepSeek API 请求失败: {e}")
+    except (KeyError, json.JSONDecodeError) as e:
+        raise RuntimeError(f"DeepSeek 返回解析失败: {e}")
+
+
+def translate_words(words: list) -> list:
+    """调用 DeepSeek API 批量翻译单词"""
+    if not DEEPSEEK_API_KEY:
+        raise RuntimeError("未配置 DEEPSEEK_API_KEY")
+    if not words:
+        return []
+
+    word_list = "\n".join(words)
+    body = json.dumps({
+        "model": "deepseek-chat",
+        "messages": [
+            {"role": "system", "content": "你是一个专业的英汉词典，只返回JSON数组。"},
+            {"role": "user", "content": TRANSLATE_PROMPT + word_list}
+        ],
+        "temperature": 0.1,
+        "max_tokens": 4096,
+    }).encode("utf-8")
+
+    req = Request(
+        "https://api.deepseek.com/chat/completions",
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        },
+    )
+
+    try:
+        with urlopen(req, timeout=90) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            content = data["choices"][0]["message"]["content"].strip()
             if content.startswith("```"):
                 content = content.split("\n", 1)[1]
                 if content.endswith("```"):
@@ -221,6 +288,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.handle_parse()
         elif parsed.path == "/api/chat":
             self.handle_chat()
+        elif parsed.path == "/api/translate-words":
+            self.handle_translate_words()
         else:
             self.send_json({"ok": False, "error": "未知接口"}, 404)
 
@@ -244,6 +313,31 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_json({"ok": True, "results": results})
         except RuntimeError as e:
             print(f"  [AI ERROR] {e}")
+            self.send_json({"ok": False, "error": str(e)}, 500)
+
+    def handle_translate_words(self):
+        """POST /api/translate-words — 调用 DeepSeek 批量翻译单词"""
+        body = self.read_json_body()
+        if not body or "words" not in body:
+            self.send_json({"ok": False, "error": "请提供 words 字段（英文单词数组）"}, 400)
+            return
+
+        words = [w.strip() for w in body["words"] if w and w.strip()]
+        if not words:
+            self.send_json({"ok": False, "error": "单词列表不能为空"}, 400)
+            return
+
+        # 限制一次最多 100 个单词
+        if len(words) > 100:
+            self.send_json({"ok": False, "error": f"一次最多翻译 100 个单词，当前 {len(words)} 个"}, 400)
+            return
+
+        try:
+            translations = translate_words(words)
+            print(f"  [Translate] {len(words)} words → {len(translations)} results")
+            self.send_json({"ok": True, "translations": translations})
+        except RuntimeError as e:
+            print(f"  [Translate ERROR] {e}")
             self.send_json({"ok": False, "error": str(e)}, 500)
 
     def handle_chat(self):

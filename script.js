@@ -467,8 +467,44 @@ async function saveEditThought(id) {
 }
 
 // ==================== 单词视图 ====================
-function renderVocabView() {
+async function autoDedupVocab(unit, part) {
+    // 仅在非复习模式下自动去重
+    if (unit === '__review__') return false;
+    const target = vocabs.filter(v => v.unit === unit && v.part === part);
+    if (target.length < 2) return false;
+    const seen = new Map();
+    const toDelete = [];
+    for (const v of target) {
+        const key = v.word.toLowerCase();
+        if (seen.has(key)) {
+            toDelete.push(v);
+        } else {
+            seen.set(key, v);
+        }
+    }
+    if (!toDelete.length) return false;
+    try {
+        for (const v of toDelete) {
+            await DS.remove('vocabulary', v.id);
+        }
+        vocabs = vocabs.filter(v => !toDelete.some(d => d.id === v.id));
+        console.log(`[去重] ${unit} ${part}: 自动删除 ${toDelete.length} 个重复单词`);
+        return true; // 有变更，需要重新渲染
+    } catch (e) {
+        console.warn('[去重] 自动去重失败:', e);
+        return false;
+    }
+}
+
+async function renderVocabView() {
     const isReview = vocabUnit === '__review__';
+    // 自动去重（仅在非复习模式）；如有变更则 vocabs 已更新，继续渲染
+    if (!isReview) {
+        const changed = await autoDedupVocab(vocabUnit, vocabPart);
+        if (changed) {
+            // vocabs 已更新，继续用新数据渲染
+        }
+    }
     const filtered = isReview
         ? vocabs.filter(v => v.review === true)
         : vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
@@ -588,6 +624,36 @@ $('#vocabStudyBtn').addEventListener('click', () => {
     if (typeof startVocabStudy === 'function') startVocabStudy();
 });
 
+// 去重：删除当前 unit+part 中重复的单词，保留最早创建的
+$('#vocabDedupBtn').addEventListener('click', async () => {
+    const isReview = vocabUnit === '__review__';
+    if (isReview) { showToast('复习模式下不支持去重', 'info'); return; }
+    const target = vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
+    if (target.length < 2) { showToast(`${vocabUnit} ${vocabPart} 单词不足，无需去重`, 'info'); return; }
+    const seen = new Map(); // word.lower() -> vocab item
+    const toDelete = [];
+    for (const v of target) {
+        const key = v.word.toLowerCase();
+        if (seen.has(key)) {
+            toDelete.push(v); // 重复的，删除
+        } else {
+            seen.set(key, v); // 第一个，保留
+        }
+    }
+    if (!toDelete.length) { showToast(`${vocabUnit} ${vocabPart} 没有重复单词 ✅`, 'success'); return; }
+    if (!confirm(`${vocabUnit} ${vocabPart} 发现 ${toDelete.length} 个重复单词，确认删除？\n${toDelete.map(v => v.word).join('、')}`)) return;
+    try {
+        for (const v of toDelete) {
+            await DS.remove('vocabulary', v.id);
+        }
+        vocabs = vocabs.filter(v => !toDelete.some(d => d.id === v.id));
+        renderVocabView();
+        showToast(`已删除 ${toDelete.length} 个重复单词 ✅`, 'success');
+    } catch (e) {
+        showToast('去重失败: ' + e.message, 'error');
+    }
+});
+
 // 添加/编辑保存
 $('#vocabEditSave').addEventListener('click', async () => {
     const word = $('#vocabEditWord').value.trim();
@@ -611,6 +677,34 @@ $('#vocabEditSave').addEventListener('click', async () => {
 
 $('#vocabEditClose').addEventListener('click', closeVocabEditModal);
 $('#vocabEditCancel').addEventListener('click', closeVocabEditModal);
+// AI 翻译按钮 - 单个单词
+$('#vocabEditTranslate').addEventListener('click', async () => {
+    const word = $('#vocabEditWord').value.trim();
+    if (!word) { showToast('请先输入英文单词', 'error'); return; }
+    const btn = $('#vocabEditTranslate');
+    btn.disabled = true;
+    btn.textContent = '⏳';
+    try {
+        const resp = await fetch('/api/translate-words', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ words: [word] }),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || '翻译失败');
+        const t = data.translations?.[0];
+        if (t?.meaning) {
+            $('#vocabEditMeaning').value = t.meaning;
+        } else {
+            showToast('AI 未能翻译该单词', 'error');
+        }
+    } catch (e) {
+        showToast('翻译失败: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🤖 翻译';
+    }
+});
 $('#vocabEditModal').addEventListener('click', e => {
     if (e.target === $('#vocabEditModal')) closeVocabEditModal();
 });
@@ -651,31 +745,96 @@ $('#vocabImportModal').addEventListener('click', e => {
 });
 $('#vocabImportConfirm').addEventListener('click', async () => {
     const text = $('#vocabImportText').value.trim();
-    if (!text) { showToast('请粘贴单词内容', 'error'); return; }
+    if (!text) { showToast('请粘贴英文单词', 'error'); return; }
     const unit = $('#vocabImportUnit').value;
     const part = $('#vocabImportPart').value;
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-    const pairs = [];
-    for (const line of lines) {
-        const idx = line.search(/\s+/);
-        if (idx > 0) {
-            const w = line.slice(0, idx).trim();
-            const m = line.slice(idx).trim();
-            if (w && m) pairs.push({ word: w, meaning: m });
-        }
+
+    // 解析英文单词：支持换行、逗号、分号、空格分隔
+    const rawWords = text.split(/[\n,;，；]+/).map(w => w.trim()).filter(w => w);
+    // 进一步拆分每个片段中的空格分隔（但保留短语）
+    const words = [];
+    for (const frag of rawWords) {
+        // 如果片段包含空格且长度较长，可能是短语，保留整体
+        // 否则按空格拆
+        const subWords = frag.split(/\s+/).filter(w => w && w.length > 0);
+        words.push(...subWords);
     }
-    if (!pairs.length) { showToast('未识别到有效单词，格式：apple 苹果', 'error'); return; }
+
+    // 去重 + 过滤掉非英文词（含中文字符的跳过）
+    const uniqueWords = [...new Set(words)].filter(w => {
+        // 跳过纯数字、含中文、太短的
+        if (w.length < 2) return false;
+        if (/[一-鿿]/.test(w)) return false;
+        if (/^\d+$/.test(w)) return false;
+        return true;
+    });
+
+    if (!uniqueWords.length) {
+        showToast('未识别到有效英文单词，请检查输入', 'error');
+        return;
+    }
+
+    if (uniqueWords.length > 100) {
+        showToast(`一次最多导入 100 个单词，当前 ${uniqueWords.length} 个`, 'error');
+        return;
+    }
+
+    // 过滤掉同一 unit+part 中已存在的单词
+    const existingWords = new Set(
+        vocabs
+            .filter(v => v.unit === unit && v.part === part)
+            .map(v => v.word.toLowerCase())
+    );
+    const newWords = uniqueWords.filter(w => !existingWords.has(w.toLowerCase()));
+    const dupCount = uniqueWords.length - newWords.length;
+
+    if (!newWords.length) {
+        showToast(`这 ${uniqueWords.length} 个单词在 ${unit} ${part} 中已全部存在，无需导入`, 'info');
+        return;
+    }
+
+    const confirmBtn = $('#vocabImportConfirm');
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = '⏳ AI 翻译中...';
+
     try {
-        let count = 0;
-        for (const p of pairs) {
-            await DS.create('vocabulary', { unit, part, word: p.word, meaning: p.meaning });
-            count++;
+        // 调用 AI 翻译 API（只翻译新单词）
+        const resp = await fetch('/api/translate-words', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ words: newWords }),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || '翻译失败');
+
+        const translations = data.translations;
+        if (!translations || !translations.length) {
+            throw new Error('AI 未返回翻译结果');
         }
+
+        // 逐个存入 Supabase
+        let count = 0;
+        const skipped = [];
+        for (const t of translations) {
+            if (t.word && t.meaning) {
+                await DS.create('vocabulary', { unit, part, word: t.word, meaning: t.meaning });
+                count++;
+            } else {
+                skipped.push(t.word || '?');
+            }
+        }
+
         await refreshAll();
         $('#vocabImportModal').style.display = 'none';
-        showToast(`成功导入 ${count} 个单词`, 'success');
+        let msg = `成功导入 ${count} 个单词 ✨`;
+        if (dupCount) msg += `，${dupCount} 个已存在跳过`;
+        if (skipped.length) msg += `，${skipped.length} 个未翻译`;
+        showToast(msg, 'success');
     } catch (e) {
         showToast('导入失败: ' + e.message, 'error');
+    } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = '🤖 翻译并导入';
     }
 });
 

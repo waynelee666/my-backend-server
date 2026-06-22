@@ -295,6 +295,7 @@
         <div class="vocab-actions">
             <button class="btn btn--primary btn--sm" id="vocabAddBtn">➕ 添加</button>
             <button class="btn btn--outline btn--sm" id="vocabImportBtn">📥 批量导入</button>
+            <button class="btn btn--outline btn--sm" id="vocabDedupBtn" title="删除当前单元重复单词">🔧 去重</button>
             <button class="btn btn--outline btn--sm" id="vocabStudyBtn">🎯 开始复习</button>
             <select class="vocab-count-select" id="vocabStudyCount">
                 <option value="0">全部</option>
@@ -363,18 +364,18 @@
                 </div>
             </div>
             <div class="form-group">
-                <label>粘贴单词内容</label>
+                <label>粘贴英文单词</label>
                 <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
                     <input type="file" id="vocabImportFile" accept=".txt,.csv,.md" style="display:none">
                     <button type="button" class="btn btn--outline btn--sm" id="vocabImportFileBtn" style="font-size:.75rem">📁 选择文件</button>
                     <span style="font-size:.7rem;color:var(--color-text-light)" id="vocabImportFileName">未选择文件</span>
                 </div>
-                <textarea class="form-input" id="vocabImportText" rows="10" placeholder="每行一个单词，格式：apple 苹果&#10;book 书&#10;cat 猫"></textarea>
-                <span style="font-size:.75rem;color:var(--color-text-light);margin-top:4px">每行一个单词，英文和中文用空格或 Tab 分隔</span>
+                <textarea class="form-input" id="vocabImportText" rows="10" placeholder="每行一个英文单词，支持逗号/分号/空格分隔&#10;例如：&#10;apple&#10;book&#10;run&#10;beautiful&#10;computer"></textarea>
+                <span style="font-size:.75rem;color:var(--color-text-light);margin-top:4px">🤖 只需输入英文单词，中文释义由 AI 自动翻译</span>
             </div>
             <div class="modal__footer">
                 <button class="btn btn--outline" id="vocabImportCancel">取消</button>
-                <button class="btn btn--primary" id="vocabImportConfirm">导入</button>
+                <button class="btn btn--primary" id="vocabImportConfirm">🤖 翻译并导入</button>
             </div>
         </div>
     </div>
@@ -412,7 +413,10 @@
             </div>
             <div class="form-group">
                 <label>中文释义 *</label>
-                <input class="form-input" id="vocabEditMeaning" maxlength="500" required placeholder="苹果">
+                <div style="display:flex;gap:6px">
+                    <input class="form-input" id="vocabEditMeaning" maxlength="500" required placeholder="苹果" style="flex:1">
+                    <button type="button" class="btn btn--outline btn--sm" id="vocabEditTranslate" title="AI 自动翻译">🤖 翻译</button>
+                </div>
             </div>
             <div class="modal__footer" style="display:flex;justify-content:space-between;align-items:center">
                 <span id="vocabEditDelete" style="display:none;"></span>

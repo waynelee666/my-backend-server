@@ -21,9 +21,10 @@ function startVocabStudy() {
         showToast(studyIsReview ? '复习表已清空 🎉' : '当前单元没有单词，请先添加或导入', 'error');
         return;
     }
-    // 取指定数量
+    // 随机打乱后取指定数量
     const count = parseInt($('#vocabStudyCount')?.value || '0');
-    studyWords = count > 0 ? [...filtered].slice(0, count) : [...filtered];
+    const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+    studyWords = count > 0 ? shuffled.slice(0, count) : shuffled;
     studyIndex = 0;
     studyFlipped = false;
     studyKnown = 0;
@@ -156,6 +157,7 @@ function renderStudyEnd() {
         studyFlipped = false;
         studyKnown = 0;
         studyUnknown = 0;
+        studyWords = studyWords.sort(() => Math.random() - 0.5); // 重新打乱
         renderStudyCard();
     });
     document.getElementById('vocabStudyBack').addEventListener('click', exitStudyMode);

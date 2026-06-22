@@ -9,9 +9,11 @@ let studyFlipped = false;
 let studyKnown = 0;
 let studyUnknown = 0;
 let studyIsReview = false;  // 是否在复习模式
+let studyModeDir = 'en2cn'; // en2cn=看英文想意思 | cn2en=看中文拼英文
 
 function startVocabStudy() {
     studyIsReview = vocabUnit === '__review__';
+    studyModeDir = $('#vocabStudyMode')?.value || 'en2cn';
     const filtered = studyIsReview
         ? vocabs.filter(v => v.review === true)
         : vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
@@ -45,6 +47,12 @@ function renderStudyCard() {
     const word = studyWords[studyIndex];
     const progress = `${studyIndex + 1} / ${studyWords.length}`;
     const pct = studyWords.length > 0 ? Math.round(studyIndex / studyWords.length * 100) : 0;
+    const isCn2en = studyModeDir === 'cn2en';
+    const frontText = isCn2en ? esc(word.meaning) : esc(word.word);
+    const backText = isCn2en ? esc(word.word) : esc(word.meaning);
+    const frontHint = isCn2en ? '拼写英文 ✏️' : '点击翻转 👆';
+    const frontClass = isCn2en ? 'vocab-flashcard__meaning' : 'vocab-flashcard__word';
+    const backClass = isCn2en ? 'vocab-flashcard__word' : 'vocab-flashcard__meaning';
 
     container.innerHTML = `
         <div class="vocab-flashcard">
@@ -54,11 +62,11 @@ function renderStudyCard() {
             </div>
             <div class="vocab-flashcard__card ${studyFlipped ? 'vocab-flashcard__card--flipped' : ''}" id="vocabFlashCard">
                 <div class="vocab-flashcard__front">
-                    <div class="vocab-flashcard__word">${esc(word.word)}</div>
-                    <div class="vocab-flashcard__hint">点击翻转 👆</div>
+                    <div class="${frontClass}">${frontText}</div>
+                    <div class="vocab-flashcard__hint">${frontHint}</div>
                 </div>
                 <div class="vocab-flashcard__back" style="${studyFlipped ? '' : 'display:none'}">
-                    <div class="vocab-flashcard__meaning">${esc(word.meaning)}</div>
+                    <div class="${backClass}">${backText}</div>
                 </div>
             </div>
             <div class="vocab-flashcard__buttons" id="vocabFlashBtns" style="${studyFlipped ? '' : 'display:none'}">

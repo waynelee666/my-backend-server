@@ -785,27 +785,8 @@ $('#vocabImportBtn').addEventListener('click', () => {
     $('#vocabImportText').value = '';
     $('#vocabImportFileName').textContent = '未选择文件';
     $('#vocabImportFile').value = '';
-    $('#vocabImportMode').value = 'ai';
-    updateImportModeUI();
     $('#vocabImportModal').style.display = '';
 });
-
-// 导入模式切换 → 更新 UI
-function updateImportModeUI() {
-    const mode = $('#vocabImportMode').value;
-    if (mode === 'direct') {
-        $('#vocabImportLabel').textContent = '粘贴英文+中文释义';
-        $('#vocabImportText').placeholder = '每行一条，英文和中文释义用Tab或空格分隔\n例如：\napple\t苹果\nlook after\t照顾；照料\ntake off\t起飞；脱下';
-        $('#vocabImportHint').textContent = '📋 跳过AI翻译，直接使用你提供的中文释义（含空格→短语，否则→单词）';
-        $('#vocabImportConfirm').textContent = '📋 直接导入';
-    } else {
-        $('#vocabImportLabel').textContent = '粘贴英文单词或短语';
-        $('#vocabImportText').placeholder = '每行一个英文单词或短语，支持逗号/分号分隔\n例如：\napple\nlook after\ntake off\ncomputer\nin the meantime';
-        $('#vocabImportHint').textContent = '🤖 只需输入英文，中文释义由 AI 自动翻译（含空格→短语，否则→单词）';
-        $('#vocabImportConfirm').textContent = '🤖 翻译并导入';
-    }
-}
-$('#vocabImportMode').addEventListener('change', updateImportModeUI);
 
 // 文件选择按钮 → 触发隐藏的 file input
 $('#vocabImportFileBtn').addEventListener('click', () => {
@@ -836,153 +817,82 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
     if (!text) { showToast('请粘贴内容', 'error'); return; }
     const unit = $('#vocabImportUnit').value;
     const part = $('#vocabImportPart').value;
-    const importType = $('#vocabImportType').value || 'auto'; // auto | word | phrase
-    const importMode = $('#vocabImportMode').value || 'ai';   // ai | direct
+    const importType = $('#vocabImportType').value || 'auto';
 
-    // 确定条目类型
     function detectType(entry) {
         if (importType === 'word') return 'word';
         if (importType === 'phrase') return 'phrase';
         return /\s/.test(entry) ? 'phrase' : 'word';
     }
 
-    // ============ 直接导入模式 ============
-    if (importMode === 'direct') {
-        // 按行解析，每行：word<TAB>meaning 或 word  meaning（2+空格）
-        const lines = text.split(/\n/).map(l => l.trim()).filter(l => l);
-        const parsed = [];  // [{word, meaning, type}]
-        const seen = new Set();
-        for (const line of lines) {
-            // 尝试Tab分割，否则2+空格分割
-            let parts = line.split('\t');
-            if (parts.length < 2) {
-                parts = line.split(/\s{2,}/);
-            }
-            if (parts.length < 2) continue;
-            const word = parts[0].trim();
-            const meaning = parts.slice(1).join(' ').trim();
-            if (!word || !meaning) continue;
-            if (!/[一-鿿]/.test(meaning)) continue;  // 释义无中文 → 跳过
-            const lower = word.toLowerCase();
-            if (seen.has(lower)) continue;
-            seen.add(lower);
-            if (word.length < 2) continue;
-            parsed.push({ word, meaning, type: detectType(word) });
+    // 解析：按行分割，每行提取英文部分（去掉Tab/空格后的中文）
+    const lines = text.split(/[\n,;，；]+/).map(l => l.trim()).filter(l => l);
+    const seen = new Set();
+    const entries = [];
+    for (let line of lines) {
+        // 去掉 Tab 及之后的内容（中文释义）
+        const tabIdx = line.indexOf('\t');
+        if (tabIdx > 0) line = line.substring(0, tabIdx).trim();
+        // 去掉第一个中文字符及之后的内容
+        const cnMatch = line.match(/[一-鿿（(]/);
+        if (cnMatch && cnMatch.index > 0) {
+            line = line.substring(0, cnMatch.index).trim();
         }
-
-        if (!parsed.length) {
-            showToast('未识别到有效内容。请确保格式：英文<Tab>中文释义', 'error');
-            return;
-        }
-        if (parsed.length > 200) {
-            showToast(`一次最多导入 200 个条目，当前 ${parsed.length} 个`, 'error');
-            return;
-        }
-
-        // 去重：与已有数据比对（区分类型）
-        const existingKeys = new Set(
-            vocabs.filter(v => v.unit === unit && v.part === part)
-                .map(v => v.word.toLowerCase() + '|' + (v.type || 'word'))
-        );
-        const newEntries = parsed.filter(e => !existingKeys.has(e.word.toLowerCase() + '|' + e.type));
-        const dupCount = parsed.length - newEntries.length;
-        if (!newEntries.length) {
-            showToast(`这 ${parsed.length} 个条目在 ${unit} ${part} 中已全部存在，无需导入`, 'info');
-            return;
-        }
-
-        const confirmBtn = $('#vocabImportConfirm');
-        confirmBtn.disabled = true;
-        confirmBtn.textContent = '⏳ 导入中...';
-
-        try {
-            let count = 0;
-            for (const e of newEntries) {
-                await DS.create('vocabulary', { unit, part, type: e.type, word: e.word, meaning: e.meaning });
-                count++;
-            }
-            await refreshAll();
-            $('#vocabImportModal').style.display = 'none';
-            let msg = `成功导入 ${count} 个条目 ✨`;
-            if (dupCount) msg += `，${dupCount} 个已存在跳过`;
-            showToast(msg, 'success');
-        } catch (e) {
-            showToast('导入失败: ' + e.message, 'error');
-        } finally {
-            confirmBtn.disabled = false;
-            confirmBtn.textContent = '📋 直接导入';
-        }
-        return;
+        // 清理尾部残留标点
+        line = line.replace(/[.,;:!?\s]+$/, '');
+        if (line.length < 2) continue;
+        if (/^\d+$/.test(line)) continue;
+        if (!/^[a-zA-Z]/.test(line)) continue;
+        const lower = line.toLowerCase();
+        if (seen.has(lower)) continue;
+        seen.add(lower);
+        entries.push(line);
     }
 
-    // ============ AI 翻译模式 ============
-    // 解析：按换行、逗号、分号分割，每行作为一个条目（保留短语中的空格）
-    const entries = text.split(/[\n,;，；]+/).map(w => w.trim()).filter(w => w);
-
-    // 去重（数组内）+ 过滤
-    const aiSeen = new Set();
-    const uniqueEntries = [];
-    for (const entry of entries) {
-        const lower = entry.toLowerCase();
-        if (aiSeen.has(lower)) continue;
-        aiSeen.add(lower);
-        if (entry.length < 2) continue;
-        if (/[一-鿿]/.test(entry)) continue;
-        if (/^\d+$/.test(entry)) continue;
-        uniqueEntries.push(entry);
-    }
-
-    if (!uniqueEntries.length) {
+    if (!entries.length) {
         showToast('未识别到有效英文内容，请检查输入', 'error');
         return;
     }
-
-    if (uniqueEntries.length > 200) {
-        showToast(`一次最多导入 200 个条目，当前 ${uniqueEntries.length} 个`, 'error');
+    if (entries.length > 200) {
+        showToast(`一次最多导入 200 个条目，当前 ${entries.length} 个`, 'error');
         return;
     }
 
-    // 过滤掉同一 unit+part 中已存在的条目（区分类型）
-    const aiExistingKeys = new Set(
-        vocabs
-            .filter(v => v.unit === unit && v.part === part)
+    // 去重：与已有数据比对（区分类型）
+    const existingKeys = new Set(
+        vocabs.filter(v => v.unit === unit && v.part === part)
             .map(v => v.word.toLowerCase() + '|' + (v.type || 'word'))
     );
-    const newWords = uniqueEntries.filter(entry => {
+    const newEntries = entries.filter(entry => {
         const etype = detectType(entry);
-        const key = entry.toLowerCase() + '|' + etype;
-        return !aiExistingKeys.has(key);
+        return !existingKeys.has(entry.toLowerCase() + '|' + etype);
     });
-    const aiDupCount = uniqueEntries.length - newWords.length;
-
-    if (!newWords.length) {
-        showToast(`这 ${uniqueEntries.length} 个条目在 ${unit} ${part} 中已全部存在，无需导入`, 'info');
+    const dupCount = entries.length - newEntries.length;
+    if (!newEntries.length) {
+        showToast(`${entries.length} 个条目在 ${unit} ${part} 中已全部存在，无需导入`, 'info');
         return;
     }
 
-    // 记录每个新条目的类型
+    // 记录类型
     const entryTypes = {};
-    for (const entry of newWords) {
-        entryTypes[entry.toLowerCase()] = detectType(entry);
+    for (const e of newEntries) {
+        entryTypes[e.toLowerCase()] = detectType(e);
     }
 
-    const aiConfirmBtn = $('#vocabImportConfirm');
-    aiConfirmBtn.disabled = true;
-    aiConfirmBtn.textContent = '⏳ AI 翻译中...';
+    const btn = $('#vocabImportConfirm');
+    btn.disabled = true;
+    btn.textContent = '⏳ AI 翻译中...';
 
     try {
         const resp = await fetch('/api/translate-words', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ words: newWords }),
+            body: JSON.stringify({ words: newEntries }),
         });
         const data = await resp.json();
         if (!data.ok) throw new Error(data.error || '翻译失败');
-
         const translations = data.translations;
-        if (!translations || !translations.length) {
-            throw new Error('AI 未返回翻译结果');
-        }
+        if (!translations || !translations.length) throw new Error('AI 未返回翻译结果');
 
         let count = 0;
         const skipped = [];
@@ -999,14 +909,14 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
         await refreshAll();
         $('#vocabImportModal').style.display = 'none';
         let msg = `成功导入 ${count} 个条目 ✨`;
-        if (aiDupCount) msg += `，${aiDupCount} 个已存在跳过`;
+        if (dupCount) msg += `，${dupCount} 个已存在跳过`;
         if (skipped.length) msg += `，${skipped.length} 个未翻译`;
         showToast(msg, 'success');
     } catch (e) {
         showToast('导入失败: ' + e.message, 'error');
     } finally {
-        aiConfirmBtn.disabled = false;
-        aiConfirmBtn.textContent = '🤖 翻译并导入';
+        btn.disabled = false;
+        btn.textContent = '🤖 翻译并导入';
     }
 });
 

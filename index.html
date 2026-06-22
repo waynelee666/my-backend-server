@@ -349,8 +349,8 @@
         </div>
         <div class="modal__body">
             <div class="form-group">
-                <label>选择单元、部分和类型</label>
-                <div style="display:flex;gap:8px">
+                <label>选择单元、部分、类型和导入方式</label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
                     <select class="form-select" id="vocabImportUnit">
                         <option value="U1">U1</option><option value="U2">U2</option>
                         <option value="U3">U3</option><option value="U4">U4</option>
@@ -366,17 +366,21 @@
                         <option value="word">📝 单词</option>
                         <option value="phrase">💬 短语</option>
                     </select>
+                    <select class="form-select" id="vocabImportMode">
+                        <option value="ai">🤖 AI 翻译导入</option>
+                        <option value="direct">📋 直接导入（已有释义）</option>
+                    </select>
                 </div>
             </div>
             <div class="form-group">
-                <label>粘贴英文单词或短语</label>
+                <label id="vocabImportLabel">粘贴英文单词或短语</label>
                 <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
                     <input type="file" id="vocabImportFile" accept=".txt,.csv,.md" style="display:none">
                     <button type="button" class="btn btn--outline btn--sm" id="vocabImportFileBtn" style="font-size:.75rem">📁 选择文件</button>
                     <span style="font-size:.7rem;color:var(--color-text-light)" id="vocabImportFileName">未选择文件</span>
                 </div>
                 <textarea class="form-input" id="vocabImportText" rows="10" placeholder="每行一个英文单词或短语，支持逗号/分号分隔&#10;例如：&#10;apple&#10;look after&#10;take off&#10;computer&#10;in the meantime"></textarea>
-                <span style="font-size:.75rem;color:var(--color-text-light);margin-top:4px">🤖 只需输入英文，中文释义由 AI 自动翻译（含空格→短语，否则→单词）</span>
+                <span style="font-size:.75rem;color:var(--color-text-light);margin-top:4px" id="vocabImportHint">🤖 只需输入英文，中文释义由 AI 自动翻译（含空格→短语，否则→单词）</span>
             </div>
             <div class="modal__footer">
                 <button class="btn btn--outline" id="vocabImportCancel">取消</button>
@@ -456,7 +460,7 @@
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 <script src="supabase.min.js"></script>
 <script src="auth.js?v=3.2"></script>
-<script src="script.js?v=3.5"></script>
+<script src="script.js?v=3.6"></script>
 <script src="calc.js?v=2.1"></script>
 <script src="chat.js?v=1.3"></script>
 <script src="vocab.js?v=1.2"></script>

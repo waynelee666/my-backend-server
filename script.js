@@ -665,6 +665,63 @@ $('#vocabDedupBtn').addEventListener('click', async () => {
     }
 });
 
+// AI 重新翻译当前单元
+$('#vocabRetranslateBtn').addEventListener('click', async () => {
+    const isReview = vocabUnit === '__review__';
+    if (isReview) { showToast('复习模式下不支持重译', 'info'); return; }
+    const target = vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
+    if (!target.length) { showToast(`${vocabUnit} ${vocabPart} 没有条目`, 'info'); return; }
+    if (!confirm(`${vocabUnit} ${vocabPart} 共 ${target.length} 个条目，将用 AI 重新翻译全部中文释义，确认？`)) return;
+
+    const btn = $('#vocabRetranslateBtn');
+    btn.disabled = true;
+    const BATCH = 50;
+    let updated = 0;
+    let failed = 0;
+
+    for (let i = 0; i < target.length; i += BATCH) {
+        const batch = target.slice(i, i + BATCH);
+        const words = batch.map(v => v.word);
+        const batchNum = Math.floor(i / BATCH) + 1;
+        const totalBatches = Math.ceil(target.length / BATCH);
+        btn.textContent = `⏳ ${batchNum}/${totalBatches}`;
+
+        try {
+            const resp = await fetch('/api/translate-words', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ words }),
+            });
+            const data = await resp.json();
+            if (!data.ok) throw new Error(data.error);
+
+            const transMap = {};
+            for (const t of data.translations) {
+                if (t.word && t.meaning) {
+                    transMap[t.word.toLowerCase().trim()] = t.meaning;
+                }
+            }
+
+            for (const v of batch) {
+                const key = v.word.toLowerCase().trim();
+                if (transMap[key] && transMap[key] !== v.meaning) {
+                    await DS.update('vocabulary', v.id, { meaning: transMap[key] });
+                    v.meaning = transMap[key];
+                    updated++;
+                }
+            }
+        } catch (e) {
+            failed += batch.length;
+            console.warn('Batch failed:', e);
+        }
+    }
+
+    await refreshAll();
+    btn.disabled = false;
+    btn.textContent = '🤖 重译';
+    showToast(`重译完成：${updated} 条更新${failed ? `，${failed} 条失败` : ''}`, failed ? 'error' : 'success');
+});
+
 // 添加/编辑保存
 $('#vocabEditSave').addEventListener('click', async () => {
     const word = $('#vocabEditWord').value.trim();

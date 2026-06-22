@@ -500,9 +500,10 @@ async function renderVocabView() {
     const isReview = vocabUnit === '__review__';
     // 自动去重（仅在非复习模式）；如有变更则 vocabs 已更新，继续渲染
     if (!isReview) {
-        const changed = await autoDedupVocab(vocabUnit, vocabPart);
-        if (changed) {
-            // vocabs 已更新，继续用新数据渲染
+        try {
+            await autoDedupVocab(vocabUnit, vocabPart);
+        } catch (e) {
+            console.warn('[去重] 跳过自动去重:', e);
         }
     }
     const filtered = isReview

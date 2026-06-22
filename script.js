@@ -475,8 +475,7 @@ async function autoDedupVocab(unit, part) {
     const seen = new Map();
     const toDelete = [];
     for (const v of target) {
-        const vtype = v.type || 'word';
-        const key = v.word.toLowerCase() + '|' + vtype;
+        const key = v.word.toLowerCase();
         if (seen.has(key)) {
             toDelete.push(v);
         } else {
@@ -510,16 +509,7 @@ function renderVocabView() {
         : vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
     const countEl = $('#vocabCount');
     const label = isReview ? '🔄 复习' : `${vocabUnit} ${vocabPart}`;
-    if (countEl && filtered.length) {
-        const wc = filtered.filter(v => (v.type || 'word') === 'word').length;
-        const pc = filtered.filter(v => v.type === 'phrase').length;
-        let cntStr = '';
-        if (wc) cntStr += `${wc}词`;
-        if (pc) cntStr += (cntStr ? ` ${pc}短语` : `${pc}短语`);
-        countEl.textContent = `${label} · ${cntStr}`;
-    } else if (countEl) {
-        countEl.textContent = '';
-    }
+    if (countEl) countEl.textContent = filtered.length ? `${label} · ${filtered.length}词` : '';
 
     // Unit 选择器：最前面加复习按钮
     const reviewCount = vocabs.filter(v => v.review === true).length;
@@ -552,7 +542,7 @@ function renderVocabView() {
     } else {
         listEl.innerHTML = filtered.map(v => `
             <div class="vocab-word-card" data-id="${v.id}">
-                <div class="vocab-word-card__word">${esc(v.word)}${v.type === 'phrase' ? ' <span class="vocab-word-card__type-badge">💬 短语</span>' : ''}</div>
+                <div class="vocab-word-card__word">${esc(v.word)}</div>
                 <div class="vocab-word-card__meaning">${esc(v.meaning)}</div>
                 <div class="vocab-word-card__unit-label">${v.unit} ${v.part}</div>
                 <div class="vocab-word-card__actions">
@@ -571,7 +561,6 @@ function openVocabEditModal(vocab) {
     const defaultUnit = vocabUnit === '__review__' ? 'U1' : vocabUnit;
     $('#vocabEditUnit').value = vocab ? vocab.unit : defaultUnit;
     $('#vocabEditPart').value = vocab ? vocab.part : vocabPart;
-    $('#vocabEditType').value = vocab ? (vocab.type || 'word') : 'word';
     $('#vocabEditWord').value = vocab ? vocab.word : '';
     $('#vocabEditMeaning').value = vocab ? vocab.meaning : '';
 
@@ -640,11 +629,10 @@ $('#vocabDedupBtn').addEventListener('click', async () => {
     if (isReview) { showToast('复习模式下不支持去重', 'info'); return; }
     const target = vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
     if (target.length < 2) { showToast(`${vocabUnit} ${vocabPart} 条目不足，无需去重`, 'info'); return; }
-    const seen = new Map(); // word.lower()|type -> vocab item
+    const seen = new Map(); // word.lower() -> vocab item
     const toDelete = [];
     for (const v of target) {
-        const vtype = v.type || 'word';
-        const key = v.word.toLowerCase() + '|' + vtype;
+        const key = v.word.toLowerCase();
         if (seen.has(key)) {
             toDelete.push(v); // 重复的，删除
         } else {
@@ -729,12 +717,11 @@ $('#vocabEditSave').addEventListener('click', async () => {
     if (!word || !meaning) { showToast('请填写英文和中文释义', 'error'); return; }
     const unit = $('#vocabEditUnit').value;
     const part = $('#vocabEditPart').value;
-    const type = $('#vocabEditType').value || 'word';
     try {
         if (vocabEditId) {
-            await DS.update('vocabulary', vocabEditId, { unit, part, type, word, meaning });
+            await DS.update('vocabulary', vocabEditId, { unit, part, word, meaning });
         } else {
-            await DS.create('vocabulary', { unit, part, type, word, meaning });
+            await DS.create('vocabulary', { unit, part, word, meaning });
         }
         await refreshAll();
         closeVocabEditModal();
@@ -817,14 +804,6 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
     if (!text) { showToast('请粘贴内容', 'error'); return; }
     const unit = $('#vocabImportUnit').value;
     const part = $('#vocabImportPart').value;
-    const importType = $('#vocabImportType').value || 'auto';
-
-    function detectType(entry) {
-        if (importType === 'word') return 'word';
-        if (importType === 'phrase') return 'phrase';
-        return /\s/.test(entry) ? 'phrase' : 'word';
-    }
-
     // 解析：按行分割，每行提取英文部分（去掉Tab/空格后的中文）
     const lines = text.split(/[\n,;，；]+/).map(l => l.trim()).filter(l => l);
     const seen = new Set();
@@ -858,25 +837,16 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
         return;
     }
 
-    // 去重：与已有数据比对（区分类型）
+    // 去重：与已有数据比对
     const existingKeys = new Set(
         vocabs.filter(v => v.unit === unit && v.part === part)
-            .map(v => v.word.toLowerCase() + '|' + (v.type || 'word'))
+            .map(v => v.word.toLowerCase())
     );
-    const newEntries = entries.filter(entry => {
-        const etype = detectType(entry);
-        return !existingKeys.has(entry.toLowerCase() + '|' + etype);
-    });
+    const newEntries = entries.filter(entry => !existingKeys.has(entry.toLowerCase()));
     const dupCount = entries.length - newEntries.length;
     if (!newEntries.length) {
         showToast(`${entries.length} 个条目在 ${unit} ${part} 中已全部存在，无需导入`, 'info');
         return;
-    }
-
-    // 记录类型
-    const entryTypes = {};
-    for (const e of newEntries) {
-        entryTypes[e.toLowerCase()] = detectType(e);
     }
 
     const btn = $('#vocabImportConfirm');
@@ -898,8 +868,7 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
         const skipped = [];
         for (const t of translations) {
             if (t.word && t.meaning) {
-                const etype = entryTypes[t.word.toLowerCase()] || 'word';
-                await DS.create('vocabulary', { unit, part, type: etype, word: t.word, meaning: t.meaning });
+                await DS.create('vocabulary', { unit, part, word: t.word, meaning: t.meaning });
                 count++;
             } else {
                 skipped.push(t.word || '?');

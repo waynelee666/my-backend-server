@@ -500,7 +500,6 @@ textarea.form-input { resize:vertical; }
 .vocab-word-card__word { font-size:1rem; font-weight:600; color:var(--color-primary); min-width:80px; }
 .vocab-word-card__meaning { flex:1; font-size:.9rem; color:var(--color-text); }
 .vocab-word-card__unit-label { font-size:.7rem; color:var(--color-text-light); background:var(--color-bg-alt); padding:2px 8px; border-radius:4px; white-space:nowrap; }
-.vocab-word-card__type-badge { font-size:.65rem; font-weight:400; background:#ede9fe; color:#7c3aed; padding:1px 6px; border-radius:10px; white-space:nowrap; vertical-align:middle; margin-left:4px; }
 .vocab-word-card__actions { display:flex; gap:4px; opacity:0; transition:opacity var(--transition); }
 .vocab-word-card:hover .vocab-word-card__actions { opacity:1; }
 .vocab-word-card__actions button { padding:4px 8px; font-size:.75rem; border:1px solid var(--color-border); border-radius:4px; background:#fff; cursor:pointer; font-family:inherit; color:var(--color-text-light); }

@@ -27,6 +27,7 @@
             <button class="nav__tab" data-tab="chat">💬 小马</button>
             <button class="nav__tab" data-tab="thoughts">🎬 脚本</button>
             <button class="nav__tab" data-tab="calculus">📐 微积分</button>
+            <button class="nav__tab" data-tab="vocab">📖 单词</button>
         </div>
         <ul class="nav__list">
             <li><span class="nav__datetime" id="navDatetime"></span></li>
@@ -84,6 +85,10 @@
             <button class="home-nav-card" data-tab="calculus">
                 <span class="home-nav-card__icon">📐</span>
                 <span class="home-nav-card__label">微积分</span>
+            </button>
+            <button class="home-nav-card" data-tab="vocab">
+                <span class="home-nav-card__icon">📖</span>
+                <span class="home-nav-card__label">单词</span>
             </button>
         </div>
     </section>
@@ -277,6 +282,26 @@
             </div>
         </div>
     </section>
+
+    <!-- ===== 单词视图 ===== -->
+    <section class="view" id="view-vocab">
+        <div class="view__header">
+            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
+            <h2>📖 单词</h2>
+            <span style="font-size:.85rem;color:var(--color-text-light)" id="vocabCount"></span>
+        </div>
+        <div class="vocab-unit-row" id="vocabUnitRow"></div>
+        <div class="vocab-part-row" id="vocabPartRow"></div>
+        <div class="vocab-actions">
+            <button class="btn btn--primary btn--sm" id="vocabAddBtn">➕ 添加</button>
+            <button class="btn btn--outline btn--sm" id="vocabImportBtn">📥 批量导入</button>
+            <button class="btn btn--outline btn--sm" id="vocabStudyBtn">🎯 开始复习</button>
+        </div>
+        <div class="vocab-list" id="vocabList">
+            <p class="empty-text">还没有单词，点击上方添加或导入 📖</p>
+        </div>
+        <div class="vocab-study" id="vocabStudy" style="display:none;"></div>
+    </section>
 </main>
 
 <!-- ==================== 科目详情模态框 ==================== -->
@@ -303,6 +328,87 @@
     </div>
 </div>
 
+<!-- ==================== 单词批量导入模态框 ==================== -->
+<div class="modal-overlay" id="vocabImportModal" style="display:none;">
+    <div class="modal">
+        <div class="modal__header">
+            <h3 class="modal__title">📥 批量导入单词</h3>
+            <button class="modal__close" data-close="vocabImportModal">&times;</button>
+        </div>
+        <div class="modal__body">
+            <div class="form-group">
+                <label>选择单元和部分</label>
+                <div style="display:flex;gap:8px">
+                    <select class="form-select" id="vocabImportUnit">
+                        <option value="U1">U1</option><option value="U2">U2</option>
+                        <option value="U3">U3</option><option value="U4">U4</option>
+                        <option value="U5">U5</option><option value="U6">U6</option>
+                        <option value="U7">U7</option><option value="U8">U8</option>
+                    </select>
+                    <select class="form-select" id="vocabImportPart">
+                        <option value="P1">P1</option>
+                        <option value="P2">P2</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>粘贴单词内容</label>
+                <textarea class="form-input" id="vocabImportText" rows="10" placeholder="每行一个单词，格式：apple 苹果&#10;book 书&#10;cat 猫"></textarea>
+                <span style="font-size:.75rem;color:var(--color-text-light);margin-top:4px">每行一个单词，英文和中文用空格或 Tab 分隔</span>
+            </div>
+            <div class="modal__footer">
+                <button class="btn btn--outline" id="vocabImportCancel">取消</button>
+                <button class="btn btn--primary" id="vocabImportConfirm">导入</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 单词添加/编辑模态框 ==================== -->
+<div class="modal-overlay" id="vocabEditModal" style="display:none;">
+    <div class="modal">
+        <div class="modal__header">
+            <h3 class="modal__title" id="vocabEditTitle">添加单词</h3>
+            <button class="modal__close" id="vocabEditClose">&times;</button>
+        </div>
+        <div class="modal__body">
+            <div style="display:flex;gap:8px">
+                <div class="form-group">
+                    <label>单元</label>
+                    <select class="form-select" id="vocabEditUnit">
+                        <option value="U1">U1</option><option value="U2">U2</option>
+                        <option value="U3">U3</option><option value="U4">U4</option>
+                        <option value="U5">U5</option><option value="U6">U6</option>
+                        <option value="U7">U7</option><option value="U8">U8</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>部分</label>
+                    <select class="form-select" id="vocabEditPart">
+                        <option value="P1">P1</option>
+                        <option value="P2">P2</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>英文单词 *</label>
+                <input class="form-input" id="vocabEditWord" maxlength="200" required placeholder="apple">
+            </div>
+            <div class="form-group">
+                <label>中文释义 *</label>
+                <input class="form-input" id="vocabEditMeaning" maxlength="500" required placeholder="苹果">
+            </div>
+            <div class="modal__footer" style="display:flex;justify-content:space-between;align-items:center">
+                <span id="vocabEditDelete" style="display:none;"></span>
+                <div style="display:flex;gap:8px;margin-left:auto">
+                    <button type="button" class="btn btn--outline" id="vocabEditCancel">取消</button>
+                    <button type="submit" class="btn btn--primary" id="vocabEditSave">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ==================== 通用模态框（科目/事件/待办） ==================== -->
 <div class="modal-overlay" id="modalOverlay" style="display:none;">
     <div class="modal">
@@ -321,6 +427,7 @@
 <script src="script.js?v=3.3"></script>
 <script src="calc.js?v=2.1"></script>
 <script src="chat.js?v=1.3"></script>
+<script src="vocab.js?v=1.0"></script>
 
 <script>
 function showAuthUI(username) {

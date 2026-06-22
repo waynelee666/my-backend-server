@@ -6,11 +6,12 @@ const sb = Auth.getClient();
 const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
 
 // ==================== 全局状态 ====================
-let subjects = [], events = [], todos = [], thoughts = [];
+let subjects = [], events = [], todos = [], thoughts = [], vocabs = [];
 let currentTab = 'home';
 let todoDate = new Date().toISOString().slice(0, 10);
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 let selectedCalDate = null;
+let vocabUnit = 'U1', vocabPart = 'P1', vocabEditId = null;
 /** 查找相似科目名（"微积分" ≈ "微积分（甲）Ⅱ"） */
 function findSimilarSubject(name) {
     if (!name) return null;
@@ -40,6 +41,7 @@ const DS = {
     async loadEvents() { const { data } = await sb.from('events').select('*').order('date').order('start_time'); return data||[]; },
     async loadTodos() { const { data } = await sb.from('todos').select('*').order('created_at',{ascending:false}); return data||[]; },
     async loadThoughts() { const { data } = await sb.from('thoughts').select('*').order('created_at',{ascending:false}); return data||[]; },
+    async loadVocab() { const { data } = await sb.from('vocabulary').select('*').order('unit').order('part').order('created_at'); return data||[]; },
     async create(table, row) { const u = await sb.auth.getUser(); row.user_id = u.data.user.id;
         const { data, error } = await sb.from(table).insert(row).select().single(); if (error) throw error; return data; },
     async update(table, id, fields) {
@@ -48,13 +50,14 @@ const DS = {
 };
 
 async function refreshAll() {
-    const [s, e, t, th] = await Promise.all([
+    const [s, e, t, th, v] = await Promise.all([
         DS.loadSubjects().catch(e=>(console.warn(e),[])),
         DS.loadEvents().catch(e=>(console.warn(e),[])),
         DS.loadTodos().catch(e=>(console.warn(e),[])),
-        DS.loadThoughts().catch(e=>(console.warn(e),[]))
+        DS.loadThoughts().catch(e=>(console.warn(e),[])),
+        DS.loadVocab().catch(e=>(console.warn(e),[]))
     ]);
-    subjects = s; todos = t; thoughts = th;
+    subjects = s; todos = t; thoughts = th; vocabs = v;
     // 事件默认按日期→时间排序（同一天内从早到晚）
     events = e.sort((a, b) => {
         if (a.date !== b.date) return a.date.localeCompare(b.date);
@@ -62,7 +65,7 @@ async function refreshAll() {
     });
     renderCurrent();
 }
-function renderCurrent() { if (currentTab==='home') renderHome(); else if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else if (currentTab==='subjects') renderSubjects(); else if (currentTab==='thoughts') renderThoughts(); else if (currentTab==='calculus') renderCalcView(); else if (currentTab==='chat') renderChatView(); }
+function renderCurrent() { if (currentTab==='home') renderHome(); else if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else if (currentTab==='subjects') renderSubjects(); else if (currentTab==='thoughts') renderThoughts(); else if (currentTab==='calculus') renderCalcView(); else if (currentTab==='chat') renderChatView(); else if (currentTab==='vocab') renderVocabView(); }
 
 // ==================== Tab 切换 ====================
 $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
@@ -76,6 +79,7 @@ $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
     if (currentTab === 'thoughts') renderThoughts();
     if (currentTab === 'calculus') renderCalcView();
     if (currentTab === 'chat') renderChatView();
+    if (currentTab === 'vocab') renderVocabView();
 }));
 $('.nav__logo').addEventListener('click', (e) => {
     if (window.innerWidth < 768) {
@@ -461,6 +465,181 @@ async function saveEditThought(id) {
         showToast('更新失败: ' + e.message, 'error');
     }
 }
+
+// ==================== 单词视图 ====================
+function renderVocabView() {
+    const filtered = vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
+    const countEl = $('#vocabCount');
+    if (countEl) countEl.textContent = filtered.length ? `${vocabUnit} ${vocabPart} · ${filtered.length} 词` : '';
+
+    const units = ['U1','U2','U3','U4','U5','U6','U7','U8'];
+    $('#vocabUnitRow').innerHTML = units.map(u => {
+        const cnt = vocabs.filter(v => v.unit === u).length;
+        const cls = u === vocabUnit ? ' vocab-unit-btn--active' : '';
+        return `<button class="vocab-unit-btn${cls}" data-unit="${u}">${u}<span class="vocab-unit-count">${cnt}</span></button>`;
+    }).join('');
+
+    $('#vocabPartRow').innerHTML = ['P1','P2'].map(p => {
+        const cls = p === vocabPart ? ' vocab-part-btn--active' : '';
+        return `<button class="vocab-part-btn${cls}" data-part="${p}">${p}</button>`;
+    }).join('');
+
+    const listEl = $('#vocabList');
+    if (!filtered.length) {
+        listEl.innerHTML = '<p class="empty-text">还没有单词，点击上方添加或导入 📖</p>';
+    } else {
+        listEl.innerHTML = filtered.map(v => `
+            <div class="vocab-word-card" data-id="${v.id}">
+                <div class="vocab-word-card__word">${esc(v.word)}</div>
+                <div class="vocab-word-card__meaning">${esc(v.meaning)}</div>
+                <div class="vocab-word-card__actions">
+                    <button data-action="edit-vocab" data-id="${v.id}" title="编辑">✏️</button>
+                    <button class="btn-del" data-action="delete-vocab" data-id="${v.id}" title="删除">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+function openVocabEditModal(vocab) {
+    const isEdit = !!vocab;
+    vocabEditId = vocab ? vocab.id : null;
+    $('#vocabEditTitle').textContent = isEdit ? '编辑单词' : '添加单词';
+    $('#vocabEditUnit').value = vocab ? vocab.unit : vocabUnit;
+    $('#vocabEditPart').value = vocab ? vocab.part : vocabPart;
+    $('#vocabEditWord').value = vocab ? vocab.word : '';
+    $('#vocabEditMeaning').value = vocab ? vocab.meaning : '';
+
+    const delSpan = $('#vocabEditDelete');
+    if (isEdit && delSpan) {
+        delSpan.style.display = '';
+        delSpan.innerHTML = `<button class="btn btn--danger btn--sm" id="vocabEditDeleteBtn">🗑️ 删除</button>`;
+        $('#vocabEditDeleteBtn').addEventListener('click', async () => {
+            if (confirm(`确定删除「${vocab.word}」？`)) {
+                await DS.remove('vocabulary', vocab.id);
+                vocabs = vocabs.filter(x => x.id !== vocab.id);
+                $('#vocabEditModal').style.display = 'none';
+                renderVocabView();
+            }
+        });
+    } else if (delSpan) {
+        delSpan.style.display = 'none';
+    }
+    $('#vocabEditModal').style.display = '';
+}
+
+function closeVocabEditModal() {
+    $('#vocabEditModal').style.display = 'none';
+    vocabEditId = null;
+}
+
+// ==================== 单词事件绑定 ====================
+$('#vocabUnitRow').addEventListener('click', e => {
+    const btn = e.target.closest('.vocab-unit-btn');
+    if (btn) { vocabUnit = btn.dataset.unit; renderVocabView(); }
+});
+$('#vocabPartRow').addEventListener('click', e => {
+    const btn = e.target.closest('.vocab-part-btn');
+    if (btn) { vocabPart = btn.dataset.part; renderVocabView(); }
+});
+$('#vocabList').addEventListener('click', async e => {
+    const editBtn = e.target.closest('[data-action="edit-vocab"]');
+    if (editBtn) {
+        const id = parseInt(editBtn.dataset.id);
+        const v = vocabs.find(x => x.id === id);
+        if (v) openVocabEditModal(v);
+        return;
+    }
+    const delBtn = e.target.closest('[data-action="delete-vocab"]');
+    if (delBtn) {
+        const id = parseInt(delBtn.dataset.id);
+        const v = vocabs.find(x => x.id === id);
+        if (v && confirm(`确定删除「${v.word}」？`)) {
+            await DS.remove('vocabulary', id);
+            vocabs = vocabs.filter(x => x.id !== id);
+            renderVocabView();
+        }
+    }
+});
+$('#vocabAddBtn').addEventListener('click', () => {
+    vocabEditId = null;
+    openVocabEditModal(null);
+});
+$('#vocabStudyBtn').addEventListener('click', () => {
+    if (typeof startVocabStudy === 'function') startVocabStudy();
+});
+
+// 添加/编辑保存
+$('#vocabEditSave').addEventListener('click', async () => {
+    const word = $('#vocabEditWord').value.trim();
+    const meaning = $('#vocabEditMeaning').value.trim();
+    if (!word || !meaning) { showToast('请填写英文单词和中文释义', 'error'); return; }
+    const unit = $('#vocabEditUnit').value;
+    const part = $('#vocabEditPart').value;
+    try {
+        if (vocabEditId) {
+            await DS.update('vocabulary', vocabEditId, { unit, part, word, meaning });
+        } else {
+            await DS.create('vocabulary', { unit, part, word, meaning });
+        }
+        await refreshAll();
+        closeVocabEditModal();
+        showToast(vocabEditId ? '已更新' : '已添加', 'success');
+    } catch (e) {
+        showToast('保存失败: ' + e.message, 'error');
+    }
+});
+
+$('#vocabEditClose').addEventListener('click', closeVocabEditModal);
+$('#vocabEditCancel').addEventListener('click', closeVocabEditModal);
+$('#vocabEditModal').addEventListener('click', e => {
+    if (e.target === $('#vocabEditModal')) closeVocabEditModal();
+});
+
+// 批量导入
+$('#vocabImportBtn').addEventListener('click', () => {
+    $('#vocabImportUnit').value = vocabUnit;
+    $('#vocabImportPart').value = vocabPart;
+    $('#vocabImportText').value = '';
+    $('#vocabImportModal').style.display = '';
+});
+$('#vocabImportCancel').addEventListener('click', () => {
+    $('#vocabImportModal').style.display = 'none';
+});
+const vocabImportClose = document.querySelector('[data-close="vocabImportModal"]');
+if (vocabImportClose) vocabImportClose.addEventListener('click', () => { $('#vocabImportModal').style.display = 'none'; });
+$('#vocabImportModal').addEventListener('click', e => {
+    if (e.target === $('#vocabImportModal')) $('#vocabImportModal').style.display = 'none';
+});
+$('#vocabImportConfirm').addEventListener('click', async () => {
+    const text = $('#vocabImportText').value.trim();
+    if (!text) { showToast('请粘贴单词内容', 'error'); return; }
+    const unit = $('#vocabImportUnit').value;
+    const part = $('#vocabImportPart').value;
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    const pairs = [];
+    for (const line of lines) {
+        const idx = line.search(/\s+/);
+        if (idx > 0) {
+            const w = line.slice(0, idx).trim();
+            const m = line.slice(idx).trim();
+            if (w && m) pairs.push({ word: w, meaning: m });
+        }
+    }
+    if (!pairs.length) { showToast('未识别到有效单词，格式：apple 苹果', 'error'); return; }
+    try {
+        let count = 0;
+        for (const p of pairs) {
+            await DS.create('vocabulary', { unit, part, word: p.word, meaning: p.meaning });
+            count++;
+        }
+        await refreshAll();
+        $('#vocabImportModal').style.display = 'none';
+        showToast(`成功导入 ${count} 个单词`, 'success');
+    } catch (e) {
+        showToast('导入失败: ' + e.message, 'error');
+    }
+});
 
 // 事件绑定
 document.addEventListener('DOMContentLoaded', () => {
@@ -1126,6 +1305,7 @@ function switchToTab(tab) {
     if (tab === 'thoughts') renderThoughts();
     if (tab === 'calculus') renderCalcView();
     if (tab === 'chat') renderChatView();
+    if (tab === 'vocab') renderVocabView();
     // 手机端收起 tabs
     document.querySelector('.nav__tabs').classList.remove('nav__tabs--open');
 }

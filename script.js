@@ -475,7 +475,8 @@ async function autoDedupVocab(unit, part) {
     const seen = new Map();
     const toDelete = [];
     for (const v of target) {
-        const key = v.word.toLowerCase();
+        const vtype = v.type || 'word';
+        const key = v.word.toLowerCase() + '|' + vtype;
         if (seen.has(key)) {
             toDelete.push(v);
         } else {
@@ -488,7 +489,7 @@ async function autoDedupVocab(unit, part) {
             await DS.remove('vocabulary', v.id);
         }
         vocabs = vocabs.filter(v => !toDelete.some(d => d.id === v.id));
-        console.log(`[去重] ${unit} ${part}: 自动删除 ${toDelete.length} 个重复单词`);
+        console.log(`[去重] ${unit} ${part}: 自动删除 ${toDelete.length} 个重复条目`);
         return true; // 有变更，需要重新渲染
     } catch (e) {
         console.warn('[去重] 自动去重失败:', e);
@@ -509,7 +510,16 @@ function renderVocabView() {
         : vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
     const countEl = $('#vocabCount');
     const label = isReview ? '🔄 复习' : `${vocabUnit} ${vocabPart}`;
-    if (countEl) countEl.textContent = filtered.length ? `${label} · ${filtered.length} 词` : '';
+    if (countEl && filtered.length) {
+        const wc = filtered.filter(v => (v.type || 'word') === 'word').length;
+        const pc = filtered.filter(v => v.type === 'phrase').length;
+        let cntStr = '';
+        if (wc) cntStr += `${wc}词`;
+        if (pc) cntStr += (cntStr ? ` ${pc}短语` : `${pc}短语`);
+        countEl.textContent = `${label} · ${cntStr}`;
+    } else if (countEl) {
+        countEl.textContent = '';
+    }
 
     // Unit 选择器：最前面加复习按钮
     const reviewCount = vocabs.filter(v => v.review === true).length;
@@ -537,12 +547,12 @@ function renderVocabView() {
     const listEl = $('#vocabList');
     if (!filtered.length) {
         listEl.innerHTML = isReview
-            ? '<p class="empty-text">🎉 复习表已清空，没有需要复习的单词</p>'
-            : '<p class="empty-text">还没有单词，点击上方添加或导入 📖</p>';
+            ? '<p class="empty-text">🎉 复习表已清空，没有需要复习的条目</p>'
+            : '<p class="empty-text">还没有单词或短语，点击上方添加或导入 📖</p>';
     } else {
         listEl.innerHTML = filtered.map(v => `
             <div class="vocab-word-card" data-id="${v.id}">
-                <div class="vocab-word-card__word">${esc(v.word)}</div>
+                <div class="vocab-word-card__word">${esc(v.word)}${v.type === 'phrase' ? ' <span class="vocab-word-card__type-badge">💬 短语</span>' : ''}</div>
                 <div class="vocab-word-card__meaning">${esc(v.meaning)}</div>
                 <div class="vocab-word-card__unit-label">${v.unit} ${v.part}</div>
                 <div class="vocab-word-card__actions">
@@ -557,10 +567,11 @@ function renderVocabView() {
 function openVocabEditModal(vocab) {
     const isEdit = !!vocab;
     vocabEditId = vocab ? vocab.id : null;
-    $('#vocabEditTitle').textContent = isEdit ? '编辑单词' : '添加单词';
+    $('#vocabEditTitle').textContent = isEdit ? '编辑单词/短语' : '添加单词/短语';
     const defaultUnit = vocabUnit === '__review__' ? 'U1' : vocabUnit;
     $('#vocabEditUnit').value = vocab ? vocab.unit : defaultUnit;
     $('#vocabEditPart').value = vocab ? vocab.part : vocabPart;
+    $('#vocabEditType').value = vocab ? (vocab.type || 'word') : 'word';
     $('#vocabEditWord').value = vocab ? vocab.word : '';
     $('#vocabEditMeaning').value = vocab ? vocab.meaning : '';
 
@@ -628,26 +639,27 @@ $('#vocabDedupBtn').addEventListener('click', async () => {
     const isReview = vocabUnit === '__review__';
     if (isReview) { showToast('复习模式下不支持去重', 'info'); return; }
     const target = vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
-    if (target.length < 2) { showToast(`${vocabUnit} ${vocabPart} 单词不足，无需去重`, 'info'); return; }
-    const seen = new Map(); // word.lower() -> vocab item
+    if (target.length < 2) { showToast(`${vocabUnit} ${vocabPart} 条目不足，无需去重`, 'info'); return; }
+    const seen = new Map(); // word.lower()|type -> vocab item
     const toDelete = [];
     for (const v of target) {
-        const key = v.word.toLowerCase();
+        const vtype = v.type || 'word';
+        const key = v.word.toLowerCase() + '|' + vtype;
         if (seen.has(key)) {
             toDelete.push(v); // 重复的，删除
         } else {
             seen.set(key, v); // 第一个，保留
         }
     }
-    if (!toDelete.length) { showToast(`${vocabUnit} ${vocabPart} 没有重复单词 ✅`, 'success'); return; }
-    if (!confirm(`${vocabUnit} ${vocabPart} 发现 ${toDelete.length} 个重复单词，确认删除？\n${toDelete.map(v => v.word).join('、')}`)) return;
+    if (!toDelete.length) { showToast(`${vocabUnit} ${vocabPart} 没有重复条目 ✅`, 'success'); return; }
+    if (!confirm(`${vocabUnit} ${vocabPart} 发现 ${toDelete.length} 个重复条目，确认删除？\n${toDelete.map(v => v.word).join('、')}`)) return;
     try {
         for (const v of toDelete) {
             await DS.remove('vocabulary', v.id);
         }
         vocabs = vocabs.filter(v => !toDelete.some(d => d.id === v.id));
         renderVocabView();
-        showToast(`已删除 ${toDelete.length} 个重复单词 ✅`, 'success');
+        showToast(`已删除 ${toDelete.length} 个重复条目 ✅`, 'success');
     } catch (e) {
         showToast('去重失败: ' + e.message, 'error');
     }
@@ -657,14 +669,15 @@ $('#vocabDedupBtn').addEventListener('click', async () => {
 $('#vocabEditSave').addEventListener('click', async () => {
     const word = $('#vocabEditWord').value.trim();
     const meaning = $('#vocabEditMeaning').value.trim();
-    if (!word || !meaning) { showToast('请填写英文单词和中文释义', 'error'); return; }
+    if (!word || !meaning) { showToast('请填写英文和中文释义', 'error'); return; }
     const unit = $('#vocabEditUnit').value;
     const part = $('#vocabEditPart').value;
+    const type = $('#vocabEditType').value || 'word';
     try {
         if (vocabEditId) {
-            await DS.update('vocabulary', vocabEditId, { unit, part, word, meaning });
+            await DS.update('vocabulary', vocabEditId, { unit, part, type, word, meaning });
         } else {
-            await DS.create('vocabulary', { unit, part, word, meaning });
+            await DS.create('vocabulary', { unit, part, type, word, meaning });
         }
         await refreshAll();
         closeVocabEditModal();
@@ -744,52 +757,68 @@ $('#vocabImportModal').addEventListener('click', e => {
 });
 $('#vocabImportConfirm').addEventListener('click', async () => {
     const text = $('#vocabImportText').value.trim();
-    if (!text) { showToast('请粘贴英文单词', 'error'); return; }
+    if (!text) { showToast('请粘贴英文单词或短语', 'error'); return; }
     const unit = $('#vocabImportUnit').value;
     const part = $('#vocabImportPart').value;
+    const importType = $('#vocabImportType').value || 'auto'; // auto | word | phrase
 
-    // 解析英文单词：支持换行、逗号、分号、空格分隔
-    const rawWords = text.split(/[\n,;，；]+/).map(w => w.trim()).filter(w => w);
-    // 进一步拆分每个片段中的空格分隔（但保留短语）
-    const words = [];
-    for (const frag of rawWords) {
-        // 如果片段包含空格且长度较长，可能是短语，保留整体
-        // 否则按空格拆
-        const subWords = frag.split(/\s+/).filter(w => w && w.length > 0);
-        words.push(...subWords);
+    // 解析：按换行、逗号、分号分割，每行作为一个条目（保留短语中的空格）
+    const entries = text.split(/[\n,;，；]+/).map(w => w.trim()).filter(w => w);
+
+    // 去重（数组内）+ 过滤
+    const seen = new Set();
+    const uniqueEntries = [];
+    for (const entry of entries) {
+        const lower = entry.toLowerCase();
+        if (seen.has(lower)) continue;
+        seen.add(lower);
+        // 跳过纯数字、含中文、太短
+        if (entry.length < 2) continue;
+        if (/[一-鿿]/.test(entry)) continue;
+        if (/^\d+$/.test(entry)) continue;
+        uniqueEntries.push(entry);
     }
 
-    // 去重 + 过滤掉非英文词（含中文字符的跳过）
-    const uniqueWords = [...new Set(words)].filter(w => {
-        // 跳过纯数字、含中文、太短的
-        if (w.length < 2) return false;
-        if (/[一-鿿]/.test(w)) return false;
-        if (/^\d+$/.test(w)) return false;
-        return true;
-    });
-
-    if (!uniqueWords.length) {
-        showToast('未识别到有效英文单词，请检查输入', 'error');
+    if (!uniqueEntries.length) {
+        showToast('未识别到有效英文内容，请检查输入', 'error');
         return;
     }
 
-    if (uniqueWords.length > 100) {
-        showToast(`一次最多导入 100 个单词，当前 ${uniqueWords.length} 个`, 'error');
+    if (uniqueEntries.length > 200) {
+        showToast(`一次最多导入 200 个条目，当前 ${uniqueEntries.length} 个`, 'error');
         return;
     }
 
-    // 过滤掉同一 unit+part 中已存在的单词
-    const existingWords = new Set(
+    // 确定每个条目的类型
+    function detectType(entry) {
+        if (importType === 'word') return 'word';
+        if (importType === 'phrase') return 'phrase';
+        // auto: 含空格 → 短语，否则 → 单词
+        return /\s/.test(entry) ? 'phrase' : 'word';
+    }
+
+    // 过滤掉同一 unit+part 中已存在的条目（区分类型）
+    const existingKeys = new Set(
         vocabs
             .filter(v => v.unit === unit && v.part === part)
-            .map(v => v.word.toLowerCase())
+            .map(v => v.word.toLowerCase() + '|' + (v.type || 'word'))
     );
-    const newWords = uniqueWords.filter(w => !existingWords.has(w.toLowerCase()));
-    const dupCount = uniqueWords.length - newWords.length;
+    const newEntries = uniqueEntries.filter(entry => {
+        const etype = detectType(entry);
+        const key = entry.toLowerCase() + '|' + etype;
+        return !existingKeys.has(key);
+    });
+    const dupCount = uniqueEntries.length - newEntries.length;
 
-    if (!newWords.length) {
-        showToast(`这 ${uniqueWords.length} 个单词在 ${unit} ${part} 中已全部存在，无需导入`, 'info');
+    if (!newEntries.length) {
+        showToast(`这 ${uniqueEntries.length} 个条目在 ${unit} ${part} 中已全部存在，无需导入`, 'info');
         return;
+    }
+
+    // 记录每个新条目的类型（用于后续插入）
+    const entryTypes = {};
+    for (const entry of newEntries) {
+        entryTypes[entry.toLowerCase()] = detectType(entry);
     }
 
     const confirmBtn = $('#vocabImportConfirm');
@@ -797,11 +826,11 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
     confirmBtn.textContent = '⏳ AI 翻译中...';
 
     try {
-        // 调用 AI 翻译 API（只翻译新单词）
+        // 调用 AI 翻译 API
         const resp = await fetch('/api/translate-words', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ words: newWords }),
+            body: JSON.stringify({ words: newEntries }),
         });
         const data = await resp.json();
         if (!data.ok) throw new Error(data.error || '翻译失败');
@@ -811,12 +840,13 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
             throw new Error('AI 未返回翻译结果');
         }
 
-        // 逐个存入 Supabase
+        // 逐个存入 Supabase（带 type）
         let count = 0;
         const skipped = [];
         for (const t of translations) {
             if (t.word && t.meaning) {
-                await DS.create('vocabulary', { unit, part, word: t.word, meaning: t.meaning });
+                const etype = entryTypes[t.word.toLowerCase()] || 'word';
+                await DS.create('vocabulary', { unit, part, type: etype, word: t.word, meaning: t.meaning });
                 count++;
             } else {
                 skipped.push(t.word || '?');
@@ -825,7 +855,7 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
 
         await refreshAll();
         $('#vocabImportModal').style.display = 'none';
-        let msg = `成功导入 ${count} 个单词 ✨`;
+        let msg = `成功导入 ${count} 个条目 ✨`;
         if (dupCount) msg += `，${dupCount} 个已存在跳过`;
         if (skipped.length) msg += `，${skipped.length} 个未翻译`;
         showToast(msg, 'success');

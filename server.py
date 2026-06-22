@@ -110,29 +110,31 @@ PARSE_PROMPT = """你是一个学业助手。从用户上传的文本中提取�
 文本内容：
 """
 
-TRANSLATE_PROMPT = """你是一个英汉词典。请将以下英文单词翻译成中文，给出每个单词最常用的1-3个中文释义。
+TRANSLATE_PROMPT = """你是一个英汉词典。请将以下英文单词或短语翻译成中文，给出最常用的1-3个中文释义。
 
 规则：
 - 优先给出最常见、最核心的释义（不要冷门释义）
 - 多个释义用分号；分隔
-- 标注词性时用缩写：n. v. adj. adv. prep. conj.
-- 词性标注放在释义前面
+- 单词标注词性时用缩写：n. v. adj. adv. prep. conj.，词性放在释义前面
+- 短语可以不标注词性，直接给出中文释义
 
 示例输入：
 apple
-book
+look after
 run
+take off
 
 示例输出：
 [
   {"word": "apple", "meaning": "n. 苹果"},
-  {"word": "book", "meaning": "n. 书；v. 预订"},
-  {"word": "run", "meaning": "v. 跑；n. 跑步；v. 运行"}
+  {"word": "look after", "meaning": "v. 照顾；照料"},
+  {"word": "run", "meaning": "v. 跑；n. 跑步；v. 运行"},
+  {"word": "take off", "meaning": "v. 起飞；脱下；n. 模仿"}
 ]
 
 请只返回纯JSON数组，不要任何额外文字。
 
-单词列表：
+单词/短语列表：
 """
 
 
@@ -327,9 +329,9 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_json({"ok": False, "error": "单词列表不能为空"}, 400)
             return
 
-        # 限制一次最多 100 个单词
-        if len(words) > 100:
-            self.send_json({"ok": False, "error": f"一次最多翻译 100 个单词，当前 {len(words)} 个"}, 400)
+        # 限制一次最多 200 个单词/短语
+        if len(words) > 200:
+            self.send_json({"ok": False, "error": f"一次最多翻译 200 个条目，当前 {len(words)} 个"}, 400)
             return
 
         try:

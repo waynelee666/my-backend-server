@@ -292,6 +292,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.handle_chat()
         elif parsed.path == "/api/translate-words":
             self.handle_translate_words()
+        elif parsed.path == "/api/generate-practice":
+            self.handle_generate_practice()
+        elif parsed.path == "/api/grade-practice":
+            self.handle_grade_practice()
         else:
             self.send_json({"ok": False, "error": "未知接口"}, 404)
 
@@ -340,6 +344,78 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_json({"ok": True, "translations": translations})
         except RuntimeError as e:
             print(f"  [Translate ERROR] {e}")
+            self.send_json({"ok": False, "error": str(e)}, 500)
+
+    def handle_generate_practice(self):
+        """POST /api/generate-practice — AI 生成选词填空练习"""
+        if not _llm_available or llm is None:
+            self.send_json({
+                "ok": False,
+                "error": "AI 功能未配置。请在环境变量中设置 DEEPSEEK_API_KEY。"
+            }, 503)
+            return
+
+        body = self.read_json_body()
+        if not body or "words" not in body or "count" not in body:
+            self.send_json({"ok": False, "error": "请提供 words 和 count 字段"}, 400)
+            return
+
+        words = body["words"]
+        count = int(body["count"])
+
+        if not isinstance(words, list) or len(words) == 0:
+            self.send_json({"ok": False, "error": "单词列表不能为空"}, 400)
+            return
+
+        if count < 1 or count > len(words):
+            self.send_json({
+                "ok": False,
+                "error": f"出题数需在 1-{len(words)} 之间（单词库共 {len(words)} 个）"
+            }, 400)
+            return
+
+        if count > 30:
+            self.send_json({"ok": False, "error": "最多出 30 题"}, 400)
+            return
+
+        try:
+            print(f"  [Practice] 从 {len(words)} 个单词中生成 {count} 题练习...")
+            result = llm.generate_practice(words, count)
+            print(f"  [Practice] 生成成功 → {len(result.get('blanks', []))} 个空")
+            self.send_json({"ok": True, **result})
+        except Exception as e:
+            print(f"  [Practice ERROR] {e}")
+            self.send_json({"ok": False, "error": str(e)}, 500)
+
+    def handle_grade_practice(self):
+        """POST /api/grade-practice — AI 批改练习答案"""
+        if not _llm_available or llm is None:
+            self.send_json({
+                "ok": False,
+                "error": "AI 功能未配置。请在环境变量中设置 DEEPSEEK_API_KEY。"
+            }, 503)
+            return
+
+        body = self.read_json_body()
+        if not body or "blanks" not in body or "answers" not in body:
+            self.send_json({"ok": False, "error": "请提供 blanks 和 answers 字段"}, 400)
+            return
+
+        blanks = body["blanks"]
+        answers = body["answers"]
+        passage = body.get("passage", "")
+
+        if not isinstance(blanks, list) or len(blanks) == 0:
+            self.send_json({"ok": False, "error": "blanks 不能为空"}, 400)
+            return
+
+        try:
+            print(f"  [Grade] 批改 {len(blanks)} 题...")
+            result = llm.grade_practice(blanks, answers, passage)
+            print(f"  [Grade] 得分: {result.get('score')}/{result.get('total')}")
+            self.send_json({"ok": True, **result})
+        except Exception as e:
+            print(f"  [Grade ERROR] {e}")
             self.send_json({"ok": False, "error": str(e)}, 500)
 
     def handle_chat(self):

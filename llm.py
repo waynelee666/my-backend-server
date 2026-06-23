@@ -3,6 +3,7 @@ DeepSeek API 流式对话封装。
 提供 chat_answer_stream，供 server.py 的 /api/chat 调用。
 """
 
+import json
 import os
 
 try:
@@ -266,3 +267,211 @@ def chat_answer_stream(user_query, history=None, mode="chat"):
     messages.append({"role": "user", "content": user_query})
     for token in chat_stream(messages):
         yield token
+
+
+# ========== 单词练习模式 — 出题 Prompt ==========
+PRACTICE_GENERATE_PROMPT = (
+    "你是一位英语出题专家，擅长设计选词填空（cloze）练习题。\n"
+    "\n"
+    "你的任务：\n"
+    "1. 从提供的单词列表中挑选恰好 N 个单词\n"
+    "2. 优先选择大学英语四级(CET-4)、六级(CET-6)、考研高频词汇\n"
+    "3. 用这 N 个单词创作一篇连贯、自然的英文短文\n"
+    "4. 文章主题要贴近大学生活或校园场景，让读者有代入感\n"
+    "5. 文章中恰好有 N 个空位，每个空位对应一个被挑中的单词\n"
+    "6. 每个空位用 [题号]_____ 标记（如 [1]_____ [2]_____）\n"
+    "7. 题号按照文章中出现顺序依次编号 1,2,3,...,N\n"
+    "\n"
+    "文章要求：\n"
+    "- 长度适中，能让每个空有足够的上下文线索\n"
+    "- 句子自然流畅，不要为了塞单词而写出生硬的句子\n"
+    "- 上下文要能暗示空缺单词的含义（但不要直接给出定义）\n"
+    "- 文章控制在 150-400 词之间\n"
+    "\n"
+    "输出格式：\n"
+    "只返回一个纯 JSON 对象，不要任何额外文字：\n"
+    '{"passage": "全文内容，空位用 [1]_____ [2]_____ 标记",'
+    ' "blanks": [{"number": 1, "word": "...", "first_letter": "x", "meaning": "中文释义"}, ...],'
+    ' "title": "文章标题"}\n'
+    "\n"
+    "注意：\n"
+    "- first_letter 是该单词的首字母（小写）\n"
+    "- meaning 是该单词在该语境下的中文释义\n"
+    "- passage 中的空位顺序必须与 blanks 数组的 number 一一对应\n"
+    "- 文章不要太短，至少 150 词"
+)
+
+
+# ========== 单词练习模式 — 批改 Prompt ==========
+PRACTICE_GRADE_PROMPT = (
+    "你是一位耐心细致的英语阅卷老师。\n"
+    "\n"
+    "一份选词填空练习已经批改完毕（比对结果见下方），请你：\n"
+    "1. 对每道错题给出一句话的简短解析（提示词义、纠正拼写、或解释用法）\n"
+    "2. 写一段总体点评（50-100字），语气鼓励为主，指出薄弱环节和改进建议\n"
+    "3. 如果全部正确，热情洋溢地表扬！\n"
+    "\n"
+    "输出格式：\n"
+    "只返回一个纯 JSON 对象，不要任何额外文字：\n"
+    '{"comment": "总体点评...", "details": ['
+    '  {"number": 1, "correct": true, "feedback": ""},'
+    '  {"number": 2, "correct": false, "feedback": "词义：commencement 意为毕业典礼，不是 graduation"}\n'
+    ']}\n'
+    "\n"
+    "注意：\n"
+    "- details 数组按题号顺序排列\n"
+    "- correct=true 的题目 feedback 可以为空字符串\n"
+    "- 总体点评要具体，不要说空话"
+)
+
+
+def generate_practice(words, count):
+    """调用 DeepSeek 生成选词填空练习
+
+    Args:
+        words: [{"word": "...", "meaning": "..."}, ...]
+        count: 目标空位数
+
+    Returns:
+        {"passage": "...", "blanks": [...], "title": "..."}
+    """
+    if not _llm_available or _client is None:
+        raise LLMNotAvailable("AI 功能未配置，请设置 DEEPSEEK_API_KEY")
+
+    # 准备单词列表文本
+    word_lines = []
+    for i, w in enumerate(words):
+        word_lines.append(f"{i+1}. {w['word']} — {w.get('meaning', '')}")
+    word_list_text = "\n".join(word_lines)
+
+    user_prompt = (
+        f"以下是我的单词库（共 {len(words)} 个）：\n\n"
+        f"{word_list_text}\n\n"
+        f"请从中挑选恰好 {count} 个单词（优先 CET-4/CET-6 高频词），"
+        f"创作一篇含 {count} 个空的英文短文。直接返回 JSON。"
+    )
+
+    messages = [
+        {"role": "system", "content": PRACTICE_GENERATE_PROMPT},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    # 需要更长的 token 限制来生成完整文章
+    resp = _client.chat.completions.create(
+        model="deepseek-chat",
+        messages=messages,
+        temperature=0.8,
+        max_tokens=4096,
+        timeout=120,
+    )
+
+    content = resp.choices[0].message.content.strip()
+    # 去除可能的 markdown 代码块
+    if content.startswith("```"):
+        content = content.split("\n", 1)[1]
+        if content.endswith("```"):
+            content = content[:-3]
+    return json.loads(content)
+
+
+def grade_practice(blanks, answers, passage=""):
+    """批改练习答案（服务端比对 + AI 点评）
+
+    Args:
+        blanks: [{"number": 1, "word": "...", "first_letter": "..."}, ...]
+        answers: {"1": "user answer", "2": "user answer", ...}
+        passage: 文章原文（可选，给 AI 参考）
+
+    Returns:
+        {"score": 12, "total": 15, "results": [...], "comment": "..."}
+    """
+    # 步骤1：服务端逐题比对
+    results = []
+    correct_count = 0
+    for blank in blanks:
+        num = str(blank["number"])
+        user_ans = (answers.get(num) or answers.get(blank["number"]) or "").strip()
+        expected = blank["word"].strip()
+        is_correct = user_ans.lower() == expected.lower()
+        if is_correct:
+            correct_count += 1
+        results.append({
+            "number": blank["number"],
+            "correct": is_correct,
+            "user": user_ans,
+            "expected": expected,
+            "first_letter": blank.get("first_letter", ""),
+            "meaning": blank.get("meaning", ""),
+        })
+
+    total = len(blanks)
+    score = correct_count
+
+    # 步骤2：如果 AI 可用，生成点评
+    comment = ""
+    if _llm_available and _client is not None:
+        try:
+            # 构造比对结果文本
+            result_lines = [f"题号{blank['number']}: 正确答案={blank['word']}, 用户答案={answers.get(str(blank['number']), '')}, {'✓正确' if r['correct'] else '✗错误'}"
+                          for blank, r in zip(blanks, results)]
+            result_text = "\n".join(result_lines)
+
+            grade_prompt = (
+                f"练习得分：{correct_count}/{total}\n\n"
+                f"逐题比对结果：\n{result_text}\n\n"
+                f"文章原文（供参考）：\n{passage[:500]}\n\n"
+                f"请给出总体点评和每道错题的简短反馈。直接返回 JSON。"
+            )
+
+            messages = [
+                {"role": "system", "content": PRACTICE_GRADE_PROMPT},
+                {"role": "user", "content": grade_prompt},
+            ]
+
+            resp = _client.chat.completions.create(
+                model="deepseek-chat",
+                messages=messages,
+                temperature=0.5,
+                max_tokens=1024,
+                timeout=60,
+            )
+
+            content = resp.choices[0].message.content.strip()
+            if content.startswith("```"):
+                content = content.split("\n", 1)[1]
+                if content.endswith("```"):
+                    content = content[:-3]
+            ai_result = json.loads(content)
+            comment = ai_result.get("comment", "")
+
+            # 合并 AI 的逐题 feedback 到 results
+            ai_details = ai_result.get("details", [])
+            for detail in ai_details:
+                num = detail.get("number")
+                for r in results:
+                    if r["number"] == num:
+                        r["feedback"] = detail.get("feedback", "")
+                        break
+
+        except Exception as e:
+            print(f"[GradePractice] AI 点评生成失败: {e}")
+            comment = ""
+
+    # 如果没有 AI 点评，生成简单评语
+    if not comment:
+        pct = total > 0 and round(correct_count / total * 100) or 0
+        if pct == 100:
+            comment = "🎉 全部正确！太厉害了！"
+        elif pct >= 80:
+            comment = f"👍 表现优秀！正确率 {pct}%，继续保持！"
+        elif pct >= 60:
+            comment = f"📚 还不错，正确率 {pct}%，再看看错题巩固一下。"
+        else:
+            comment = f"💪 继续加油！正确率 {pct}%，多复习错题的词义和拼写。"
+
+    return {
+        "score": score,
+        "total": total,
+        "results": results,
+        "comment": comment,
+    }

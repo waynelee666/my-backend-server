@@ -12,6 +12,7 @@ let todoDate = new Date().toISOString().slice(0, 10);
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 let selectedCalDate = null;
 let vocabUnit = 'U1', vocabPart = 'P1', vocabEditId = null;
+let vocabEditMode = false;  // 编辑模式：显示复选框和编辑/删除按钮
 /** 查找相似科目名（"微积分" ≈ "微积分（甲）Ⅱ"） */
 function findSimilarSubject(name) {
     if (!name) return null;
@@ -534,6 +535,23 @@ function renderVocabView() {
         }).join('');
     }
 
+    // 编辑工具栏
+    const editTools = $('#vocabEditTools');
+    if (editTools) {
+        editTools.style.display = vocabEditMode && !isReview ? '' : 'none';
+    }
+    // 编辑按钮：复习模式隐藏
+    const editBtn = $('#vocabEditBtn');
+    if (editBtn) {
+        if (isReview) {
+            editBtn.style.display = 'none';
+        } else {
+            editBtn.style.display = '';
+            editBtn.textContent = vocabEditMode ? '✏️ 完成' : '✏️ 编辑';
+            editBtn.classList.toggle('btn--active', vocabEditMode);
+        }
+    }
+
     const listEl = $('#vocabList');
     if (!filtered.length) {
         listEl.innerHTML = isReview
@@ -542,14 +560,15 @@ function renderVocabView() {
     } else {
         listEl.innerHTML = filtered.map(v => `
             <div class="vocab-word-card" data-id="${v.id}">
-                <input type="checkbox" class="vocab-word-card__check" data-id="${v.id}" title="选中">
+                ${vocabEditMode && !isReview ? `<input type="checkbox" class="vocab-word-card__check" data-id="${v.id}" title="选中">` : ''}
                 <div class="vocab-word-card__word">${esc(v.word)}</div>
                 <div class="vocab-word-card__meaning">${esc(v.meaning)}</div>
                 <div class="vocab-word-card__unit-label">${v.unit} ${v.part}</div>
-                <div class="vocab-word-card__actions">
+                ${vocabEditMode && !isReview ? `
+                <div class="vocab-word-card__actions" style="opacity:1">
                     <button data-action="edit-vocab" data-id="${v.id}" title="编辑">✏️</button>
                     <button class="btn-del" data-action="delete-vocab" data-id="${v.id}" title="删除">🗑️</button>
-                </div>
+                </div>` : ''}
             </div>
         `).join('');
     }
@@ -591,11 +610,18 @@ function closeVocabEditModal() {
 // ==================== 单词事件绑定 ====================
 $('#vocabUnitRow').addEventListener('click', e => {
     const btn = e.target.closest('.vocab-unit-btn');
-    if (btn) { vocabUnit = btn.dataset.unit; renderVocabView(); }
+    if (btn) { vocabUnit = btn.dataset.unit; vocabEditMode = false; vocabSelected.clear(); renderVocabView(); }
 });
 $('#vocabPartRow').addEventListener('click', e => {
     const btn = e.target.closest('.vocab-part-btn');
-    if (btn) { vocabPart = btn.dataset.part; renderVocabView(); }
+    if (btn) { vocabPart = btn.dataset.part; vocabEditMode = false; vocabSelected.clear(); renderVocabView(); }
+});
+
+// 编辑模式切换
+$('#vocabEditBtn')?.addEventListener('click', () => {
+    vocabEditMode = !vocabEditMode;
+    if (!vocabEditMode) vocabSelected.clear();
+    renderVocabView();
 });
 $('#vocabList').addEventListener('click', async e => {
     const editBtn = e.target.closest('[data-action="edit-vocab"]');

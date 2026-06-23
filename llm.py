@@ -475,3 +475,52 @@ def grade_practice(blanks, answers, passage=""):
         "results": results,
         "comment": comment,
     }
+
+
+# ========== 单词查询 — Oxford 词典风格 Prompt ==========
+WORD_LOOKUP_PROMPT = (
+    "You are a senior editor at the Oxford Advanced Learner's Dictionary.\n"
+    "Your task is to provide a clear, authoritative English definition and natural example sentences for a given English word.\n"
+    "\n"
+    "Rules:\n"
+    "1. Write the definition in simple, clear English (like OALD — Oxford 3000 vocabulary level)\n"
+    "2. Cover the most common meaning(s) of the word; if there are multiple important meanings, list them numbered\n"
+    "3. Provide 2-3 natural, everyday example sentences that show typical usage\n"
+    "4. Include the part of speech (noun, verb, adj, etc.)\n"
+    "5. If the word has common collocations or phrases, mention 1-2\n"
+    "\n"
+    "Output format — ONLY a pure JSON object, no extra text:\n"
+    '{"word": "...", "pos": "n./v./adj./...", "definition": "Clear English definition of the most common meaning(s)", "examples": ["Example sentence 1.", "Example sentence 2.", "Example sentence 3."], "collocations": ["collocation 1", "collocation 2"]}\n'
+    "\n"
+    "Keep definitions concise but complete. Example sentences should sound natural and be useful for learners."
+)
+
+
+def lookup_word(word):
+    """查询单词的 Oxford 风格英文释义和例句
+
+    Returns:
+        {"word": "...", "pos": "...", "definition": "...", "examples": [...], "collocations": [...]}
+    """
+    if not _llm_available or _client is None:
+        raise LLMNotAvailable("AI 功能未配置，请设置 DEEPSEEK_API_KEY")
+
+    messages = [
+        {"role": "system", "content": WORD_LOOKUP_PROMPT},
+        {"role": "user", "content": f"Word: {word}"},
+    ]
+
+    resp = _client.chat.completions.create(
+        model="deepseek-chat",
+        messages=messages,
+        temperature=0.3,
+        max_tokens=1024,
+        timeout=30,
+    )
+
+    content = resp.choices[0].message.content.strip()
+    if content.startswith("```"):
+        content = content.split("\n", 1)[1]
+        if content.endswith("```"):
+            content = content[:-3]
+    return json.loads(content)

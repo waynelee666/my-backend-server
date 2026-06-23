@@ -5,11 +5,36 @@ console.log('📖 Vocab module loaded');
 
 let studyWords = [];
 let studyIndex = 0;
-let studyFlipped = false;
+let studyFlipped = false;    // false=正面 | true=背面(中文) | 'loading'=AI查询中 | 'ai'=AI详情
 let studyKnown = 0;
 let studyUnknown = 0;
 let studyIsReview = false;  // 是否在复习模式
 let studyModeDir = 'en2cn'; // en2cn=看英文想意思 | cn2en=看中文拼英文
+
+// 单词详情缓存（避免重复调用 AI）
+const wordDetailCache = {};
+
+async function lookupWordDetail(word) {
+    const key = word.toLowerCase().trim();
+    if (wordDetailCache[key]) return wordDetailCache[key];
+    try {
+        const resp = await fetch('/api/word-lookup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ word }),
+        });
+        const data = await resp.json();
+        if (data.ok) {
+            wordDetailCache[key] = data;
+            return data;
+        }
+        console.warn('Word lookup failed:', data.error);
+        return null;
+    } catch (e) {
+        console.error('Word lookup error:', e);
+        return null;
+    }
+}
 
 function startVocabStudy() {
     studyIsReview = vocabUnit === '__review__';
@@ -51,9 +76,37 @@ function renderStudyCard() {
     const isCn2en = studyModeDir === 'cn2en';
     const frontText = isCn2en ? esc(word.meaning) : esc(word.word);
     const backText = isCn2en ? esc(word.word) : esc(word.meaning);
-    const frontHint = isCn2en ? '拼写英文 ✏️' : '点击翻转 👆';
+    const showAiHint = studyFlipped === true; // 翻到背面后，提示可以再点击看 AI 详情
+    const frontHint = isCn2en ? '拼写英文 ✏️' : (showAiHint ? '再次点击查看牛津释义 📖' : '点击翻转 👆');
     const frontClass = isCn2en ? 'vocab-flashcard__meaning' : 'vocab-flashcard__word';
     const backClass = isCn2en ? 'vocab-flashcard__word' : 'vocab-flashcard__meaning';
+
+    // AI 详情
+    const detail = word._aiDetail || null;
+    const aiLoading = studyFlipped === 'loading';
+    const aiReady = studyFlipped === 'ai' && detail;
+    const showAiSection = aiLoading || aiReady;
+    let aiHTML = '';
+    if (aiLoading) {
+        aiHTML = `<div class="vocab-flashcard__ai vocab-flashcard__ai--loading">
+            <div class="vocab-flashcard__ai-spinner"></div>
+            <span>AI 正在查询牛津词典...</span>
+        </div>`;
+    } else if (aiReady) {
+        const examplesHTML = (detail.examples || []).map(e => `<li>${esc(e)}</li>`).join('');
+        const collocHTML = (detail.collocations || []).length
+            ? `<div class="vocab-flashcard__ai-colloc"><strong>搭配:</strong> ${detail.collocations.map(c => esc(c)).join(' · ')}</div>`
+            : '';
+        aiHTML = `<div class="vocab-flashcard__ai">
+            <div class="vocab-flashcard__ai-pos">${esc(detail.pos || '')}</div>
+            <div class="vocab-flashcard__ai-def">${esc(detail.definition || '')}</div>
+            ${collocHTML}
+            <div class="vocab-flashcard__ai-examples">
+                <strong>例句:</strong>
+                <ul>${examplesHTML}</ul>
+            </div>
+        </div>`;
+    }
 
     container.innerHTML = `
         <div class="vocab-flashcard">
@@ -70,6 +123,7 @@ function renderStudyCard() {
                     <div class="${backClass}">${backText}</div>
                 </div>
             </div>
+            ${showAiSection ? aiHTML : ''}
             <div class="vocab-flashcard__buttons" id="vocabFlashBtns" style="${studyFlipped ? '' : 'display:none'}">
                 <button class="vocab-flashcard__btn vocab-flashcard__btn--no" id="vocabBtnNo">不认识 ❌</button>
                 <button class="vocab-flashcard__btn vocab-flashcard__btn--yes" id="vocabBtnYes">认识 ✅</button>
@@ -87,9 +141,35 @@ function renderStudyCard() {
     }
 }
 
-function flipCard() {
-    studyFlipped = true;
-    renderStudyCard();
+async function flipCard() {
+    if (!studyFlipped) {
+        // 第一次点击：翻到背面（中文意思）
+        studyFlipped = true;
+        renderStudyCard();
+        return;
+    }
+    if (studyFlipped === true) {
+        // 第二次点击：查询 AI 英文释义
+        const word = studyWords[studyIndex];
+        // 检查缓存
+        if (!word._aiDetail) {
+            studyFlipped = 'loading';
+            renderStudyCard();
+            const detail = await lookupWordDetail(word.word);
+            if (detail) {
+                word._aiDetail = detail;
+                studyFlipped = 'ai';
+            } else {
+                studyFlipped = true; // 失败回退
+                showToast('查询失败，请稍后重试', 'error');
+            }
+        } else {
+            studyFlipped = 'ai';
+        }
+        renderStudyCard();
+        return;
+    }
+    // studyFlipped === 'loading' 或 'ai'：不做任何事
 }
 
 async function answerCard(known) {
@@ -180,7 +260,15 @@ document.addEventListener('keydown', e => {
     if (!studyFlipped && e.key === 'Enter') {
         e.preventDefault();
         flipCard();
-    } else if (studyFlipped) {
+    } else if (studyFlipped === true) {
+        // 翻到背面后：Enter 查 AI，左右箭头作答
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            flipCard();
+        } else if (e.key === 'ArrowLeft') { e.preventDefault(); answerCard(true); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); answerCard(false); }
+    } else if (studyFlipped === 'ai') {
+        // AI 详情已显示：左右箭头作答
         if (e.key === 'ArrowLeft') { e.preventDefault(); answerCard(true); }
         else if (e.key === 'ArrowRight') { e.preventDefault(); answerCard(false); }
     }

@@ -296,6 +296,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.handle_generate_practice()
         elif parsed.path == "/api/grade-practice":
             self.handle_grade_practice()
+        elif parsed.path == "/api/word-lookup":
+            self.handle_word_lookup()
         else:
             self.send_json({"ok": False, "error": "未知接口"}, 404)
 
@@ -416,6 +418,34 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_json({"ok": True, **result})
         except Exception as e:
             print(f"  [Grade ERROR] {e}")
+            self.send_json({"ok": False, "error": str(e)}, 500)
+
+    def handle_word_lookup(self):
+        """POST /api/word-lookup — Oxford 风格英文释义 + 例句"""
+        if not _llm_available or llm is None:
+            self.send_json({
+                "ok": False,
+                "error": "AI 功能未配置。请在环境变量中设置 DEEPSEEK_API_KEY。"
+            }, 503)
+            return
+
+        body = self.read_json_body()
+        if not body or "word" not in body:
+            self.send_json({"ok": False, "error": "请提供 word 字段"}, 400)
+            return
+
+        word = body["word"].strip()
+        if not word:
+            self.send_json({"ok": False, "error": "单词不能为空"}, 400)
+            return
+
+        try:
+            print(f"  [WordLookup] 查询: {word}")
+            result = llm.lookup_word(word)
+            print(f"  [WordLookup] 返回: {result.get('definition', '')[:50]}...")
+            self.send_json({"ok": True, **result})
+        except Exception as e:
+            print(f"  [WordLookup ERROR] {e}")
             self.send_json({"ok": False, "error": str(e)}, 500)
 
     def handle_chat(self):

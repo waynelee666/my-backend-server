@@ -536,6 +536,30 @@ textarea.form-input { resize:vertical; }
 .vocab-flashcard__btn--no { background:#fef2f2; color:#991b1b; border:2px solid #fecaca; }
 .vocab-flashcard__btn--no:hover { background:#ef4444; color:#fff; border-color:#ef4444; }
 
+/* 闪卡 AI 牛津释义 */
+.vocab-flashcard__ai { width:100%; padding:16px 20px; background:#fafcff; border:1px solid #d0d5f0; border-radius:12px; text-align:left; font-size:.88rem; line-height:1.6; color:var(--color-text); }
+.vocab-flashcard__ai--loading { display:flex; align-items:center; justify-content:center; gap:10px; color:var(--color-text-light); font-size:.9rem; }
+.vocab-flashcard__ai-spinner { width:20px; height:20px; border:3px solid #e0e0f0; border-top-color:var(--color-primary); border-radius:50%; animation:spin .8s linear infinite; }
+.vocab-flashcard__ai-pos { display:inline-block; padding:2px 10px; background:var(--color-primary); color:#fff; border-radius:20px; font-size:.78rem; font-weight:600; margin-bottom:8px; }
+.vocab-flashcard__ai-def { color:var(--color-text); margin-bottom:8px; }
+.vocab-flashcard__ai-colloc { font-size:.82rem; color:var(--color-text-light); margin-bottom:8px; }
+.vocab-flashcard__ai-examples { font-size:.85rem; }
+.vocab-flashcard__ai-examples ul { margin:6px 0 0 16px; padding:0; }
+.vocab-flashcard__ai-examples li { margin-bottom:4px; color:var(--color-text-light); }
+
+/* 单词详情弹窗（列表页） */
+.vocab-detail-modal { max-width:480px; }
+.vocab-detail__loading { display:flex;align-items:center;justify-content:center;gap:10px;padding:30px;color:var(--color-text-light); }
+.vocab-detail__content { padding:0; }
+.vocab-detail__word { font-size:1.8rem;font-weight:700;color:var(--color-text);margin-bottom:4px; }
+.vocab-detail__pos { display:inline-block;padding:3px 12px;background:var(--color-primary);color:#fff;border-radius:20px;font-size:.82rem;font-weight:600;margin-bottom:12px; }
+.vocab-detail__def { font-size:1rem;color:var(--color-text);line-height:1.7;margin-bottom:10px; }
+.vocab-detail__colloc { font-size:.85rem;color:var(--color-text-light);margin-bottom:8px; }
+.vocab-detail__examples { font-size:.9rem;color:var(--color-text-light); }
+.vocab-detail__examples ul { margin:6px 0 0 16px;padding:0; }
+.vocab-detail__examples li { margin-bottom:5px; }
+.vocab-detail__error { text-align:center;padding:30px;color:var(--color-text-light); }
+
 /* 结束页 */
 .vocab-study-end { display:flex; flex-direction:column; align-items:center; gap:16px; padding:40px 20px; text-align:center; }
 .vocab-study-end__emoji { font-size:4rem; }
@@ -625,6 +649,7 @@ textarea.form-input { resize:vertical; }
     animation:practice-spin .8s linear infinite; margin-bottom:20px;
 }
 @keyframes practice-spin { to { transform:rotate(360deg); } }
+@keyframes spin { to { transform:rotate(360deg); } }
 .practice-loading__text { font-size:1.3rem; font-weight:600; color:var(--color-text); margin-bottom:8px; }
 .practice-loading__sub { font-size:.85rem; color:var(--color-text-light); }
 

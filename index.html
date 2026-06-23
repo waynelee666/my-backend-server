@@ -484,6 +484,32 @@
     </div>
 </div>
 
+<!-- ==================== 单词详情模态框（牛津释义） ==================== -->
+<div class="modal-overlay" id="vocabDetailModal" style="display:none;">
+    <div class="modal vocab-detail-modal">
+        <div class="modal__header">
+            <h3 class="modal__title vocab-detail__title" id="vocabDetailTitle">📖 单词详情</h3>
+            <button class="modal__close" id="vocabDetailClose">&times;</button>
+        </div>
+        <div class="modal__body">
+            <div class="vocab-detail__loading" id="vocabDetailLoading">
+                <div class="vocab-flashcard__ai-spinner"></div>
+                <span>AI 正在查询牛津词典...</span>
+            </div>
+            <div class="vocab-detail__content" id="vocabDetailContent" style="display:none;">
+                <div class="vocab-detail__word" id="vocabDetailWord"></div>
+                <div class="vocab-detail__pos" id="vocabDetailPos"></div>
+                <div class="vocab-detail__def" id="vocabDetailDef"></div>
+                <div class="vocab-detail__colloc" id="vocabDetailColloc"></div>
+                <div class="vocab-detail__examples" id="vocabDetailExamples"></div>
+            </div>
+            <div class="vocab-detail__error" id="vocabDetailError" style="display:none;">
+                <p>查询失败，请稍后重试 😥</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ==================== 通用模态框（科目/事件/待办） ==================== -->
 <div class="modal-overlay" id="modalOverlay" style="display:none;">
     <div class="modal">

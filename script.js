@@ -607,6 +607,60 @@ function closeVocabEditModal() {
     vocabEditId = null;
 }
 
+// ==================== 单词详情弹窗（牛津释义） ====================
+async function showVocabWordDetail(vocab) {
+    const modal = $('#vocabDetailModal');
+    const loading = $('#vocabDetailLoading');
+    const content = $('#vocabDetailContent');
+    const error = $('#vocabDetailError');
+
+    // 显示模态框，loading 状态
+    modal.style.display = '';
+    loading.style.display = '';
+    content.style.display = 'none';
+    if (error) error.style.display = 'none';
+    $('#vocabDetailTitle').textContent = `📖 ${vocab.word}`;
+
+    // 查缓存或调 API
+    let detail = null;
+    if (typeof wordDetailCache !== 'undefined' && wordDetailCache[vocab.word.toLowerCase().trim()]) {
+        detail = wordDetailCache[vocab.word.toLowerCase().trim()];
+    } else if (typeof lookupWordDetail === 'function') {
+        detail = await lookupWordDetail(vocab.word);
+    }
+
+    loading.style.display = 'none';
+
+    if (detail) {
+        $('#vocabDetailWord').textContent = detail.word || vocab.word;
+        $('#vocabDetailPos').textContent = detail.pos || '';
+        $('#vocabDetailDef').textContent = detail.definition || '';
+        if (detail.collocations && detail.collocations.length) {
+            $('#vocabDetailColloc').innerHTML = '<strong>搭配:</strong> ' + detail.collocations.map(c => esc(c)).join(' · ');
+            $('#vocabDetailColloc').style.display = '';
+        } else {
+            $('#vocabDetailColloc').style.display = 'none';
+        }
+        if (detail.examples && detail.examples.length) {
+            $('#vocabDetailExamples').innerHTML = '<strong>例句:</strong><ul>' + detail.examples.map(e => `<li>${esc(e)}</li>`).join('') + '</ul>';
+            $('#vocabDetailExamples').style.display = '';
+        } else {
+            $('#vocabDetailExamples').style.display = 'none';
+        }
+        content.style.display = '';
+    } else {
+        if (error) error.style.display = '';
+    }
+}
+
+function closeVocabDetailModal() {
+    $('#vocabDetailModal').style.display = 'none';
+}
+$('#vocabDetailClose').addEventListener('click', closeVocabDetailModal);
+$('#vocabDetailModal').addEventListener('click', e => {
+    if (e.target === $('#vocabDetailModal')) closeVocabDetailModal();
+});
+
 // ==================== 单词事件绑定 ====================
 $('#vocabUnitRow').addEventListener('click', e => {
     const btn = e.target.closest('.vocab-unit-btn');
@@ -639,6 +693,16 @@ $('#vocabList').addEventListener('click', async e => {
             await DS.remove('vocabulary', id);
             vocabs = vocabs.filter(x => x.id !== id);
             renderVocabView();
+        }
+        return;
+    }
+    // 点击单词卡片（非编辑模式），显示牛津释义
+    if (!vocabEditMode) {
+        const card = e.target.closest('.vocab-word-card');
+        if (card) {
+            const id = parseInt(card.dataset.id);
+            const v = vocabs.find(x => x.id === id);
+            if (v) showVocabWordDetail(v);
         }
     }
 });

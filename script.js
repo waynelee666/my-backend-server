@@ -614,22 +614,36 @@ async function showVocabWordDetail(vocab) {
     const content = $('#vocabDetailContent');
     const error = $('#vocabDetailError');
 
-    // 显示模态框，loading 状态
-    modal.style.display = '';
-    loading.style.display = '';
-    content.style.display = 'none';
-    if (error) error.style.display = 'none';
-    $('#vocabDetailTitle').textContent = `📖 ${vocab.word}`;
-
-    // 查缓存或调 API
+    // 优先用 DB 已存储的 oxford_detail
     let detail = null;
-    if (typeof wordDetailCache !== 'undefined' && wordDetailCache[vocab.word.toLowerCase().trim()]) {
-        detail = wordDetailCache[vocab.word.toLowerCase().trim()];
-    } else if (typeof lookupWordDetail === 'function') {
-        detail = await lookupWordDetail(vocab.word);
+    if (vocab.oxford_detail) {
+        const d = vocab.oxford_detail;
+        detail = { ok: true, word: d.word || vocab.word, pos: d.pos, definition: d.definition, examples: d.examples, collocations: d.collocations };
     }
 
-    loading.style.display = 'none';
+    if (!detail) {
+        // 显示模态框，loading 状态
+        modal.style.display = '';
+        loading.style.display = '';
+        content.style.display = 'none';
+        if (error) error.style.display = 'none';
+        $('#vocabDetailTitle').textContent = `📖 ${vocab.word}`;
+
+        // 查缓存或调 API（兜底）
+        if (typeof wordDetailCache !== 'undefined' && wordDetailCache[vocab.word.toLowerCase().trim()]) {
+            detail = wordDetailCache[vocab.word.toLowerCase().trim()];
+        } else if (typeof lookupWordDetail === 'function') {
+            detail = await lookupWordDetail(vocab.word, vocab);
+        }
+        loading.style.display = 'none';
+    } else {
+        // 已有 DB 数据，直接显示，无需 loading
+        modal.style.display = '';
+        loading.style.display = 'none';
+        content.style.display = '';
+        if (error) error.style.display = 'none';
+        $('#vocabDetailTitle').textContent = `📖 ${vocab.word}`;
+    }
 
     if (detail) {
         $('#vocabDetailWord').textContent = detail.word || vocab.word;

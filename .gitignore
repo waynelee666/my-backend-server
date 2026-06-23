@@ -4,3 +4,7 @@ config.py
 *.sqlite3
 *.sqlite3-journal
 experiment_result.txt
+# 工具脚本（含敏感配置）
+populate_oxford.py
+check_vocab.py
+retranslate.py

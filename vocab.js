@@ -14,9 +14,16 @@ let studyModeDir = 'en2cn'; // en2cn=看英文想意思 | cn2en=看中文拼英�
 // 单词详情缓存（避免重复调用 AI）
 const wordDetailCache = {};
 
-async function lookupWordDetail(word) {
+async function lookupWordDetail(word, vocabObj) {
+    // 优先：从数据库已存储的 oxford_detail 读取（毫秒级）
+    if (vocabObj && vocabObj.oxford_detail) {
+        const d = vocabObj.oxford_detail;
+        return { ok: true, word: d.word || vocabObj.word, pos: d.pos, definition: d.definition, examples: d.examples, collocations: d.collocations };
+    }
+    // 其次：内存缓存
     const key = word.toLowerCase().trim();
     if (wordDetailCache[key]) return wordDetailCache[key];
+    // 最后：调 AI API（兜底）
     try {
         const resp = await fetch('/api/word-lookup', {
             method: 'POST',
@@ -149,13 +156,13 @@ async function flipCard() {
         return;
     }
     if (studyFlipped === true) {
-        // 第二次点击：查询 AI 英文释义
+        // 第二次点击：查询 AI 英文释义（优先读 DB 的 oxford_detail）
         const word = studyWords[studyIndex];
-        // 检查缓存
+        // 检查缓存或 DB 数据
         if (!word._aiDetail) {
             studyFlipped = 'loading';
             renderStudyCard();
-            const detail = await lookupWordDetail(word.word);
+            const detail = await lookupWordDetail(word.word, word);
             if (detail) {
                 word._aiDetail = detail;
                 studyFlipped = 'ai';

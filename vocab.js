@@ -10,10 +10,7 @@ let studyKnown = 0;
 let studyUnknown = 0;
 let studyIsReview = false;  // 是否在复习模式
 let studyModeDir = 'en2cn'; // en2cn=看英文想意思 | cn2en=看中文拼英文
-let studyDifficulty = 'all'; // 'all' | 'cet4' | 'cet6'
-let studyConfig = null;     // 保存出题配置，供"换主题"复用
-let studyCetPool = [];      // 高频四六级词池（用于换主题重新抽取）
-let studyOtherPool = [];    // 其他词池（用于换主题重新抽取）
+let studyConfig = null;     // 保存出题配置，供"再来一组"复用
 
 // 单词详情缓存（避免重复调用 AI）
 const wordDetailCache = {};
@@ -50,7 +47,6 @@ async function lookupWordDetail(word, vocabObj) {
 async function startVocabStudy() {
     studyIsReview = vocabUnit === '__review__';
     studyModeDir = $('#vocabStudyMode')?.value || 'en2cn';
-    studyDifficulty = $('#vocabDifficulty')?.value || 'all';
 
     const filtered = studyIsReview
         ? vocabs.filter(v => v.review === true)
@@ -63,9 +59,9 @@ async function startVocabStudy() {
     const rawCount = parseInt($('#vocabStudyCount')?.value || '0');
     const count = rawCount > 0 ? Math.min(rawCount, filtered.length) : filtered.length;
 
-    // 保存配置供"换主题"使用
+    // 保存配置供"再来一组"使用
     studyConfig = { isReview: studyIsReview, unit: vocabUnit, part: vocabPart,
-                    difficulty: studyDifficulty, count, modeDir: studyModeDir };
+                    count, modeDir: studyModeDir };
 
     // 进入加载状态
     $('#vocabList').style.display = 'none';
@@ -73,85 +69,11 @@ async function startVocabStudy() {
     $('#vocabPartRow').style.display = 'none';
     document.querySelector('.vocab-actions').style.display = 'none';
     $('#vocabStudy').style.display = '';
-    $('#vocabStudy').innerHTML = `<div class="vocab-study-loading">
-        <div class="vocab-flashcard__ai-spinner"></div>
-        <p>🤖 AI 正在分析单词难度...</p>
-    </div>`;
 
-    try {
-        // 1. 检查哪些单词尚未分类
-        const unclassified = filtered.filter(w => !w._cetLevel);
-        if (unclassified.length > 0) {
-            const toClassify = unclassified.map(w => ({ word: w.word, meaning: w.meaning || '' }));
-            const resp = await fetch('/api/classify-vocab', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ words: toClassify }),
-            });
-            const data = await resp.json();
-            if (data.ok && data.classified) {
-                // 缓存分类结果到单词对象
-                const classMap = {};
-                data.classified.forEach(c => { classMap[c.word] = c.level; });
-                unclassified.forEach(w => {
-                    w._cetLevel = classMap[w.word] || 'other';
-                });
-            }
-        }
-
-        // 2. 根据难度筛选
-        const diff = studyDifficulty;
-        let cetPool, otherPool;
-        if (diff === 'cet4') {
-            cetPool = filtered.filter(w => w._cetLevel === 'cet4_high');
-            otherPool = filtered.filter(w => w._cetLevel !== 'cet4_high');
-        } else if (diff === 'cet6') {
-            cetPool = filtered.filter(w => w._cetLevel === 'cet6_high');
-            otherPool = filtered.filter(w => w._cetLevel !== 'cet6_high');
-        } else {
-            // 'all': 四六级高频 vs 其他
-            cetPool = filtered.filter(w => w._cetLevel === 'cet4_high' || w._cetLevel === 'cet6_high');
-            otherPool = filtered.filter(w => !w._cetLevel || w._cetLevel === 'other');
-        }
-
-        // 保存词池供"换主题"使用
-        studyCetPool = [...cetPool];
-        studyOtherPool = [...otherPool];
-
-        // 3. 按 80/20 比例抽取
-        const cetCount = Math.round(count * 0.8);
-        let otherCount = count - cetCount;
-
-        // 如果 CET 池不够，从 other 补
-        const actualCet = Math.min(cetCount, cetPool.length);
-        let actualOther = Math.min(otherCount, otherPool.length);
-        const shortfall = count - actualCet - actualOther;
-        if (shortfall > 0) {
-            // CET 池有剩余空间 → 从 CET 补
-            const cetRemaining = cetPool.length - actualCet;
-            if (cetRemaining >= shortfall) {
-                actualCet += shortfall;
-            } else {
-                actualCet += cetRemaining;
-                actualOther += (shortfall - cetRemaining);
-            }
-        }
-
-        const shuffledCet = [...cetPool].sort(() => Math.random() - 0.5);
-        const shuffledOther = [...otherPool].sort(() => Math.random() - 0.5);
-        studyWords = [...shuffledCet.slice(0, actualCet), ...shuffledOther.slice(0, actualOther)]
-            .sort(() => Math.random() - 0.5);
-        studyConfig._actualCount = studyWords.length;
-
-    } catch (e) {
-        console.error('AI 分类失败，回退到随机抽取:', e);
-        // 回退：纯随机
-        const shuffled = [...filtered].sort(() => Math.random() - 0.5);
-        studyWords = shuffled.slice(0, count);
-        studyCetPool = [];
-        studyOtherPool = [];
-        studyConfig._actualCount = studyWords.length;
-    }
+    // 纯随机抽取，不需要 AI 分类
+    const shuffled = [...filtered].sort(() => Math.random() - 0.5);
+    studyWords = shuffled.slice(0, count);
+    studyConfig._actualCount = studyWords.length;
 
     studyIndex = 0;
     studyFlipped = false;
@@ -211,10 +133,6 @@ function renderStudyCard() {
             <div class="vocab-flashcard__bar">
                 <div class="vocab-flashcard__fill" style="width:${pct}%"></div>
             </div>
-            <div class="vocab-flashcard__theme-row">
-                <span class="vocab-difficulty-tag">${studyDifficulty === 'cet4' ? '📗 四级高频' : studyDifficulty === 'cet6' ? '📘 六级高频' : '📊 全部难度'}</span>
-                <button class="vocab-flashcard__theme-btn" id="vocabThemeBtn" title="保持范围不变，重新随机抽题">🔄 换主题</button>
-            </div>
             <div class="vocab-flashcard__card ${studyFlipped ? 'vocab-flashcard__card--flipped' : ''}" id="vocabFlashCard">
                 <div class="vocab-flashcard__front">
                     <div class="${frontClass}">${frontText}</div>
@@ -245,8 +163,6 @@ function renderStudyCard() {
     }
     const exitBtn = document.getElementById('vocabStudyExitBtn');
     if (exitBtn) exitBtn.addEventListener('click', exitStudyMode);
-    const themeBtn = document.getElementById('vocabThemeBtn');
-    if (themeBtn) themeBtn.addEventListener('click', changeStudyTheme);
 }
 
 async function flipCard() {
@@ -334,26 +250,12 @@ function renderStudyEnd() {
                 </div>
             </div>
             <div class="vocab-study-end__buttons">
-                <button class="btn btn--primary" id="vocabStudyTheme">🔄 换主题</button>
-                <button class="btn btn--outline" id="vocabStudyAgain">🔁 原题重做</button>
+                <button class="btn btn--primary" id="vocabStudyAgain">🔁 再来一组</button>
                 <button class="btn btn--outline" id="vocabStudyBack">📋 返回列表</button>
             </div>
         </div>
     `;
 
-    document.getElementById('vocabStudyTheme').addEventListener('click', () => {
-        if (studyCetPool.length || studyOtherPool.length) {
-            changeStudyTheme();
-        } else {
-            // 回退模式：无词池，直接重打乱
-            studyIndex = 0;
-            studyFlipped = false;
-            studyKnown = 0;
-            studyUnknown = 0;
-            studyWords = studyWords.sort(() => Math.random() - 0.5);
-            renderStudyCard();
-        }
-    });
     document.getElementById('vocabStudyAgain').addEventListener('click', () => {
         studyIndex = 0;
         studyFlipped = false;
@@ -363,43 +265,6 @@ function renderStudyEnd() {
         renderStudyCard();
     });
     document.getElementById('vocabStudyBack').addEventListener('click', exitStudyMode);
-}
-
-function changeStudyTheme() {
-    if (!studyConfig) return;
-    const { count } = studyConfig;
-    const cetPool = studyCetPool;
-    const otherPool = studyOtherPool;
-
-    // 从保存的词池中重新按 80/20 随机抽取
-    const cetCount = Math.round(count * 0.8);
-    let otherCount = count - cetCount;
-
-    const actualCet = Math.min(cetCount, cetPool.length);
-    let actualOther = Math.min(otherCount, otherPool.length);
-    const shortfall = count - actualCet - actualOther;
-    if (shortfall > 0) {
-        const cetRemaining = cetPool.length - actualCet;
-        if (cetRemaining >= shortfall) {
-            actualCet += shortfall;
-        } else {
-            actualCet += cetRemaining;
-            actualOther += (shortfall - cetRemaining);
-        }
-    }
-
-    const shuffledCet = [...cetPool].sort(() => Math.random() - 0.5);
-    const shuffledOther = [...otherPool].sort(() => Math.random() - 0.5);
-    studyWords = [...shuffledCet.slice(0, actualCet), ...shuffledOther.slice(0, actualOther)]
-        .sort(() => Math.random() - 0.5);
-
-    studyIndex = 0;
-    studyFlipped = false;
-    studyKnown = 0;
-    studyUnknown = 0;
-
-    renderStudyCard();
-    showToast('🔄 已换新主题，加油！', 'info');
 }
 
 async function exitStudyMode() {

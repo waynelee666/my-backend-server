@@ -295,6 +295,7 @@ let practiceResult = null;     // 批改结果
 let selectedUnits = new Set(); // 选中的 Unit/Part 组合，如 "U1-P1"
 let practiceCount = 10;        // 出题数
 let practiceCustomCount = 10;  // 自定义出题数
+let practiceShowMeaning = false; // 是否在空格后显示中文释义
 
 // 初始化：收集所有可用的 Unit/Part 组合
 function getAvailableUnits() {
@@ -322,6 +323,7 @@ function enterPracticeMode() {
     selectedUnits.clear();
     practiceCount = 10;
     practiceCustomCount = 10;
+    practiceShowMeaning = false;
     practiceBlanks = [];
     practicePassage = '';
     practiceTitle = '';
@@ -369,7 +371,16 @@ function renderPracticeConfig() {
     } else {
         customInput.style.display = 'none';
     }
+
+    // 同步「显示释义」复选框
+    const meaningCB = $('#practiceShowMeaning');
+    if (meaningCB) meaningCB.checked = practiceShowMeaning;
 }
+
+// 监听「显示释义」复选框变化
+$('#practiceShowMeaning')?.addEventListener('change', () => {
+    practiceShowMeaning = $('#practiceShowMeaning')?.checked || false;
+});
 
 // 出题数按钮点击
 document.addEventListener('click', e => {
@@ -517,6 +528,9 @@ function renderPracticeExam() {
     // 渲染答题区
     let answerHTML = '';
     sorted.sort((a, b) => a.number - b.number).forEach(b => {
+        const meaningTag = practiceShowMeaning && b.meaning
+            ? `<span class="practice-answer-meaning">${esc(b.meaning)}</span>`
+            : '';
         answerHTML += `
             <div class="practice-answer-item">
                 <span class="practice-answer-num">${b.number}.</span>
@@ -524,6 +538,7 @@ function renderPracticeExam() {
                 <input class="practice-answer-input" id="practiceAnswer${b.number}"
                        data-n="${b.number}" maxlength="50"
                        placeholder="${esc(b.first_letter)}..." autocomplete="off" spellcheck="false">
+                ${meaningTag}
             </div>
         `;
     });

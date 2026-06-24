@@ -524,3 +524,76 @@ def lookup_word(word):
         if content.endswith("```"):
             content = content[:-3]
     return json.loads(content)
+
+
+# ========== 单词分类 — 四六级高频词识别 Prompt ==========
+CLASSIFY_VOCAB_PROMPT = (
+    "你是一位中国大学英语四六级考试（CET-4/CET-6）词汇专家。\n"
+    "你的任务：判断以下每个单词或短语是否属于四六级高频词汇。\n"
+    "\n"
+    "分类标准：\n"
+    "- cet4_high: 大学英语四级(CET-4)考试中的高频核心词汇，出现频率高、考查概率大\n"
+    "- cet6_high: 大学英语六级(CET-6)考试中的高频核心词汇，比四级词汇更难、更学术\n"
+    "- other: 不属于以上两类的词汇（如基础初中高中词汇、超纲冷僻词、专业术语等）\n"
+    "\n"
+    "注意：\n"
+    "- 一个词最多属于一个类别，选最匹配的\n"
+    "- 四级高频词通常更基础常用，六级高频词更学术正式\n"
+    "- 短语（如 take off, look after）按整体难度判断，通常是 other\n"
+    "- 常见基础词（如 apple, book, run, good）归为 other，不算高频考试词\n"
+    "\n"
+    "输出格式 — 只返回纯 JSON 数组，不要任何额外文字：\n"
+    '[{"word": "...", "level": "cet4_high"}, {"word": "...", "level": "cet6_high"}, {"word": "...", "level": "other"}]\n'
+    "\n"
+    "必须为每个输入的单词返回一条记录，不要遗漏。"
+)
+
+
+def classify_vocab(words):
+    """调用 DeepSeek 分类单词为四六级高频词或其他
+
+    Args:
+        words: [{"word": "...", "meaning": "..."}, ...]
+
+    Returns:
+        [{"word": "...", "level": "cet4_high"|"cet6_high"|"other"}, ...]
+    """
+    if not _llm_available or _client is None:
+        raise LLMNotAvailable("AI 功能未配置，请设置 DEEPSEEK_API_KEY")
+
+    if not words:
+        return []
+
+    # 准备单词列表文本
+    word_lines = []
+    for i, w in enumerate(words):
+        meaning = w.get('meaning', '')
+        word_lines.append(f"{i+1}. {w['word']}" + (f" — {meaning}" if meaning else ""))
+
+    word_list_text = "\n".join(word_lines)
+
+    user_prompt = (
+        f"请分类以下 {len(words)} 个单词/短语：\n\n"
+        f"{word_list_text}\n\n"
+        f"直接返回 JSON 数组。"
+    )
+
+    messages = [
+        {"role": "system", "content": CLASSIFY_VOCAB_PROMPT},
+        {"role": "user", "content": user_prompt},
+    ]
+
+    resp = _client.chat.completions.create(
+        model="deepseek-chat",
+        messages=messages,
+        temperature=0.1,
+        max_tokens=2048,
+        timeout=60,
+    )
+
+    content = resp.choices[0].message.content.strip()
+    if content.startswith("```"):
+        content = content.split("\n", 1)[1]
+        if content.endswith("```"):
+            content = content[:-3]
+    return json.loads(content)

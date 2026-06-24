@@ -298,6 +298,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.handle_grade_practice()
         elif parsed.path == "/api/word-lookup":
             self.handle_word_lookup()
+        elif parsed.path == "/api/classify-vocab":
+            self.handle_classify_vocab()
         else:
             self.send_json({"ok": False, "error": "未知接口"}, 404)
 
@@ -446,6 +448,38 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_json({"ok": True, **result})
         except Exception as e:
             print(f"  [WordLookup ERROR] {e}")
+            self.send_json({"ok": False, "error": str(e)}, 500)
+
+    def handle_classify_vocab(self):
+        """POST /api/classify-vocab — AI 分类单词为四六级高频词或其他"""
+        if not _llm_available or llm is None:
+            self.send_json({
+                "ok": False,
+                "error": "AI 功能未配置。请在环境变量中设置 DEEPSEEK_API_KEY。"
+            }, 503)
+            return
+
+        body = self.read_json_body()
+        if not body or "words" not in body:
+            self.send_json({"ok": False, "error": "请提供 words 字段（单词数组）"}, 400)
+            return
+
+        words = body["words"]
+        if not isinstance(words, list) or len(words) == 0:
+            self.send_json({"ok": False, "error": "单词列表不能为空"}, 400)
+            return
+
+        if len(words) > 200:
+            self.send_json({"ok": False, "error": f"一次最多分类 200 个单词，当前 {len(words)} 个"}, 400)
+            return
+
+        try:
+            print(f"  [Classify] 分类 {len(words)} 个单词...")
+            classified = llm.classify_vocab(words)
+            print(f"  [Classify] 完成 → {len(classified)} 个结果")
+            self.send_json({"ok": True, "classified": classified})
+        except Exception as e:
+            print(f"  [Classify ERROR] {e}")
             self.send_json({"ok": False, "error": str(e)}, 500)
 
     def handle_chat(self):

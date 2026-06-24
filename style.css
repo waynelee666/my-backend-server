@@ -535,7 +535,17 @@ textarea.form-input { resize:vertical; }
 .vocab-flashcard__btn--yes:hover { background:#10b981; color:#fff; border-color:#10b981; }
 .vocab-flashcard__btn--no { background:#fef2f2; color:#991b1b; border:2px solid #fecaca; }
 .vocab-flashcard__btn--no:hover { background:#ef4444; color:#fff; border-color:#ef4444; }
+.vocab-flashcard__theme-row { display:flex; align-items:center; justify-content:space-between; width:100%; }
+.vocab-difficulty-tag { font-size:.75rem; font-weight:600; color:var(--color-primary); background:#eef2ff; padding:4px 10px; border-radius:20px; white-space:nowrap; }
+.vocab-flashcard__theme-btn { padding:6px 14px; border:2px dashed var(--color-border); border-radius:20px; background:transparent; font-family:inherit; font-size:.8rem; font-weight:500; color:var(--color-text-light); cursor:pointer; transition:all var(--transition); white-space:nowrap; }
+.vocab-flashcard__theme-btn:hover { border-color:var(--color-primary); color:var(--color-primary); background:#f8f7ff; }
+.vocab-study-loading { display:flex; flex-direction:column; align-items:center; gap:16px; padding:60px 20px; color:var(--color-text-light); font-size:.95rem; }
 .vocab-flashcard__exit { margin-top:16px; text-align:center; }
+
+/* 练习模式：单空释义提示按钮 */
+.practice-answer-hint-btn { padding:2px 6px; border:1px solid var(--color-border); border-radius:6px; background:#fafafa; font-family:inherit; font-size:.85rem; cursor:pointer; transition:all var(--transition); }
+.practice-answer-hint-btn:hover { background:#eef2ff; border-color:var(--color-primary); transform:scale(1.1); }
+.practice-answer-meaning--revealed { animation:fadeIn .3s ease; }
 
 /* 闪卡 AI 牛津释义 */
 .vocab-flashcard__ai { width:100%; padding:16px 20px; background:#fafcff; border:1px solid #d0d5f0; border-radius:12px; text-align:left; font-size:.88rem; line-height:1.6; color:var(--color-text); }

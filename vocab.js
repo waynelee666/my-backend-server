@@ -448,6 +448,8 @@ let selectedUnits = new Set(); // 选中的 Unit/Part 组合，如 "U1-P1"
 let practiceCount = 10;        // 出题数
 let practiceCustomCount = 10;  // 自定义出题数
 let practiceShowMeaning = false; // 是否在空格后显示中文释义
+let practiceDifficulty = 'all';  // 'all' | 'cet4' | 'cet6'
+let practiceFullPool = [];       // 保存全量词池供"换主题"使用
 
 // 初始化：收集所有可用的 Unit/Part 组合
 function getAvailableUnits() {
@@ -480,7 +482,130 @@ function enterPracticeMode() {
     practicePassage = '';
     practiceTitle = '';
     practiceResult = null;
+    practiceFullPool = [];
     renderPracticeConfig();
+}
+
+// 智能抽词：AI 分类 + 难度筛选 + 80/20 拆分
+async function pickWordsForPractice(pool, difficulty, count) {
+    practiceDifficulty = difficulty;
+    // 保存全量词池供"换主题"使用
+    practiceFullPool = [...pool];
+
+    // 1. 分类未分类的单词
+    const unclassified = pool.filter(w => !w._cetLevel);
+    if (unclassified.length > 0) {
+        const toClassify = unclassified.map(w => ({ word: w.word, meaning: w.meaning || '' }));
+        try {
+            const resp = await fetch('/api/classify-vocab', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ words: toClassify }),
+            });
+            const data = await resp.json();
+            if (data.ok && data.classified) {
+                const classMap = {};
+                data.classified.forEach(c => { classMap[c.word] = c.level; });
+                unclassified.forEach(w => {
+                    w._cetLevel = classMap[w.word] || 'other';
+                });
+            }
+        } catch (e) {
+            console.warn('AI 分类失败，所有单词视为 other:', e);
+            unclassified.forEach(w => { w._cetLevel = 'other'; });
+        }
+    }
+
+    // 2. 根据难度拆分 CET 池 vs Other 池
+    let cetPool, otherPool;
+    if (difficulty === 'cet4') {
+        cetPool = pool.filter(w => w._cetLevel === 'cet4_high');
+        otherPool = pool.filter(w => w._cetLevel !== 'cet4_high');
+    } else if (difficulty === 'cet6') {
+        cetPool = pool.filter(w => w._cetLevel === 'cet6_high');
+        otherPool = pool.filter(w => w._cetLevel !== 'cet6_high');
+    } else {
+        cetPool = pool.filter(w => w._cetLevel === 'cet4_high' || w._cetLevel === 'cet6_high');
+        otherPool = pool.filter(w => !w._cetLevel || w._cetLevel === 'other');
+    }
+
+    // 3. 按 80/20 比例从两池抽取
+    const cetCount = Math.round(count * 0.8);
+    const otherCount = count - cetCount;
+
+    let actualCet = Math.min(cetCount, cetPool.length);
+    let actualOther = Math.min(otherCount, otherPool.length);
+    let shortfall = count - actualCet - actualOther;
+    // 不够的从另一池补
+    while (shortfall > 0) {
+        const cetRemaining = cetPool.length - actualCet;
+        const otherRemaining = otherPool.length - actualOther;
+        if (cetRemaining >= shortfall) { actualCet += shortfall; break; }
+        if (otherRemaining >= shortfall) { actualOther += shortfall; break; }
+        actualCet += cetRemaining;
+        shortfall -= cetRemaining;
+        if (shortfall > 0) { actualOther += Math.min(shortfall, otherRemaining); break; }
+    }
+
+    const shuffledCet = [...cetPool].sort(() => Math.random() - 0.5);
+    const shuffledOther = [...otherPool].sort(() => Math.random() - 0.5);
+    return [...shuffledCet.slice(0, actualCet), ...shuffledOther.slice(0, actualOther)]
+        .sort(() => Math.random() - 0.5);
+}
+
+// 换主题：保持范围/难度/题数，重新抽词出题
+async function changePracticeTheme() {
+    if (!practiceFullPool.length || practiceState !== 'exam') return;
+
+    let count = practiceCount;
+    if (document.querySelector('.practice-count-btn[data-count="custom"].active')) {
+        count = practiceCustomCount;
+    }
+    count = Math.min(count, practiceFullPool.length);
+
+    practiceState = 'loading';
+    $('#practiceExam').style.display = 'none';
+    $('#practiceLoading').style.display = '';
+    const loadingText = document.querySelector('.practice-loading__text');
+    const loadingSub = document.querySelector('.practice-loading__sub');
+    if (loadingText) loadingText.innerHTML = '换主题中<span id="practiceLoadingDots">.</span>';
+    if (loadingSub) loadingSub.textContent = 'AI 正在重新挑选单词并创作文章 🤔';
+    const dotsEl = $('#practiceLoadingDots');
+    let dotTimer = setInterval(() => {
+        if (dotsEl) { const d = dotsEl.textContent; dotsEl.textContent = d.length >= 3 ? '.' : d + '.'; }
+    }, 500);
+
+    try {
+        const selected = await pickWordsForPractice(practiceFullPool, practiceDifficulty, count);
+        const words = selected.map(v => ({ word: v.word, meaning: v.meaning }));
+        const resp = await fetch('/api/generate-practice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ words, count }),
+        });
+        const data = await resp.json();
+        clearInterval(dotTimer);
+
+        if (!data.ok) {
+            showToast(data.error || '换主题失败', 'error');
+            renderPracticeExam();
+            return;
+        }
+
+        practiceBlanks = data.blanks || [];
+        practicePassage = data.passage || '';
+        practiceTitle = data.title || '选词填空练习';
+        practiceState = 'exam';
+        practiceResult = null;
+        renderPracticeExam();
+        showToast('🔄 已换新主题，加油！', 'info');
+
+    } catch (e) {
+        clearInterval(dotTimer);
+        console.error('换主题失败:', e);
+        showToast('换主题失败，请检查网络连接', 'error');
+        renderPracticeExam();
+    }
 }
 
 function renderPracticeConfig() {
@@ -576,7 +701,7 @@ $('#practiceStartBtn')?.addEventListener('click', async () => {
         showToast('请至少选择一个单元范围', 'error');
         return;
     }
-    const unitList = [...selectedUnits];
+    practiceDifficulty = $('#practiceDifficulty')?.value || 'all';
     const pool = vocabs.filter(v => selectedUnits.has(`${v.unit}-${v.part}`));
     if (!pool.length) {
         showToast('选中范围内没有单词', 'error');
@@ -615,7 +740,9 @@ $('#practiceStartBtn')?.addEventListener('click', async () => {
     }, 500);
 
     try {
-        const words = pool.map(v => ({ word: v.word, meaning: v.meaning }));
+        // 智能抽词：AI 分类 → 难度筛选 → 80/20 拆分
+        const selected = await pickWordsForPractice(pool, practiceDifficulty, count);
+        const words = selected.map(v => ({ word: v.word, meaning: v.meaning }));
         const resp = await fetch('/api/generate-practice', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -648,12 +775,12 @@ $('#practiceStartBtn')?.addEventListener('click', async () => {
 $('#practiceBackBtn')?.addEventListener('click', exitPracticeMode);
 $('#practiceCancelBtn')?.addEventListener('click', () => {
     if (practiceState === 'result') {
-        // 结果阶段：保持结果，返回列表
         exitPracticeMode();
     } else {
         exitPracticeMode();
     }
 });
+$('#practiceThemeBtn')?.addEventListener('click', changePracticeTheme);
 
 function renderPracticeExam() {
     practiceState = 'exam';
@@ -874,6 +1001,8 @@ function exitPracticeMode() {
     practicePassage = '';
     practiceTitle = '';
     practiceResult = null;
+    practiceFullPool = [];
+    practiceDifficulty = 'all';
     selectedUnits.clear();
     $('#vocabPractice').style.display = 'none';
     $('#vocabList').style.display = '';

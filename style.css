@@ -665,7 +665,9 @@ textarea.form-input { resize:vertical; }
 .practice-loading__sub { font-size:.85rem; color:var(--color-text-light); }
 
 /* Exam — 文章区 */
-.practice-exam__header { margin-bottom:20px; text-align:center; }
+.practice-exam__header { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
+.practice-exam__header .practice-exam__title { flex:1; min-width:150px; }
+.practice-exam__header .practice-exam__info { font-size:.8rem; color:var(--color-text-light); }
 .practice-exam__title { font-size:1.2rem; color:var(--color-text); margin-bottom:4px; }
 .practice-exam__info { font-size:.8rem; color:var(--color-text-light); }
 
@@ -718,6 +720,14 @@ textarea.form-input { resize:vertical; }
 }
 .practice-meaning-toggle:hover { border-color:var(--color-primary); background:#f0f4ff; }
 .practice-meaning-toggle input[type="checkbox"] { width:16px; height:16px; accent-color:var(--color-primary); cursor:pointer; }
+.practice-difficulty-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.practice-difficulty-select {
+    padding:6px 12px; border:1px solid var(--color-border); border-radius:8px;
+    font-family:inherit; font-size:.85rem; background:#fff; cursor:pointer;
+    transition:border-color var(--transition);
+}
+.practice-difficulty-select:focus { border-color:var(--color-primary); outline:none; }
+.practice-theme-btn { margin-left:auto; flex-shrink:0; }
 
 /* Result */
 .practice-result__score { text-align:center; margin-bottom:20px; }

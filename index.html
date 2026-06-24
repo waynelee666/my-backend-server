@@ -344,6 +344,14 @@
                     <input type="number" class="practice-custom-count" id="practiceCustomCount" value="10" min="1" max="30" style="display:none" placeholder="题数">
                 </div>
                 <div class="practice-options">
+                    <div class="practice-difficulty-row">
+                        <label class="practice__label">难度：</label>
+                        <select class="practice-difficulty-select" id="practiceDifficulty">
+                            <option value="all">📊 全部难度</option>
+                            <option value="cet4">📗 四级高频</option>
+                            <option value="cet6">📘 六级高频</option>
+                        </select>
+                    </div>
                     <label class="practice-meaning-toggle">
                         <input type="checkbox" id="practiceShowMeaning">
                         <span>在每个空格后显示中文释义 💡</span>
@@ -365,6 +373,7 @@
                 <div class="practice-exam__header">
                     <h3 class="practice-exam__title" id="practiceExamTitle"></h3>
                     <span class="practice-exam__info" id="practiceExamInfo"></span>
+                    <button class="btn btn--outline btn--sm practice-theme-btn" id="practiceThemeBtn" title="保持范围不变，重新出题">🔄 换主题</button>
                 </div>
                 <div class="practice-exam__passage" id="practiceExamPassage"></div>
                 <div class="practice-exam__answers" id="practiceExamAnswers">

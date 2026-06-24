@@ -135,6 +135,9 @@ function renderStudyCard() {
                 <button class="vocab-flashcard__btn vocab-flashcard__btn--no" id="vocabBtnNo">不认识 ❌</button>
                 <button class="vocab-flashcard__btn vocab-flashcard__btn--yes" id="vocabBtnYes">认识 ✅</button>
             </div>
+            <div class="vocab-flashcard__exit">
+                <button class="btn btn--outline btn--sm" id="vocabStudyExitBtn">← 返回列表</button>
+            </div>
         </div>
     `;
 
@@ -146,6 +149,8 @@ function renderStudyCard() {
         if (btnYes) btnYes.addEventListener('click', () => answerCard(true));
         if (btnNo) btnNo.addEventListener('click', () => answerCard(false));
     }
+    const exitBtn = document.getElementById('vocabStudyExitBtn');
+    if (exitBtn) exitBtn.addEventListener('click', exitStudyMode);
 }
 
 async function flipCard() {

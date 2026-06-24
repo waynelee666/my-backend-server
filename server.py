@@ -366,6 +366,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         words = body["words"]
         count = int(body["count"])
+        difficulty = body.get("difficulty", "medium")  # easy | medium | hard
 
         if not isinstance(words, list) or len(words) == 0:
             self.send_json({"ok": False, "error": "单词列表不能为空"}, 400)
@@ -383,8 +384,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            print(f"  [Practice] 从 {len(words)} 个单词中生成 {count} 题练习...")
-            result = llm.generate_practice(words, count)
+            print(f"  [Practice] 从 {len(words)} 个单词中生成 {count} 题练习 (文章难度: {difficulty})...")
+            result = llm.generate_practice(words, count, difficulty)
             print(f"  [Practice] 生成成功 → {len(result.get('blanks', []))} 个空")
             self.send_json({"ok": True, **result})
         except Exception as e:

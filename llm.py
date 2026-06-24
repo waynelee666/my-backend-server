@@ -325,18 +325,48 @@ PRACTICE_GRADE_PROMPT = (
 )
 
 
-def generate_practice(words, count):
+def generate_practice(words, count, difficulty="medium"):
     """调用 DeepSeek 生成选词填空练习
 
     Args:
         words: [{"word": "...", "meaning": "..."}, ...]
         count: 目标空位数
+        difficulty: 文章难度 — "easy" | "medium" | "hard"
 
     Returns:
         {"passage": "...", "blanks": [...], "title": "..."}
     """
     if not _llm_available or _client is None:
         raise LLMNotAvailable("AI 功能未配置，请设置 DEEPSEEK_API_KEY")
+
+    # 难度指令映射
+    difficulty_guide = {
+        "easy": (
+            "文章难度：简单。\n"
+            "- 使用基础词汇和简单句式（主谓宾结构为主，少用从句）\n"
+            "- 段落简短，每句不超过 15 个单词\n"
+            "- 上下文线索明显，能轻易推断空缺单词\n"
+            "- 文章总词数控制在 100-200 词\n"
+            "- 主题贴近日常校园生活（食堂、宿舍、图书馆、上课等）"
+        ),
+        "medium": (
+            "文章难度：中等。\n"
+            "- 使用标准大学英语水平词汇和句式（可含少量从句）\n"
+            "- 句子自然流畅，长度适中\n"
+            "- 上下文有合理线索但不过于直白\n"
+            "- 文章总词数控制在 150-350 词\n"
+            "- 主题多样化（科技、文化、社会、学术等）"
+        ),
+        "hard": (
+            "文章难度：较难。\n"
+            "- 可使用复杂句式（定语从句、状语从句、倒装等）和学术词汇\n"
+            "- 句子可以较长，模仿学术文章风格\n"
+            "- 上下文线索更隐晦，需要读者深入理解才能推断\n"
+            "- 文章总词数控制在 200-400 词\n"
+            "- 主题可涉及学术讨论、社会评论、科技前沿等"
+        ),
+    }
+    diff_instruction = difficulty_guide.get(difficulty, difficulty_guide["medium"])
 
     # 准备单词列表文本
     word_lines = []
@@ -348,7 +378,9 @@ def generate_practice(words, count):
         f"以下是我的单词库（共 {len(words)} 个）：\n\n"
         f"{word_list_text}\n\n"
         f"请从中挑选恰好 {count} 个单词（优先 CET-4/CET-6 高频词），"
-        f"创作一篇含 {count} 个空的英文短文。直接返回 JSON。"
+        f"创作一篇含 {count} 个空的英文短文。\n\n"
+        f"{diff_instruction}\n\n"
+        f"直接返回 JSON。"
     )
 
     messages = [

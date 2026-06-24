@@ -313,7 +313,8 @@ let selectedUnits = new Set(); // 选中的 Unit/Part 组合，如 "U1-P1"
 let practiceCount = 10;        // 出题数
 let practiceCustomCount = 10;  // 自定义出题数
 let practiceShowMeaning = false; // 是否在空格后显示中文释义
-let practiceDifficulty = 'all';  // 'all' | 'cet4' | 'cet6'
+let practiceDifficulty = 'medium';  // 'easy' | 'medium' | 'hard' — 控制文章难度
+let practiceWordRange = 'all';   // 'all' | 'cet4' | 'cet6' — 控制单词范围
 let practiceFullPool = [];       // 保存全量词池供"换主题"使用
 
 // 初始化：收集所有可用的 Unit/Part 组合
@@ -348,11 +349,14 @@ function enterPracticeMode() {
     practiceTitle = '';
     practiceResult = null;
     practiceFullPool = [];
+    practiceWordRange = 'all';
+    practiceDifficulty = 'medium';
     renderPracticeConfig();
 }
 
-// 智能抽词：AI 分类 + 难度筛选 + 80/20 拆分
-async function pickWordsForPractice(pool, difficulty, count) {
+// 智能抽词：AI 分类 + 单词范围筛选 + 80/20 拆分
+async function pickWordsForPractice(pool, wordRange, difficulty, count) {
+    practiceWordRange = wordRange;
     practiceDifficulty = difficulty;
     // 保存全量词池供"换主题"使用
     practiceFullPool = [...pool];
@@ -381,15 +385,18 @@ async function pickWordsForPractice(pool, difficulty, count) {
         }
     }
 
-    // 2. 根据难度拆分 CET 池 vs Other 池
+    // 2. 根据单词范围拆分 CET 主池 vs 其他池
     let cetPool, otherPool;
-    if (difficulty === 'cet4') {
+    if (wordRange === 'cet4') {
+        // 四级高频: 80% 四级, 20% 六级或其他
         cetPool = pool.filter(w => w._cetLevel === 'cet4_high');
         otherPool = pool.filter(w => w._cetLevel !== 'cet4_high');
-    } else if (difficulty === 'cet6') {
+    } else if (wordRange === 'cet6') {
+        // 六级高频: 80% 六级, 20% 四级或其他
         cetPool = pool.filter(w => w._cetLevel === 'cet6_high');
         otherPool = pool.filter(w => w._cetLevel !== 'cet6_high');
     } else {
+        // 全部难度: 80% 四级或六级（随机选取）, 20% 其他
         cetPool = pool.filter(w => w._cetLevel === 'cet4_high' || w._cetLevel === 'cet6_high');
         otherPool = pool.filter(w => !w._cetLevel || w._cetLevel === 'other');
     }
@@ -441,12 +448,12 @@ async function changePracticeTheme() {
     }, 500);
 
     try {
-        const selected = await pickWordsForPractice(practiceFullPool, practiceDifficulty, count);
+        const selected = await pickWordsForPractice(practiceFullPool, practiceWordRange, practiceDifficulty, count);
         const words = selected.map(v => ({ word: v.word, meaning: v.meaning }));
         const resp = await fetch('/api/generate-practice', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ words, count }),
+            body: JSON.stringify({ words, count, difficulty: practiceDifficulty }),
         });
         const data = await resp.json();
         clearInterval(dotTimer);
@@ -566,7 +573,8 @@ $('#practiceStartBtn')?.addEventListener('click', async () => {
         showToast('请至少选择一个单元范围', 'error');
         return;
     }
-    practiceDifficulty = $('#practiceDifficulty')?.value || 'all';
+    practiceDifficulty = $('#practiceDifficulty')?.value || 'medium';
+    practiceWordRange = $('#practiceWordRange')?.value || 'all';
     const pool = vocabs.filter(v => selectedUnits.has(`${v.unit}-${v.part}`));
     if (!pool.length) {
         showToast('选中范围内没有单词', 'error');
@@ -605,13 +613,13 @@ $('#practiceStartBtn')?.addEventListener('click', async () => {
     }, 500);
 
     try {
-        // 智能抽词：AI 分类 → 难度筛选 → 80/20 拆分
-        const selected = await pickWordsForPractice(pool, practiceDifficulty, count);
+        // 智能抽词：AI 分类 → 单词范围筛选 → 80/20 拆分
+        const selected = await pickWordsForPractice(pool, practiceWordRange, practiceDifficulty, count);
         const words = selected.map(v => ({ word: v.word, meaning: v.meaning }));
         const resp = await fetch('/api/generate-practice', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ words, count }),
+            body: JSON.stringify({ words, count, difficulty: practiceDifficulty }),
         });
         const data = await resp.json();
         clearInterval(dotTimer);
@@ -867,7 +875,8 @@ function exitPracticeMode() {
     practiceTitle = '';
     practiceResult = null;
     practiceFullPool = [];
-    practiceDifficulty = 'all';
+    practiceDifficulty = 'medium';
+    practiceWordRange = 'all';
     selectedUnits.clear();
     $('#vocabPractice').style.display = 'none';
     $('#vocabList').style.display = '';

@@ -340,11 +340,19 @@
                 </div>
                 <div class="practice-options">
                     <div class="practice-difficulty-row">
-                        <label class="practice__label">难度：</label>
+                        <label class="practice__label">单词范围：</label>
+                        <select class="practice-difficulty-select" id="practiceWordRange">
+                            <option value="all" selected>📊 全部难度 (80%四六级+20%其他)</option>
+                            <option value="cet4">📗 四级高频 (80%四级+20%其他)</option>
+                            <option value="cet6">📘 六级高频 (80%六级+20%其他)</option>
+                        </select>
+                    </div>
+                    <div class="practice-difficulty-row">
+                        <label class="practice__label">文章难度：</label>
                         <select class="practice-difficulty-select" id="practiceDifficulty">
-                            <option value="all">📊 全部难度</option>
-                            <option value="cet4">📗 四级高频</option>
-                            <option value="cet6">📘 六级高频</option>
+                            <option value="easy">⭐ 简单</option>
+                            <option value="medium" selected>⭐⭐ 中等</option>
+                            <option value="hard">⭐⭐⭐ 较难</option>
                         </select>
                     </div>
                     <label class="practice-meaning-toggle">

@@ -344,8 +344,6 @@ function renderPracticeConfig() {
         $('#practiceUnits').innerHTML = '<p class="empty-text">还没有单词，请先添加或导入 📖</p>';
         $('#practiceStartBtn').disabled = true;
     } else {
-        // 默认全选
-        if (selectedUnits.size === 0) units.forEach(u => selectedUnits.add(u));
         $('#practiceUnits').innerHTML = units.map(u => {
             const checked = selectedUnits.has(u) ? 'checked' : '';
             const cnt = vocabs.filter(v => `${v.unit}-${v.part}` === u).length;
@@ -354,7 +352,7 @@ function renderPracticeConfig() {
                 <span>${u} <small>(${cnt}词)</small></span>
             </label>`;
         }).join('');
-        $('#practiceStartBtn').disabled = false;
+        $('#practiceStartBtn').disabled = selectedUnits.size === 0;
     }
 
     // 渲染出题数按钮
@@ -413,6 +411,9 @@ $('#practiceUnits')?.addEventListener('change', e => {
     if (e.target.classList.contains('practice-unit-cb')) {
         if (e.target.checked) selectedUnits.add(e.target.value);
         else selectedUnits.delete(e.target.value);
+        // 实时更新开始按钮状态
+        const startBtn = $('#practiceStartBtn');
+        if (startBtn) startBtn.disabled = selectedUnits.size === 0;
     }
 });
 

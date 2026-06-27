@@ -797,6 +797,62 @@ textarea.form-input { resize:vertical; }
 .thought-edit-area { width:100%; min-height:100px; padding:10px 12px; border:1px solid var(--color-primary); border-radius:8px; font-family:inherit; font-size:.9rem; line-height:1.6; resize:vertical; outline:none; }
 .thought-edit-actions { display:flex; gap:6px; justify-content:flex-end; align-items:center; }
 
+/* ==================== 脚本全屏编辑器 ==================== */
+.script-editor-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,.45); backdrop-filter: blur(4px);
+    display: flex; align-items: stretch; justify-content: stretch;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s ease;
+}
+.script-editor-overlay.active { opacity: 1; pointer-events: auto; }
+.script-editor {
+    display: flex; flex-direction: column;
+    width: 100%; height: 100%;
+    background: #f8fafc;
+}
+.script-editor__topbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px;
+    background: #fff;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+.script-editor__back { font-weight: 600; font-size: .9rem; white-space: nowrap; }
+.script-editor__title {
+    flex: 1; min-width: 0;
+    padding: 10px 14px;
+    border: 1px solid var(--color-border); border-radius: 8px;
+    font-family: inherit; font-size: 1.1rem; font-weight: 600;
+    outline: none; color: var(--color-text);
+    background: #f8fafc;
+}
+.script-editor__title:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(79,70,229,.1); background: #fff; }
+.script-editor__del:hover { background: #fee2e2 !important; color: #dc2626 !important; border-color: #fecaca !important; }
+.script-editor__content {
+    flex: 1; min-height: 0;
+    padding: 24px 28px;
+    border: none; outline: none;
+    font-family: inherit; font-size: .95rem; line-height: 1.85;
+    color: var(--color-text);
+    background: #f8fafc;
+    resize: none;
+}
+.script-editor__content::placeholder { color: #c0c0c0; }
+.script-editor__bottombar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 24px;
+    background: #fff;
+    border-top: 1px solid var(--color-border);
+    flex-shrink: 0;
+    font-size: .8rem; color: var(--color-text-light);
+}
+.script-editor__hints { color: #bbb; font-size: .75rem; }
+
+/* 脚本卡片点击提示 */
+.thought-card { cursor: pointer; }
+.thought-card__btn { position: relative; z-index: 1; }
+
 /* ==================== 微积分 ==================== */
 .calc-plan { display:flex; flex-direction:column; gap:8px; }
 .calc-chapter { border:1px solid var(--color-border); border-radius:10px; background:#fff; overflow:hidden; transition:all var(--transition); }

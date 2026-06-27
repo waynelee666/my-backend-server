@@ -188,6 +188,28 @@
         </div>
     </section>
 
+    <!-- ===== 脚本全屏编辑器 ===== -->
+    <div class="script-editor-overlay" id="scriptEditorOverlay">
+        <div class="script-editor">
+            <div class="script-editor__topbar">
+                <button class="btn btn--icon script-editor__back" id="scriptEditorBack" title="返回列表">← 返回列表</button>
+                <input type="text" class="script-editor__title" id="scriptEditorTitle" placeholder="输入脚本标题..." maxlength="100">
+                <select class="thought-status-select" id="scriptEditorStatus">
+                    <option value="draft">🏷️ 草稿</option>
+                    <option value="filming">🎥 拍摄中</option>
+                    <option value="done">✅ 已完成</option>
+                </select>
+                <button class="btn btn--primary btn--sm" id="scriptEditorSave">💾 保存</button>
+                <button class="btn btn--outline btn--sm script-editor__del" id="scriptEditorDelete" title="删除">🗑️</button>
+            </div>
+            <textarea class="script-editor__content" id="scriptEditorContent" placeholder="写视频脚本…用 --- 分隔不同场景"></textarea>
+            <div class="script-editor__bottombar">
+                <span class="script-stats" id="scriptEditorStats">📊 0 个场景 · 0 字</span>
+                <span class="script-editor__hints">Ctrl+Enter 保存 · Esc 关闭</span>
+            </div>
+        </div>
+    </div>
+
     <!-- ===== 微积分视图 ===== -->
     <section class="view" id="view-calculus">
         <div class="view__header">

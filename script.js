@@ -355,21 +355,18 @@ function renderThoughts() {
         // 内容预览：取前 3 行，每行最多 30 字
         const preview = scenes.slice(0, 3).map(s => s.split('\n')[0].slice(0, 30)).join('\n');
 
-        return `<div class="thought-card" data-id="${t.id}">
+        return `<div class="thought-card" data-id="${t.id}" data-action="open">
             <div class="thought-card__header">
                 <span class="thought-card__title">🎬 ${esc(title)}</span>
                 <span class="thought-card__status thought-card__status--${t.status || 'draft'}">${statusLabel}</span>
             </div>
-            <div class="thought-card__content" data-id="${t.id}">
+            <div class="thought-card__content">
                 <div class="thought-card__preview">${esc(preview)}</div>
             </div>
             <div class="thought-card__footer">
                 <span class="thought-card__meta">📊 ${sceneCount} 个场景 · ${charCount} 字 · 约 ${duration}</span>
                 <span class="thought-card__time">${time}</span>
-                <div class="thought-card__actions">
-                    <button class="thought-card__btn" data-action="edit" data-id="${t.id}" title="编辑">✏️</button>
-                    <button class="thought-card__btn thought-card__del" data-action="delete" data-id="${t.id}" title="删除">🗑️</button>
-                </div>
+                <button class="thought-card__btn thought-card__del" data-action="delete" data-id="${t.id}" title="删除">🗑️</button>
             </div>
         </div>`;
     }).join('');
@@ -415,57 +412,73 @@ async function deleteThought(id) {
     }
 }
 
-// 进入编辑模式
-function enterEditThought(id) {
+// ==================== 全屏脚本编辑器 ====================
+let scriptEditorId = null;
+
+function openScriptEditor(id) {
     const t = thoughts.find(x => x.id === id);
     if (!t) return;
-    const card = document.querySelector(`.thought-card[data-id="${id}"]`);
-    if (!card) return;
-    const statusLabels = { draft: '草稿', filming: '🎥 拍摄中', done: '✅ 已完成' };
-    card.innerHTML = `
-        <div class="thought-edit-area-wrap">
-            <input type="text" class="thought-title-input thought-edit-title" id="thoughtEditTitle" value="${esc(t.title || '')}" placeholder="视频标题" maxlength="100">
-            <textarea class="thought-edit-area" id="thoughtEditArea">${esc(t.content)}</textarea>
-            <div class="thought-edit-actions">
-                <select class="thought-status-select" id="thoughtEditStatus">
-                    <option value="draft" ${(t.status||'draft')==='draft'?'selected':''}>🏷️ 草稿</option>
-                    <option value="filming" ${t.status==='filming'?'selected':''}>🎥 拍摄中</option>
-                    <option value="done" ${t.status==='done'?'selected':''}>✅ 已完成</option>
-                </select>
-                <button class="btn btn--outline btn--sm" id="thoughtCancelBtn">取消</button>
-                <button class="btn btn--primary btn--sm" id="thoughtSaveBtn">保存</button>
-            </div>
-        </div>`;
-    const textarea = document.getElementById('thoughtEditArea');
+    scriptEditorId = id;
+    document.getElementById('scriptEditorTitle').value = t.title || '';
+    document.getElementById('scriptEditorContent').value = t.content || '';
+    document.getElementById('scriptEditorStatus').value = t.status || 'draft';
+    document.getElementById('scriptEditorOverlay').classList.add('active');
+    updateScriptEditorStats();
+    const textarea = document.getElementById('scriptEditorContent');
     textarea.focus();
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-
-    document.getElementById('thoughtSaveBtn').addEventListener('click', () => saveEditThought(id));
-    document.getElementById('thoughtCancelBtn').addEventListener('click', () => renderThoughts());
-    textarea.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); saveEditThought(id); }
-        else if (e.key === 'Escape') { renderThoughts(); }
-    });
 }
 
-// 保存编辑
-async function saveEditThought(id) {
-    const titleInput = document.getElementById('thoughtEditTitle');
-    const textarea = document.getElementById('thoughtEditArea');
-    const statusSelect = document.getElementById('thoughtEditStatus');
-    const title = titleInput?.value.trim() || null;
-    const content = textarea.value.trim();
+function closeScriptEditor() {
+    document.getElementById('scriptEditorOverlay').classList.remove('active');
+    scriptEditorId = null;
+    renderThoughts();
+}
+
+function updateScriptEditorStats() {
+    const content = document.getElementById('scriptEditorContent')?.value || '';
+    const scenes = content.split('\n---\n').filter(s => s.trim());
+    const sceneCount = scenes.length;
+    const charCount = content.replace(/\s/g, '').length;
+    const secs = Math.round(charCount / 250 * 60);
+    const duration = secs < 60 ? `${secs} 秒` : `${Math.floor(secs / 60)} 分 ${secs % 60} 秒`;
+    const el = document.getElementById('scriptEditorStats');
+    if (el) el.textContent = `📊 ${sceneCount} 个场景 · ${charCount} 字 · 约 ${duration}`;
+}
+
+async function saveScriptEditor() {
+    if (!scriptEditorId) return;
+    const title = document.getElementById('scriptEditorTitle').value.trim() || null;
+    const content = document.getElementById('scriptEditorContent').value.trim();
+    const status = document.getElementById('scriptEditorStatus').value || 'draft';
     if (!content) return;
     try {
-        await DS.update('thoughts', id, { title, content, status: statusSelect?.value || 'draft' });
-        const t = thoughts.find(x => x.id === id);
-        if (t) { t.title = title; t.content = content; t.status = statusSelect?.value || 'draft'; }
-        renderThoughts();
+        await DS.update('thoughts', scriptEditorId, { title, content, status });
+        const t = thoughts.find(x => x.id === scriptEditorId);
+        if (t) { t.title = title; t.content = content; t.status = status; }
+        showToast('已保存 ✅', 'success');
     } catch (e) {
-        console.error('更新脚本失败:', e);
-        showToast('更新失败: ' + e.message, 'error');
+        console.error('保存脚本失败:', e);
+        showToast('保存失败: ' + e.message, 'error');
     }
 }
+
+async function deleteScriptFromEditor() {
+    if (!scriptEditorId) return;
+    if (!confirm('确定删除这条脚本吗？')) return;
+    try {
+        await DS.remove('thoughts', scriptEditorId);
+        thoughts = thoughts.filter(t => t.id !== scriptEditorId);
+        closeScriptEditor();
+        showToast('已删除', 'info');
+    } catch (e) {
+        console.error('删除脚本失败:', e);
+    }
+}
+
+// 旧版编辑模式（已废弃，转发到全屏编辑器）
+function enterEditThought(id) { openScriptEditor(id); }
+async function saveEditThought(id) { await saveScriptEditor(); }
 
 // ==================== 单词视图 ====================
 async function autoDedupVocab(unit, part) {
@@ -1073,17 +1086,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const thoughtsList = document.getElementById('thoughtsList');
     if (thoughtsList) {
         thoughtsList.addEventListener('click', (e) => {
-            const editBtn = e.target.closest('[data-action="edit"]');
-            if (editBtn) {
-                const id = parseInt(editBtn.dataset.id);
-                if (id) enterEditThought(id);
-                return;
-            }
             const delBtn = e.target.closest('[data-action="delete"]');
             if (delBtn) {
+                e.stopPropagation();
                 const id = parseInt(delBtn.dataset.id);
                 if (id) deleteThought(id);
+                return;
             }
+            const openCard = e.target.closest('[data-action="open"]');
+            if (openCard) {
+                const id = parseInt(openCard.dataset.id);
+                if (id) openScriptEditor(id);
+            }
+        });
+    }
+
+    // 全屏脚本编辑器事件
+    const editorOverlay = document.getElementById('scriptEditorOverlay');
+    if (editorOverlay) {
+        document.getElementById('scriptEditorBack').addEventListener('click', closeScriptEditor);
+        document.getElementById('scriptEditorSave').addEventListener('click', saveScriptEditor);
+        document.getElementById('scriptEditorDelete').addEventListener('click', deleteScriptFromEditor);
+        const editorContent = document.getElementById('scriptEditorContent');
+        editorContent.addEventListener('input', updateScriptEditorStats);
+        editorContent.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); saveScriptEditor(); }
+            else if (e.key === 'Escape') { closeScriptEditor(); }
+        });
+        // 点击遮罩关闭
+        editorOverlay.addEventListener('click', (e) => {
+            if (e.target === editorOverlay) closeScriptEditor();
         });
     }
 });

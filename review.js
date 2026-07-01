@@ -208,6 +208,10 @@ async function handlePPTFileSelected(event) {
 
     // ===== ① 尝试 localhost COM 转换 =====
     const localOK = await isLocalServerAvailable();
+    if (!localOK) {
+        console.warn('⚠ 本地服务器未运行，跳过 PowerPoint 原版转换。请运行 python server.py');
+        showToast && showToast('⚠ 未检测到本地服务器，上传后将是非原版渲染。如需原版请先运行 python server.py', 'warning');
+    }
     if (localOK) {
         try {
             // 上传 PPTX 到本地 server

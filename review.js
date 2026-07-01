@@ -332,7 +332,8 @@ async function openPPTViewer(chapterIndex) {
     } else if (rec.pptx_path) {
         // ★ 降级：PptxViewJS
         _slideState = { mode: 'pptxjs', pptx_path: rec.pptx_path };
-        img.style.display = 'none';
+        document.getElementById('pptViewerImgA').style.display = 'none';
+        document.getElementById('pptViewerImgB').style.display = 'none';
         canvas.style.display = 'block';
         if (loading) { loading.style.display = 'flex'; loading.textContent = '加载中...'; }
         await openWithPptxJS(name, rec.pptx_path);

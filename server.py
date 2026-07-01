@@ -21,8 +21,16 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError
 import time
 import re
-import pythoncom  # COM 初始化（多线程）
-import win32com.client
+
+# PowerPoint COM — 仅 Windows 可用
+try:
+    import pythoncom
+    import win32com.client
+    _ppt_com_available = True
+except ImportError:
+    pythoncom = None
+    win32com = None
+    _ppt_com_available = False
 
 # 设置 HuggingFace 镜像（必须在 import retriever 之前）
 # 海外服务器直连 HuggingFace 更快；国内可设环境变量 HF_ENDPOINT="https://hf-mirror.com"
@@ -281,6 +289,8 @@ def parse_multipart(headers, rfile):
 
 def export_pptx_to_images(pptx_path, output_dir, prefix):
     """用 PowerPoint COM 将 PPTX 每页导出为 PNG，返回图片文件列表"""
+    if not _ppt_com_available:
+        raise RuntimeError("PowerPoint COM 仅 Windows 可用")
     pythoncom.CoInitialize()
     ppt = None
     presentation = None

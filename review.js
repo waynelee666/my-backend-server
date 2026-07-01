@@ -129,45 +129,67 @@ async function removeChapterPPT(chapterName) {
 
 // ==================== 渲染章节列表 ====================
 
+function chapterRowHTML(i, name, rec) {
+    const hasPNG = !!(rec && rec.slide_prefix && rec.slides_count > 0);
+    const hasPPTXOnly = !!(rec && rec.pptx_path && !rec.slide_prefix);
+    const hasPPT = hasPNG || hasPPTXOnly;
+    const label = hasPNG ? `📱 ${rec.slides_count}页` : (hasPPTXOnly ? 'PPT' : '');
+    return `<div class="review-chapter" id="reviewCh${i}">
+        <div class="review-chapter__row">
+            <span class="review-chapter__label">第${i + 1}章</span>
+            <span class="review-chapter__name">${esc(name)}</span>
+            <span class="review-chapter__ppt-filename">${hasPPT ? esc(label) : ''}</span>
+            <div class="review-chapter__ppt-actions">
+                <button class="btn btn--outline btn--sm review-ppt-upload-btn" data-ch="${i}">📤</button>
+                ${hasPPT ? `<button class="btn btn--primary btn--sm review-ppt-view-btn" data-ch="${i}">👁 查看</button>
+                <button class="btn btn--outline btn--sm review-ppt-del-btn" data-ch="${i}" title="删除">✕</button>` : ''}
+            </div>
+        </div>
+    </div>`;
+}
+
 function renderReviewPlan() {
     const el = document.getElementById('reviewPlan');
     if (!el) return;
+    el.innerHTML = REVIEW_CHAPTERS.map((name, i) => chapterRowHTML(i, name, getChapterPPT(name))).join('');
+    _bindChapterEvents(el);
+}
 
-    el.innerHTML = REVIEW_CHAPTERS.map((name, i) => {
-        const rec = getChapterPPT(name);
-        const hasPNG = !!(rec && rec.slide_prefix && rec.slides_count > 0);
-        const hasPPTXOnly = !!(rec && rec.pptx_path && !rec.slide_prefix);
-        const hasPPT = hasPNG || hasPPTXOnly;
-        const label = hasPNG ? `📱 ${rec.slides_count}页` : (hasPPTXOnly ? 'PPT' : '');
+/** 单行刷新——并行上传时不互相干扰 */
+function updateChapterRow(chapterIndex) {
+    const row = document.getElementById('reviewCh' + chapterIndex);
+    if (!row) return;
+    const name = REVIEW_CHAPTERS[chapterIndex];
+    const rec = getChapterPPT(name);
+    const temp = document.createElement('div');
+    temp.innerHTML = chapterRowHTML(chapterIndex, name, rec);
+    const newRow = temp.firstElementChild;
+    // 保留上传按钮的文字和禁用状态
+    const oldBtn = row.querySelector('.review-ppt-upload-btn');
+    const newBtn = newRow.querySelector('.review-ppt-upload-btn');
+    if (oldBtn && newBtn && oldBtn.disabled) {
+        newBtn.textContent = oldBtn.textContent;
+        newBtn.disabled = true;
+    }
+    row.replaceWith(newRow);
+    _bindChapterEvents(newRow);
+}
 
-        return `<div class="review-chapter">
-            <div class="review-chapter__row">
-                <span class="review-chapter__label">第${i + 1}章</span>
-                <span class="review-chapter__name">${esc(name)}</span>
-                <span class="review-chapter__ppt-filename">${hasPPT ? esc(label) : ''}</span>
-                <div class="review-chapter__ppt-actions">
-                    <button class="btn btn--outline btn--sm review-ppt-upload-btn" data-ch="${i}">📤</button>
-                    ${hasPPT ? `<button class="btn btn--primary btn--sm review-ppt-view-btn" data-ch="${i}">👁 查看</button>
-                    <button class="btn btn--outline btn--sm review-ppt-del-btn" data-ch="${i}" title="删除">✕</button>` : ''}
-                </div>
-            </div>
-        </div>`;
-    }).join('');
-
-    el.querySelectorAll('.review-ppt-upload-btn').forEach(btn => {
+function _bindChapterEvents(container) {
+    container.querySelectorAll('.review-ppt-upload-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             _pendingPPTChapter = parseInt(btn.dataset.ch);
             document.getElementById('reviewPPTInput').click();
         });
     });
-    el.querySelectorAll('.review-ppt-view-btn').forEach(btn => {
+    container.querySelectorAll('.review-ppt-view-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             openPPTViewer(parseInt(btn.dataset.ch));
         });
     });
-    el.querySelectorAll('.review-ppt-del-btn').forEach(btn => {
+    container.querySelectorAll('.review-ppt-del-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const name = REVIEW_CHAPTERS[parseInt(btn.dataset.ch)];
@@ -287,7 +309,7 @@ async function handlePPTFileSelected(event) {
     } else {
         showToast && showToast(`「${name}」已上传 · 云端同步（手机端效果可能不佳）`, 'success');
     }
-    renderReviewPlan();
+    updateChapterRow(chIdx);  // 只刷新当前行，不影响其他正在上传的章节
 
     event.target.value = '';
 }

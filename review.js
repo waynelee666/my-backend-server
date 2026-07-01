@@ -31,7 +31,8 @@ const REVIEW_CHAPTERS = [
 ];
 
 const SUPABASE_BUCKET = 'review-ppts';
-const REVIEW_KEY = 'review_ppt';  // localStorage 离线缓存
+const REVIEW_KEY = 'review_ppt';
+const LOCAL_BASE = 'http://localhost:8080';  // 本地 PC server（用于 COM 转换 + PNG 服务）
 
 let _pptCache = null;    // { chapterName: {pptx_path, slide_prefix, slides_count} }
 let _pptLoaded = false;
@@ -200,39 +201,42 @@ async function handlePPTFileSelected(event) {
 
     let slide_prefix = '';
     let slides_count = 0;
-    let useComRender = false;  // 是否用了 PowerPoint 原版渲染
+    let useComRender = false;
 
-    // ===== 尝试 ①+②：server 上传 + COM 转换（仅 Windows/localhost 可用） =====
-    try {
-        if (btn) btn.textContent = '⬆ 上传...';
-        const form = new FormData();
-        form.append('file', file);
-        const upResp = await fetch(`/api/upload-review-ppt?chapter=${chIdx + 1}`, { method: 'POST', body: form });
-        const upJson = await upResp.json();
-        if (!upJson.ok) throw new Error(upJson.error);
+    // ===== 尝试 localhost COM 转换 =====
+    const localOK = await isLocalServerAvailable();
+    if (localOK) {
+        try {
+            // ① 上传 PPTX 到本地 server
+            if (btn) btn.textContent = '⬆ 上传...';
+            const form = new FormData();
+            form.append('file', file);
+            const upResp = await fetch(`${LOCAL_BASE}/api/upload-review-ppt?chapter=${chIdx + 1}`, {
+                method: 'POST', body: form
+            });
+            const upJson = await upResp.json();
+            if (!upJson.ok) throw new Error(upJson.error);
 
-        if (btn) btn.textContent = '🖼 转换...';
-        const cvResp = await fetch('/api/convert-ppt', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: upJson.filename })
-        });
-        const cvJson = await cvResp.json();
-        if (cvJson.ok) {
-            slide_prefix = cvJson.prefix;
-            slides_count = cvJson.slides;
-            useComRender = true;
-        } else {
-            // COM 不可用（Linux/Render），静默降级
-            console.warn('COM转换不可用，使用PptxViewJS降级:', cvJson.error);
+            // ② COM 转 PNG（100% 原版）
+            if (btn) btn.textContent = '🖼 转换...';
+            const cvResp = await fetch(`${LOCAL_BASE}/api/convert-ppt`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: upJson.filename })
+            });
+            const cvJson = await cvResp.json();
+            if (cvJson.ok) {
+                slide_prefix = cvJson.prefix;
+                slides_count = cvJson.slides;
+                useComRender = true;
+            }
+        } catch (e) {
+            console.warn('本地COM转换失败:', e.message);
         }
-    } catch (e) {
-        // server 不可达（网络问题等），也静默降级
-        console.warn('服务器不可达，直接上传云端:', e.message);
     }
 
-    // ===== ③ 上传 PPTX 到 Supabase Storage =====
-    if (btn) btn.textContent = '☁ 上传云端...';
+    // ===== 上传 PPTX 到 Supabase（云端备份 + 跨设备） =====
+    if (btn) btn.textContent = '☁ 云端同步...';
     let pptxPath = '';
     try {
         const sp = `ch${chIdx + 1}/${Date.now()}_${file.name}`;
@@ -242,22 +246,18 @@ async function handlePPTFileSelected(event) {
     } catch (e) { console.warn('Supabase上传失败:', e.message); }
 
     if (!pptxPath && !useComRender) {
-        showToast && showToast('上传失败：无法连接到云存储', 'error');
+        showToast && showToast('上传失败：无法连接到云存储，且本地服务器不可用', 'error');
         if (btn) { btn.textContent = '📤'; btn.disabled = false; }
         event.target.value = ''; return;
     }
 
-    // ===== ④ 存入 Supabase DB + localStorage =====
-    await setChapterPPT(name, {
-        pptx_path: pptxPath,
-        slide_prefix: slide_prefix,
-        slides_count: slides_count,
-    });
+    // ===== 存入 Supabase DB + localStorage =====
+    await setChapterPPT(name, { pptx_path: pptxPath, slide_prefix, slides_count });
 
     if (useComRender) {
         showToast && showToast(`「${name}」上传成功 · ${slides_count} 页 · PowerPoint 原版渲染`, 'success');
     } else {
-        showToast && showToast(`「${name}」上传成功 · 云端同步 · 非原版渲染`, 'success');
+        showToast && showToast(`「${name}」上传成功 · 云端同步（非原版渲染）`, 'success');
     }
     renderReviewPlan();
 
@@ -268,15 +268,15 @@ async function handlePPTFileSelected(event) {
 let _slideState = null;   // { mode:'images'|'pptxjs', prefix, total, current }
 let _pptViewerJS = null;  // PptxViewJS 实例（降级用）
 
-async function isServerAvailable() {
+async function isLocalServerAvailable() {
     try {
-        const resp = await fetch('/api/health', { signal: AbortSignal.timeout(2000) });
+        const resp = await fetch(`${LOCAL_BASE}/api/health`, { signal: AbortSignal.timeout(2000) });
         return resp.ok;
     } catch { return false; }
 }
 
 function getSlideURL(prefix, n) {
-    return `/uploads/review/${prefix}_slide_${n}.png`;
+    return `${LOCAL_BASE}/uploads/review/${prefix}_slide_${n}.png`;
 }
 
 async function openPPTViewer(chapterIndex) {
@@ -293,7 +293,7 @@ async function openPPTViewer(chapterIndex) {
     document.getElementById('pptViewerTitle').textContent = name;
     overlay.classList.add('active');
 
-    const serverOK = await isServerAvailable();
+    const serverOK = await isLocalServerAvailable();
 
     if (serverOK && rec.slide_prefix && rec.slides_count > 0) {
         // ★ 原版呈现：加载服务器 PNG（PowerPoint COM 导出，100% 还原）

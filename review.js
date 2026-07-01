@@ -313,34 +313,60 @@ async function openPPTViewer(chapterIndex) {
     const loading = document.getElementById('pptViewerLoading');
     document.getElementById('pptViewerTitle').textContent = name;
     overlay.classList.add('active');
-
-    // 隐藏工具栏
     hideToolbar();
 
+    // 隐藏双图和 canvas
+    document.getElementById('pptViewerImgA').style.display = 'none';
+    document.getElementById('pptViewerImgB').style.display = 'none';
+    canvas.style.display = 'none';
+    if (_pptViewerJS) { try { _pptViewerJS.destroy(); } catch (e) {} _pptViewerJS = null; }
+
+    // ★ 优先尝试 Supabase PNG（原版）
     if (rec.slide_prefix && rec.slides_count > 0) {
-        // ★ 图片模式（全平台原版）
-        _slideState = { mode: 'images', prefix: rec.slide_prefix, total: rec.slides_count, current: -1 };
-        _activeImg = 'A';
-        const imgA = document.getElementById('pptViewerImgA');
-        const imgB = document.getElementById('pptViewerImgB');
-        imgA.style.display = ''; imgA.style.opacity = '0'; imgA.src = '';
-        imgB.style.display = ''; imgB.style.opacity = '0'; imgB.src = '';
-        canvas.style.display = 'none';
-        if (loading) { loading.style.display = 'none'; }
-        if (_pptViewerJS) { try { _pptViewerJS.destroy(); } catch (e) {} _pptViewerJS = null; }
-        loadSlide(0);
-    } else if (rec.pptx_path) {
-        // ★ 降级：PptxViewJS
+        // 先检测第一张 PNG 是否真的能加载
+        const testUrl = getSupabaseSlideURL(rec.slide_prefix, 1);
+        const pngOK = await checkImageExists(testUrl);
+
+        if (pngOK) {
+            // PNG 可用 → 图片模式
+            _slideState = { mode: 'images', prefix: rec.slide_prefix, total: rec.slides_count, current: -1 };
+            _activeImg = 'A';
+            const imgA = document.getElementById('pptViewerImgA');
+            const imgB = document.getElementById('pptViewerImgB');
+            imgA.style.display = ''; imgA.style.opacity = '0'; imgA.src = '';
+            imgB.style.display = ''; imgB.style.opacity = '0'; imgB.src = '';
+            if (loading) loading.style.display = 'none';
+            document.getElementById('pptViewerTitle').textContent = name + '  🖼 原版';
+            loadSlide(0);
+            return;
+        }
+        // PNG 不可用（可能被删除或上传失败）→ 降级
+        console.warn('PNG不存在，降级到PptxViewJS');
+    }
+
+    // ★ 降级：PptxViewJS
+    if (rec.pptx_path) {
         _slideState = { mode: 'pptxjs', pptx_path: rec.pptx_path };
-        document.getElementById('pptViewerImgA').style.display = 'none';
-        document.getElementById('pptViewerImgB').style.display = 'none';
         canvas.style.display = 'block';
         if (loading) { loading.style.display = 'flex'; loading.textContent = '加载中...'; }
+        document.getElementById('pptViewerTitle').textContent = name + '  ⚠ 非原版';
         await openWithPptxJS(name, rec.pptx_path);
-    } else {
-        showToast && showToast('PPT文件不可用', 'error');
-        closePPTViewer();
+        return;
     }
+
+    showToast && showToast('PPT文件不可用', 'error');
+    closePPTViewer();
+}
+
+/** 快速检测图片 URL 是否可达 */
+function checkImageExists(url) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = url;
+        setTimeout(() => resolve(false), 5000); // 5秒超时
+    });
 }
 
 // ---- 工具栏显示/隐藏 ----

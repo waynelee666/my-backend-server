@@ -235,18 +235,17 @@ function buildUserContext() {
         }
     }
 
-    // 微积分复习进度（从 localStorage 读取）
+    // 复习进度（从 localStorage 读取）
     try {
-        const calcProgress = JSON.parse(localStorage.getItem('calc_progress') || '{}');
-        const chapterNames = Object.keys(calcProgress).filter(k => !k.startsWith('_'));
+        const reviewProgress = JSON.parse(localStorage.getItem('review_progress') || '{}');
+        const chapterNames = Object.keys(reviewProgress).filter(k => !k.startsWith('_'));
         if (chapterNames.length > 0) {
-            const calcSummary = chapterNames.map(chName => {
-                const chData = calcProgress[chName] || {};
+            const reviewSummary = chapterNames.map(chName => {
+                const chData = reviewProgress[chName] || {};
                 const sections = Object.keys(chData).filter(k => !k.startsWith('_'));
                 const doneCount = sections.filter(s => chData[s] && chData[s].done).length;
                 const total = sections.length || 0;
                 const chDate = chData._date || '';
-                // 小节详情：列出未完成的
                 const undone = sections.filter(s => !(chData[s] && chData[s].done));
                 let detail = `${chName}：${doneCount}/${total} 已完成`;
                 if (chDate) detail += `，计划${chDate}复习`;
@@ -257,7 +256,7 @@ function buildUserContext() {
                 }
                 return detail;
             }).join('\n');
-            parts.push(`微积分（甲）Ⅱ 复习进度：\n${calcSummary}`);
+            parts.push(`复习进度：\n${reviewSummary}`);
         }
     } catch (e) {}
 

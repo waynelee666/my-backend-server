@@ -26,7 +26,7 @@
             <button class="nav__tab" data-tab="subjects">📚 科目</button>
             <button class="nav__tab" data-tab="chat">💬 小马</button>
             <button class="nav__tab" data-tab="thoughts">🎬 脚本</button>
-            <button class="nav__tab" data-tab="calculus">📐 微积分</button>
+            <button class="nav__tab" data-tab="review">📝 复习</button>
             <button class="nav__tab" data-tab="vocab">📖 单词</button>
         </div>
         <ul class="nav__list">
@@ -82,9 +82,9 @@
                 <span class="home-nav-card__icon">🎬</span>
                 <span class="home-nav-card__label">脚本</span>
             </button>
-            <button class="home-nav-card" data-tab="calculus">
-                <span class="home-nav-card__icon">📐</span>
-                <span class="home-nav-card__label">微积分</span>
+            <button class="home-nav-card" data-tab="review">
+                <span class="home-nav-card__icon">📝</span>
+                <span class="home-nav-card__label">复习</span>
             </button>
             <button class="home-nav-card" data-tab="vocab">
                 <span class="home-nav-card__icon">📖</span>
@@ -210,69 +210,14 @@
         </div>
     </div>
 
-    <!-- ===== 微积分视图 ===== -->
-    <section class="view" id="view-calculus">
+    <!-- ===== 复习视图 ===== -->
+    <section class="view" id="view-review">
         <div class="view__header">
             <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
-            <h2>📐 微积分复习</h2>
-            <div style="display:flex;gap:8px">
-                <a href="https://www.geogebra.org/3d" target="_blank" class="btn btn--outline btn--sm">🌐 GeoGebra 3D</a>
-                <button class="btn btn--outline btn--sm" id="calcResetBtn">🔄 重置进度</button>
-            </div>
+            <h2>📝 复习</h2>
+            <button class="btn btn--outline btn--sm" id="reviewResetBtn">🔄 重置进度</button>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" id="calcColumns">
-            <!-- 左侧：复习计划 -->
-            <div>
-                <h3 style="font-size:1rem;margin-bottom:12px">📅 复习计划</h3>
-                <div class="calc-plan" id="calcPlan"></div>
-            </div>
-            <!-- 右侧：工具（可折叠） -->
-            <div>
-                <div class="calc-tools-toggle" id="calcToolsToggle" style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;margin-bottom:12px">
-                    <h3 style="font-size:1rem;margin:0">🔧 常用工具</h3>
-                    <span class="calc-tools-arrow" style="font-size:.7rem;color:var(--color-text-light)">▶</span>
-                </div>
-                <div class="calc-tools-body" id="calcToolsBody" style="display:none">
-                <!-- 导数计算器 -->
-                <div class="calc-tool-card">
-                    <div class="calc-tool-title">📈 导数计算器 <span style="font-weight:400;font-size:.75rem;color:var(--color-text-light)">（支持多项式 如 3x^2+2x+1）</span></div>
-                    <div style="display:flex;gap:8px;margin-top:8px">
-                        <input class="form-input" id="calcDerivativeInput" placeholder="输入函数，如 3x^2+2x+1" style="flex:1">
-                        <button class="btn btn--primary btn--sm" id="calcDerivativeBtn">求导</button>
-                    </div>
-                    <div id="calcDerivativeResult" style="margin-top:8px;font-size:.9rem;min-height:20px"></div>
-                </div>
-                <!-- 积分计算器 -->
-                <div class="calc-tool-card">
-                    <div class="calc-tool-title">📉 不定积分计算器</div>
-                    <div style="display:flex;gap:8px;margin-top:8px">
-                        <input class="form-input" id="calcIntegralInput" placeholder="输入函数，如 3x^2+2x+1" style="flex:1">
-                        <button class="btn btn--primary btn--sm" id="calcIntegralBtn">积分</button>
-                    </div>
-                    <div id="calcIntegralResult" style="margin-top:8px;font-size:.9rem;min-height:20px"></div>
-                </div>
-                <!-- 常用公式速查 -->
-                <div class="calc-tool-card">
-                    <div class="calc-tool-title">📋 常用公式速查</div>
-                    <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
-                        <select class="form-select" id="calcFormulaSelect" style="width:100%">
-                            <option value="">-- 选择公式类型 --</option>
-                            <option value="derivative">常用导数公式</option>
-                            <option value="integral">常用积分公式</option>
-                            <option value="trig">三角恒等式</option>
-                            <option value="taylor">常用泰勒展开</option>
-                            <option value="vector">向量与空间解析几何</option>
-                            <option value="multi">多元微分与重积分</option>
-                            <option value="green_gauss_stokes">格林/高斯/斯托克斯</option>
-                            <option value="fourier">傅里叶级数</option>
-                            <option value="gamma_beta">Γ函数与B函数</option>
-                        </select>
-                        <div id="calcFormulaDisplay" style="font-size:.85rem;line-height:2;background:#f8fafc;border-radius:8px;padding:12px;min-height:40px"></div>
-                    </div>
-                </div>
-                </div><!-- calc-tools-body -->
-            </div>
-        </div>
+        <div class="review-plan" id="reviewPlan"></div>
     </section>
 
     <!-- ===== 问答视图 ===== -->
@@ -571,7 +516,7 @@
 <script src="supabase.min.js"></script>
 <script src="auth.js?v=3.2"></script>
 <script src="script.js?v=4.3"></script>
-<script src="calc.js?v=2.1"></script>
+<script src="review.js?v=1.0"></script>
 <script src="chat.js?v=1.3"></script>
 <script src="vocab.js?v=1.5"></script>
 

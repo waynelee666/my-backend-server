@@ -66,7 +66,7 @@ async function refreshAll() {
     });
     renderCurrent();
 }
-function renderCurrent() { if (currentTab==='home') renderHome(); else if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else if (currentTab==='subjects') renderSubjects(); else if (currentTab==='thoughts') renderThoughts(); else if (currentTab==='calculus') renderCalcView(); else if (currentTab==='chat') renderChatView(); else if (currentTab==='vocab') renderVocabView(); }
+function renderCurrent() { if (currentTab==='home') renderHome(); else if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else if (currentTab==='subjects') renderSubjects(); else if (currentTab==='thoughts') renderThoughts(); else if (currentTab==='review') renderReviewView(); else if (currentTab==='chat') renderChatView(); else if (currentTab==='vocab') renderVocabView(); }
 
 // ==================== Tab 切换 ====================
 $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
@@ -78,7 +78,7 @@ $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
     if (currentTab === 'subjects') renderSubjects();
     if (currentTab === 'todos') renderTodos();
     if (currentTab === 'thoughts') renderThoughts();
-    if (currentTab === 'calculus') renderCalcView();
+    if (currentTab === 'review') renderReviewView();
     if (currentTab === 'chat') renderChatView();
     if (currentTab === 'vocab') renderVocabView();
 }));
@@ -1745,7 +1745,7 @@ function switchToTab(tab) {
     if (tab === 'calendar') renderCalendar();
     if (tab === 'subjects') renderSubjects();
     if (tab === 'thoughts') renderThoughts();
-    if (tab === 'calculus') renderCalcView();
+    if (tab === 'review') renderReviewView();
     if (tab === 'chat') renderChatView();
     if (tab === 'vocab') renderVocabView();
     // 手机端收起 tabs

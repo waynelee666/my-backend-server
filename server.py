@@ -16,9 +16,11 @@ import os
 import sys
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 from urllib.request import Request, urlopen
 from urllib.error import URLError
+import time
+import re
 
 # 设置 HuggingFace 镜像（必须在 import retriever 之前）
 # 海外服务器直连 HuggingFace 更快；国内可设环境变量 HF_ENDPOINT="https://hf-mirror.com"
@@ -58,6 +60,7 @@ MIME_TYPES = {
     ".jpeg": "image/jpeg",
     ".svg":  "image/svg+xml",
     ".ico":  "image/x-icon",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
 
 BLOCKED_FILES = {"server.py", ".gitignore", "config.py"}
@@ -220,6 +223,60 @@ def translate_words(words: list) -> list:
         raise RuntimeError(f"DeepSeek 返回解析失败: {e}")
 
 
+def parse_multipart(headers, rfile):
+    """解析 multipart/form-data 请求体，返回 {"fields": {...}, "file": {"filename": ..., "data": bytes}}"""
+    content_type = headers.get("Content-Type", "")
+    boundary_match = re.search(r"boundary=([^;\s]+)", content_type)
+    if not boundary_match:
+        raise ValueError("无法找到 multipart boundary")
+    boundary = boundary_match.group(1).strip('"')
+    boundary_bytes = ("--" + boundary).encode()
+    end_boundary = ("--" + boundary + "--").encode()
+
+    length = int(headers.get("Content-Length", 0))
+    body = rfile.read(length)
+
+    result = {"fields": {}, "file": None}
+
+    # 按 boundary 分割
+    parts = body.split(boundary_bytes)
+    for part in parts:
+        if not part or part == b"--" or part == b"--\r\n" or part == b"\r\n":
+            continue
+        if part.startswith(b"\r\n"):
+            part = part[2:]
+        if part.endswith(b"\r\n"):
+            part = part[:-2]
+
+        # 分离 headers 和 content
+        header_end = part.find(b"\r\n\r\n")
+        if header_end == -1:
+            continue
+        header_bytes = part[:header_end]
+        content = part[header_end + 4:]
+        if content.endswith(b"\r\n"):
+            content = content[:-2]
+
+        # 解析 headers
+        header_text = header_bytes.decode("latin-1")
+        cd_match = re.search(r'Content-Disposition:[^\n]+name="([^"]*)"', header_text)
+        if not cd_match:
+            continue
+        field_name = cd_match.group(1)
+        filename_match = re.search(r'filename="([^"]*)"', header_text)
+        filename = filename_match.group(1) if filename_match else None
+
+        if filename is not None:
+            result["file"] = {"filename": filename, "data": content}
+        else:
+            try:
+                result["fields"][field_name] = content.decode("utf-8")
+            except (UnicodeDecodeError, AttributeError):
+                result["fields"][field_name] = content.decode("latin-1")
+
+    return result
+
+
 class RequestHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):
@@ -286,7 +343,9 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         parsed = urlparse(self.path)
 
-        if parsed.path == "/api/parse":
+        if parsed.path == "/api/upload-review-ppt":
+            self.handle_upload_review_ppt()
+        elif parsed.path == "/api/parse":
             self.handle_parse()
         elif parsed.path == "/api/chat":
             self.handle_chat()
@@ -309,6 +368,45 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
+
+    def handle_upload_review_ppt(self):
+        """POST /api/upload-review-ppt?chapter=N — 上传复习PPT"""
+        qs = parse_qs(urlparse(self.path).query)
+        chapter_str = qs.get("chapter", [""])[0]
+        if not chapter_str.isdigit() or not (1 <= int(chapter_str) <= 10):
+            self.send_json({"ok": False, "error": "章节号需为 1-10"}, 400)
+            return
+
+        try:
+            parsed = parse_multipart(self.headers, self.rfile)
+        except ValueError as e:
+            self.send_json({"ok": False, "error": f"解析上传数据失败: {e}"}, 400)
+            return
+
+        file_info = parsed.get("file")
+        if not file_info or not file_info.get("data"):
+            self.send_json({"ok": False, "error": "未找到上传文件"}, 400)
+            return
+
+        filename = file_info["filename"]
+        if not filename.lower().endswith(".pptx"):
+            self.send_json({"ok": False, "error": "只支持 .pptx 文件"}, 400)
+            return
+
+        chapter = int(chapter_str)
+        timestamp = int(time.time())
+        save_name = f"ch{chapter}_{timestamp}.pptx"
+        upload_dir = os.path.join(SERVER_DIR, "uploads", "review")
+        os.makedirs(upload_dir, exist_ok=True)
+        filepath = os.path.join(upload_dir, save_name)
+
+        with open(filepath, "wb") as f:
+            f.write(file_info["data"])
+
+        size_kb = round(len(file_info["data"]) / 1024, 1)
+        print(f"  [PPT] 章节{chapter} 上传成功: {save_name} ({size_kb} KB)")
+        self.send_json({"ok": True, "filename": save_name, "chapter": chapter, "size_kb": size_kb,
+                        "original_name": filename})
 
     def handle_parse(self):
         """POST /api/parse — 调用 DeepSeek 解析文本"""

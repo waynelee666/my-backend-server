@@ -4,16 +4,16 @@
 
 // ==================== 复习章节（含小节） ====================
 const REVIEW_CHAPTERS = [
-    { name: '数据结构',    sections: ['链表', '栈与队列', '树与二叉树', '图论基础', '排序算法', '查找算法'], pptFile: null },
-    { name: '操作系统',    sections: ['进程管理', '内存管理', '文件系统', 'I/O系统', '死锁'], pptFile: null },
-    { name: '计算机网络',  sections: ['OSI模型', 'TCP/IP协议', 'HTTP协议', '路由算法', '网络安全'], pptFile: null },
-    { name: '数据库原理',  sections: ['关系模型', 'SQL查询', '范式设计', '事务与锁', '索引优化'], pptFile: null },
-    { name: '高等数学',    sections: ['极限与连续', '导数与微分', '积分学', '级数', '微分方程'], pptFile: null },
-    { name: '线性代数',    sections: ['矩阵运算', '行列式', '向量空间', '特征值', '二次型'], pptFile: null },
-    { name: '概率论',      sections: ['随机事件', '分布函数', '数字特征', '大数定律', '参数估计'], pptFile: null },
-    { name: '英语四级',    sections: ['听力理解', '阅读理解', '翻译', '写作', '词汇语法'], pptFile: null },
-    { name: '思政理论',    sections: ['马原', '毛概', '思修', '近代史', '形策'], pptFile: null },
-    { name: '专业课综合',  sections: ['重点概念', '公式推导', '实验原理', '案例分析', '综合练习'], pptFile: null },
+    { name: '数据结构',    sections: ['链表', '栈与队列', '树与二叉树', '图论基础', '排序算法', '查找算法'], pptFile: null, slideCount: 0, slideImages: [] },
+    { name: '操作系统',    sections: ['进程管理', '内存管理', '文件系统', 'I/O系统', '死锁'], pptFile: null, slideCount: 0, slideImages: [] },
+    { name: '计算机网络',  sections: ['OSI模型', 'TCP/IP协议', 'HTTP协议', '路由算法', '网络安全'], pptFile: null, slideCount: 0, slideImages: [] },
+    { name: '数据库原理',  sections: ['关系模型', 'SQL查询', '范式设计', '事务与锁', '索引优化'], pptFile: null, slideCount: 0, slideImages: [] },
+    { name: '高等数学',    sections: ['极限与连续', '导数与微分', '积分学', '级数', '微分方程'], pptFile: null, slideCount: 0, slideImages: [] },
+    { name: '线性代数',    sections: ['矩阵运算', '行列式', '向量空间', '特征值', '二次型'], pptFile: null, slideCount: 0, slideImages: [] },
+    { name: '概率论',      sections: ['随机事件', '分布函数', '数字特征', '大数定律', '参数估计'], pptFile: null, slideCount: 0, slideImages: [] },
+    { name: '英语四级',    sections: ['听力理解', '阅读理解', '翻译', '写作', '词汇语法'], pptFile: null, slideCount: 0, slideImages: [] },
+    { name: '思政理论',    sections: ['马原', '毛概', '思修', '近代史', '形策'], pptFile: null, slideCount: 0, slideImages: [] },
+    { name: '专业课综合',  sections: ['重点概念', '公式推导', '实验原理', '案例分析', '综合练习'], pptFile: null, slideCount: 0, slideImages: [] },
 ];
 
 // ==================== 进度管理 ====================
@@ -25,10 +25,10 @@ async function initReviewProgress() {
     try { local = JSON.parse(localStorage.getItem(REVIEW_KEY) || '{}'); } catch (e) {}
     _reviewProgressCache = local;
 
-    // 从持久化进度恢复 pptFile
+    // 从持久化进度恢复 pptFile / slideCount / slideImages
     REVIEW_CHAPTERS.forEach(ch => {
-        const pptFiles = local._pptFiles || {};
-        if (pptFiles[ch.name]) ch.pptFile = pptFiles[ch.name];
+        const pptData = (local._pptData || {})[ch.name];
+        if (pptData) { ch.pptFile = pptData.file || null; ch.slideCount = pptData.slides || 0; ch.slideImages = pptData.images || []; }
     });
 
     try {
@@ -36,10 +36,10 @@ async function initReviewProgress() {
         if (data && data.progress) {
             _reviewProgressCache = data.progress;
             localStorage.setItem(REVIEW_KEY, JSON.stringify(data.progress));
-            // 同步 pptFile
-            const pptFiles = data.progress._pptFiles || {};
+            const pptData = data.progress._pptData || {};
             REVIEW_CHAPTERS.forEach(ch => {
-                if (pptFiles[ch.name]) ch.pptFile = pptFiles[ch.name];
+                const d = pptData[ch.name];
+                if (d) { ch.pptFile = d.file || null; ch.slideCount = d.slides || 0; ch.slideImages = d.images || []; }
             });
         }
     } catch (e) { /* 静默忽略 */ }
@@ -78,21 +78,21 @@ function reviewChapterStats(ch) {
     return { total, done, pct: total ? Math.round(done / total * 100) : 0 };
 }
 
-function savePPTFile(chapterName, filename) {
+function savePPTData(chapterName, data) {
     const progress = getReviewProgress();
-    if (!progress._pptFiles) progress._pptFiles = {};
-    progress._pptFiles[chapterName] = filename;
+    if (!progress._pptData) progress._pptData = {};
+    progress._pptData[chapterName] = data;
     const ch = REVIEW_CHAPTERS.find(c => c.name === chapterName);
-    if (ch) ch.pptFile = filename;
+    if (ch) { ch.pptFile = data.file || null; ch.slideCount = data.slides || 0; ch.slideImages = data.images || []; }
     saveReviewProgress(progress);
 }
 
 function removePPTFile(chapterName) {
     const progress = getReviewProgress();
-    if (!progress._pptFiles) progress._pptFiles = {};
-    delete progress._pptFiles[chapterName];
+    if (!progress._pptData) progress._pptData = {};
+    delete progress._pptData[chapterName];
     const ch = REVIEW_CHAPTERS.find(c => c.name === chapterName);
-    if (ch) ch.pptFile = null;
+    if (ch) { ch.pptFile = null; ch.slideCount = 0; ch.slideImages = []; }
     saveReviewProgress(progress);
 }
 
@@ -138,7 +138,7 @@ function renderReviewPlan() {
             <div class="review-chapter__body" style="${expanded ? '' : 'display:none'}">
                 ${sectionHTML}
                 <div class="review-chapter__ppt">
-                    <span class="review-chapter__ppt-filename">${hasPPT ? '📎 ' + esc(ch.pptFile) : '📂 暂无PPT'}</span>
+                    <span class="review-chapter__ppt-filename">${hasPPT ? `📎 ${esc(ch.pptFile)} · ${ch.slideCount} 页` : '📂 暂无PPT'}</span>
                     <div class="review-chapter__ppt-actions">
                         <button class="btn btn--outline btn--sm review-ppt-upload-btn" data-ch="${i}">📤 ${hasPPT ? '更换' : '上传'}PPT</button>
                         ${hasPPT ? `<button class="btn btn--primary btn--sm review-ppt-view-btn" data-ch="${i}">👁 查看PPT</button>
@@ -300,10 +300,34 @@ function handlePPTFileSelected(event) {
         body: formData
     })
     .then(r => r.json())
-    .then(data => {
+    .then(async data => {
         if (data.ok) {
-            savePPTFile(ch.name, data.filename);
-            showToast && showToast(`「${ch.name}」PPT 上传成功 (${data.size_kb} KB)`, 'success');
+            // 立即触发转换
+            if (btn) { btn.textContent = '🔄 转换中...'; btn.disabled = true; }
+            try {
+                const convResp = await fetch('/api/convert-ppt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: data.filename })
+                });
+                const convData = await convResp.json();
+                if (convData.ok) {
+                    savePPTData(ch.name, {
+                        file: data.filename,
+                        slides: convData.slides,
+                        images: convData.images,
+                        prefix: convData.prefix
+                    });
+                    showToast && showToast(`「${ch.name}」PPT 已就绪 (${convData.slides} 页)`, 'success');
+                } else {
+                    // 转换失败，只保存文件引用
+                    savePPTData(ch.name, { file: data.filename, slides: 0, images: [] });
+                    showToast && showToast(`PPT 已保存但转换失败: ${convData.error}`, 'error');
+                }
+            } catch (convErr) {
+                savePPTData(ch.name, { file: data.filename, slides: 0, images: [] });
+                showToast && showToast('PPT 已保存但转换失败', 'error');
+            }
             renderReviewPlan();
         } else {
             showToast && showToast(data.error || '上传失败', 'error');
@@ -323,64 +347,56 @@ let pptSwiper = null;
 
 async function openPPTViewer(chapterIndex) {
     const ch = REVIEW_CHAPTERS[chapterIndex];
-    const filename = ch.pptFile;
-    if (!filename) { showToast && showToast('请先上传PPT', 'error'); return; }
-    if (typeof JSZip === 'undefined') { showToast && showToast('PPT 查看组件未加载，请刷新页面重试', 'error'); return; }
+    if (!ch.pptFile) { showToast && showToast('请先上传PPT', 'error'); return; }
 
     const overlay = document.getElementById('pptViewerOverlay');
     const container = document.getElementById('pptViewerSlides');
     const titleEl = document.getElementById('pptViewerTitle');
+    const wrapper = container.querySelector('.swiper-wrapper');
+    const pagEl = container.querySelector('.swiper-pagination');
 
     overlay.classList.add('active');
     titleEl.textContent = ch.name;
     document.getElementById('pptViewerCounter').textContent = '加载中...';
-
-    // 清空旧内容
-    container.querySelector('.swiper-wrapper').innerHTML = '';
-    const pagEl = container.querySelector('.swiper-pagination');
+    wrapper.innerHTML = `<div class="swiper-slide"><div class="ppt-viewer__loading"><div class="practice-loading__spinner"></div><p>正在加载...</p></div></div>`;
     if (pagEl) pagEl.style.display = 'none';
-
-    // 显示加载状态
-    const wrapper = container.querySelector('.swiper-wrapper');
-    wrapper.innerHTML = `<div class="swiper-slide"><div class="ppt-viewer__loading"><div class="practice-loading__spinner"></div><p>正在解析PPT...</p></div></div>`;
-
     if (pptSwiper) { pptSwiper.destroy(true, true); pptSwiper = null; }
 
     try {
-        const resp = await fetch('/uploads/review/' + filename);
-        if (!resp.ok) throw new Error('文件加载失败');
-        const arrayBuffer = await resp.arrayBuffer();
+        const images = ch.slideImages || [];
+        const prefix = (ch.pptFile || '').replace('.pptx', '');
 
-        // 尝试 PptxViewJS 渲染（如果可用），否则用 JSZip 提取文字
-        let slideElements = [];
-        try {
-            slideElements = await renderWithPptxViewJS(arrayBuffer);
-        } catch (e) {
-            console.log('PptxViewJS 不可用，使用文字模式:', e.message);
-            try {
-                slideElements = await renderWithJSZip(arrayBuffer);
-            } catch (e2) {
-                throw new Error('PPT 解析失败: ' + e2.message);
-            }
+        // 如果没有预转换的图片列表，尝试推断
+        let slideImages = images;
+        if (slideImages.length === 0 && ch.slideCount > 0) {
+            slideImages = Array.from({ length: ch.slideCount }, (_, i) => `${prefix}_slide_${i + 1}.png`);
+        }
+        if (slideImages.length === 0) {
+            throw new Error('此 PPT 尚未转换为图片，请尝试重新上传');
         }
 
-        if (slideElements.length === 0) {
-            throw new Error('未找到任何幻灯片内容');
-        }
+        // 验证第一张图片是否存在
+        const testResp = await fetch('/uploads/review/' + slideImages[0], { method: 'HEAD' });
+        if (!testResp.ok) throw new Error('图片文件不存在，请重新上传');
 
-        // 渲染到 Swiper
+        // 渲染所有幻灯片到 Swiper
         wrapper.innerHTML = '';
-        slideElements.forEach(el => {
+        slideImages.forEach((imgName, i) => {
             const slide = document.createElement('div');
             slide.className = 'swiper-slide';
-            slide.appendChild(el);
+            const img = document.createElement('img');
+            img.src = '/uploads/review/' + imgName;
+            img.className = 'ppt-slide-img';
+            img.alt = `第 ${i + 1} 页`;
+            img.loading = (i === 0) ? 'eager' : 'lazy';
+            slide.appendChild(img);
             wrapper.appendChild(slide);
         });
 
         if (pagEl) pagEl.style.display = '';
-        document.getElementById('pptViewerCounter').textContent = `1 / ${slideElements.length}`;
+        document.getElementById('pptViewerCounter').textContent = `1 / ${slideImages.length}`;
 
-        // 初始化 Swiper（等 DOM 更新完）
+        // 初始化 Swiper
         await new Promise(r => requestAnimationFrame(r));
         pptSwiper = new Swiper(container, {
             slidesPerView: 1,
@@ -390,7 +406,7 @@ async function openPPTViewer(chapterIndex) {
             on: {
                 slideChange: function () {
                     document.getElementById('pptViewerCounter').textContent =
-                        `${this.activeIndex + 1} / ${slideElements.length}`;
+                        `${this.activeIndex + 1} / ${slideImages.length}`;
                 }
             }
         });
@@ -405,181 +421,6 @@ function closePPTViewer() {
     if (pptSwiper) { pptSwiper.destroy(true, true); pptSwiper = null; }
     document.getElementById('pptViewerOverlay').classList.remove('active');
     document.getElementById('pptViewerSlides').querySelector('.swiper-wrapper').innerHTML = '';
-}
-
-// ==================== PPTX 渲染：JSZip 文字提取（可靠方案） ====================
-async function renderWithJSZip(arrayBuffer) {
-    const zip = await JSZip.loadAsync(arrayBuffer);
-
-    // 找到所有 slide 文件
-    const slideFiles = Object.keys(zip.files)
-        .filter(name => name.match(/^ppt\/slides\/slide\d+\.xml$/i))
-        .sort((a, b) => {
-            const na = parseInt(a.match(/slide(\d+)/i)[1]);
-            const nb = parseInt(b.match(/slide(\d+)/i)[1]);
-            return na - nb;
-        });
-
-    if (slideFiles.length === 0) {
-        throw new Error('PPT 中没有找到幻灯片');
-    }
-
-    const elements = [];
-    for (const slidePath of slideFiles) {
-        const xmlText = await zip.files[slidePath].async('text');
-        const slideEl = parseSlideXML(xmlText, zip);
-        elements.push(slideEl);
-    }
-
-    if (elements.length === 0) throw new Error('未能提取幻灯片内容');
-    return elements;
-}
-
-function parseSlideXML(xmlText, zip) {
-    const container = document.createElement('div');
-    container.className = 'ppt-slide';
-
-    // 用 DOMParser 解析 XML
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xmlText, 'text/xml');
-    const parseError = doc.querySelector('parsererror');
-    if (parseError) {
-        container.innerHTML = `<div class="ppt-slide__text">(无法解析)</div>`;
-        return container;
-    }
-
-    // 提取所有 <a:t> 文本元素
-    const textNodes = doc.querySelectorAll('t');
-    if (textNodes.length === 0) {
-        container.innerHTML = `<div class="ppt-slide__text ppt-slide__empty">(空白幻灯片)</div>`;
-        return container;
-    }
-
-    // 按段落 <a:p> 分组
-    const paragraphs = doc.querySelectorAll('p');
-    // 检查有没有 slide layout 信息
-    const sld = doc.querySelector('sld');
-    // 提取文本运行属性以检测粗体等
-
-    // 收集段落文本及格式
-    const paraData = [];
-    paragraphs.forEach(p => {
-        const runs = [];
-        p.querySelectorAll('r').forEach(r => {
-            const tEl = r.querySelector('t');
-            if (tEl && tEl.textContent) {
-                const rPr = r.querySelector('rPr');
-                const isBold = rPr && rPr.getAttribute('b') === '1';
-                const fontSize = rPr ? (rPr.getAttribute('sz') || '') : '';
-                const text = tEl.textContent;
-                runs.push({ text, isBold, fontSize });
-            }
-        });
-        if (runs.length > 0) {
-            // 检查段落对齐
-            const pPr = p.querySelector('pPr');
-            const align = pPr ? (pPr.getAttribute('algn') || 'l') : 'l';
-            paraData.push({ runs, align });
-        }
-    });
-
-    // 渲染为 HTML
-    if (paraData.length === 0) {
-        // 直接用 <a:t> 文本
-        const texts = [];
-        textNodes.forEach(t => { if (t.textContent) texts.push(t.textContent); });
-        const div = document.createElement('div');
-        div.className = 'ppt-slide__content';
-        div.innerHTML = texts.map(t => `<div class="ppt-slide__text">${esc(t)}</div>`).join('');
-        container.appendChild(div);
-    } else {
-        const div = document.createElement('div');
-        div.className = 'ppt-slide__content';
-        paraData.forEach((para, pi) => {
-            const pEl = document.createElement('div');
-            pEl.className = 'ppt-slide__para';
-            pEl.style.textAlign = para.align === 'ctr' ? 'center' : para.align === 'r' ? 'right' : 'left';
-
-            // 第一段通常是标题
-            if (pi === 0) pEl.classList.add('ppt-slide__title-line');
-
-            para.runs.forEach(run => {
-                const span = document.createElement('span');
-                span.textContent = run.text;
-                if (run.isBold) span.style.fontWeight = 'bold';
-                if (run.fontSize) {
-                    const sz = parseInt(run.fontSize) / 100;
-                    span.style.fontSize = sz + 'pt';
-                }
-                pEl.appendChild(span);
-            });
-            div.appendChild(pEl);
-        });
-        container.appendChild(div);
-    }
-
-    return container;
-}
-
-// ==================== PPTX 渲染：PptxViewJS（增强方案，如果可用） ====================
-async function renderWithPptxViewJS(arrayBuffer) {
-    if (typeof PptxViewJS === 'undefined') {
-        throw new Error('PptxViewJS 未加载');
-    }
-
-    // PptxViewJS 的 API 可能因版本而异，尝试几种常见模式
-    // 模式1：构造函数接受 options
-    // 模式2：静态 render 方法
-    // 模式3：new PptxViewJS(data).getSlides()
-
-    const elements = [];
-
-    try {
-        // 尝试大部分库的通用模式：创建临时容器
-        const tempDiv = document.createElement('div');
-        tempDiv.style.cssText = 'position:absolute;left:-9999px;top:0;width:960px;height:540px;';
-        document.body.appendChild(tempDiv);
-
-        // 尝试用 PptxViewJS 渲染
-        const pptxData = new Uint8Array(arrayBuffer);
-        let viewer;
-
-        // 尝试模式1: new PptxViewJS({ container, data })
-        try {
-            viewer = new PptxViewJS({ container: tempDiv, data: pptxData });
-        } catch (e1) {
-            // 尝试模式2: new PptxViewJS(container, data)
-            try { viewer = new PptxViewJS(tempDiv, pptxData); }
-            catch (e2) {
-                // 尝试模式3: new PptxViewJS(data)
-                try { viewer = new PptxViewJS(pptxData); }
-                catch (e3) {
-                    throw new Error('无法初始化 PptxViewJS');
-                }
-            }
-        }
-
-        // 等待渲染完成
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // 提取 canvas 元素
-        const canvases = tempDiv.querySelectorAll('canvas');
-        if (canvases.length > 0) {
-            canvases.forEach(canvas => {
-                const clone = canvas.cloneNode(true);
-                clone.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;';
-                elements.push(clone);
-            });
-        }
-
-        document.body.removeChild(tempDiv);
-    } catch (e) {
-        // 如果上面的复杂方法失败，回退到 JSZip
-        throw e;
-    }
-
-    if (elements.length === 0) throw new Error('PptxViewJS 未返回任何幻灯片');
-    return elements;
 }
 
 // ==================== 渲染入口 ====================

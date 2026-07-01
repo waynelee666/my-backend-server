@@ -981,27 +981,12 @@ textarea.form-input { resize:vertical; }
 .ppt-viewer__prev:hover,
 .ppt-viewer__next:hover { background: rgba(255,255,255,.25) !important; }
 
-/* PPT 幻灯片内容（文字模式） */
-.ppt-slide {
-    width: 100%; max-width: 860px; margin: 0 auto;
-    background: #fff; border-radius: 8px;
-    box-shadow: 0 4px 24px rgba(0,0,0,.3);
-    overflow: hidden;
-    display: flex; flex-direction: column;
-}
-.ppt-slide__content { padding: 32px 36px; }
-.ppt-slide__text {
-    font-size: 1rem; color: #333; line-height: 1.8;
-    margin-bottom: 6px;
-}
-.ppt-slide__empty { color: #999; font-style: italic; text-align: center; padding: 40px; }
-.ppt-slide__para {
-    font-size: 1rem; color: #333; line-height: 1.8;
-    margin-bottom: 8px;
-}
-.ppt-slide__title-line {
-    font-size: 1.4rem; font-weight: 700; color: #1a1a2e;
-    margin-bottom: 16px; line-height: 1.4;
+/* PPT 幻灯片图片 */
+.ppt-slide-img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    -webkit-user-drag: none;
+    user-select: none;
 }
 
 /* PPT 查看器加载状态 */
@@ -1023,9 +1008,6 @@ textarea.form-input { resize:vertical; }
     .ppt-viewer__container .swiper-slide { padding: 8px; }
     .ppt-viewer__controls { padding: 6px 12px; gap: 16px; }
     .ppt-viewer__prev, .ppt-viewer__next { width: 38px; height: 38px; font-size: 1rem; }
-    .ppt-slide__content { padding: 20px 22px; }
-    .ppt-slide__title-line { font-size: 1.2rem; }
-    .ppt-slide__text, .ppt-slide__para { font-size: .9rem; }
 }
 @media (max-width: 480px) {
     .ppt-viewer__topbar { padding: 4px 6px; gap: 6px; }
@@ -1034,7 +1016,4 @@ textarea.form-input { resize:vertical; }
     .ppt-viewer__title { font-size: .75rem; }
     .ppt-viewer__counter { font-size: .7rem; min-width: 46px; }
     .ppt-viewer__prev, .ppt-viewer__next { width: 34px; height: 34px; }
-    .ppt-slide__content { padding: 16px; }
-    .ppt-slide__title-line { font-size: 1.1rem; margin-bottom: 12px; }
-    .ppt-slide__text, .ppt-slide__para { font-size: .82rem; line-height: 1.6; }
 }

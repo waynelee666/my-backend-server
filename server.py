@@ -21,6 +21,8 @@ from urllib.request import Request, urlopen
 from urllib.error import URLError
 import time
 import re
+import pythoncom  # COM 初始化（多线程）
+import win32com.client
 
 # 设置 HuggingFace 镜像（必须在 import retriever 之前）
 # 海外服务器直连 HuggingFace 更快；国内可设环境变量 HF_ENDPOINT="https://hf-mirror.com"
@@ -277,6 +279,35 @@ def parse_multipart(headers, rfile):
     return result
 
 
+def export_pptx_to_images(pptx_path, output_dir, prefix):
+    """用 PowerPoint COM 将 PPTX 每页导出为 PNG，返回图片文件列表"""
+    pythoncom.CoInitialize()
+    ppt = None
+    presentation = None
+    image_paths = []
+
+    try:
+        ppt = win32com.client.Dispatch("PowerPoint.Application")
+        ppt.Visible = False
+        presentation = ppt.Presentations.Open(pptx_path, WithWindow=False)
+
+        total = presentation.Slides.Count
+        for i in range(1, total + 1):
+            img_name = f"{prefix}_slide_{i}.png"
+            img_path = os.path.join(output_dir, img_name)
+            presentation.Slides(i).Export(img_path, "PNG", 0, 0)
+            image_paths.append(img_name)
+
+    finally:
+        if presentation:
+            presentation.Close()
+        if ppt:
+            ppt.Quit()
+        pythoncom.CoUninitialize()
+
+    return image_paths
+
+
 class RequestHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):
@@ -345,6 +376,8 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/upload-review-ppt":
             self.handle_upload_review_ppt()
+        elif parsed.path == "/api/convert-ppt":
+            self.handle_convert_ppt()
         elif parsed.path == "/api/parse":
             self.handle_parse()
         elif parsed.path == "/api/chat":
@@ -407,6 +440,34 @@ class RequestHandler(BaseHTTPRequestHandler):
         print(f"  [PPT] 章节{chapter} 上传成功: {save_name} ({size_kb} KB)")
         self.send_json({"ok": True, "filename": save_name, "chapter": chapter, "size_kb": size_kb,
                         "original_name": filename})
+
+    def handle_convert_ppt(self):
+        """POST /api/convert-ppt — 用 PowerPoint 将 PPTX 转为 PNG 图片"""
+        body = self.read_json_body()
+        if not body or "filename" not in body:
+            self.send_json({"ok": False, "error": "请提供 filename 字段"}, 400)
+            return
+
+        filename = body["filename"]
+        pptx_path = os.path.join(SERVER_DIR, "uploads", "review", filename)
+        if not os.path.isfile(pptx_path):
+            self.send_json({"ok": False, "error": "PPT 文件不存在"}, 404)
+            return
+
+        output_dir = os.path.join(SERVER_DIR, "uploads", "review")
+        prefix = filename.replace(".pptx", "")
+
+        print(f"  [PPT] 开始转换: {filename} ...")
+        try:
+            images = export_pptx_to_images(pptx_path, output_dir, prefix)
+        except Exception as e:
+            print(f"  [PPT] 转换失败: {e}")
+            self.send_json({"ok": False, "error": f"转换失败: {e}"}, 500)
+            return
+
+        print(f"  [PPT] 转换完成: {len(images)} 张图片")
+        self.send_json({"ok": True, "slides": len(images), "images": images,
+                        "prefix": prefix})
 
     def handle_parse(self):
         """POST /api/parse — 调用 DeepSeek 解析文本"""

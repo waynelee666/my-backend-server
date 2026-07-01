@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="stylesheet" href="style.css?v=3.7">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+
 </head>
 <body>
 
@@ -227,16 +227,15 @@
         <div class="ppt-viewer__topbar">
             <button class="ppt-viewer__back" id="pptViewerBack">← 返回</button>
             <span class="ppt-viewer__title" id="pptViewerTitle">PPT 查看</span>
-            <span class="ppt-viewer__counter" id="pptViewerCounter">0 / 0</span>
+            <span class="ppt-viewer__counter" id="pptViewerCounter"></span>
             <button class="ppt-viewer__close" id="pptViewerClose">&times;</button>
         </div>
-        <div class="ppt-viewer__container swiper" id="pptViewerSlides">
-            <div class="swiper-wrapper"></div>
-            <div class="swiper-pagination"></div>
+        <div class="ppt-viewer__canvas-wrap">
+            <canvas id="pptViewerCanvas"></canvas>
         </div>
         <div class="ppt-viewer__controls">
-            <button class="ppt-viewer__prev" id="pptViewerPrev">◀</button>
-            <button class="ppt-viewer__next" id="pptViewerNext">▶</button>
+            <button class="ppt-viewer__prev" id="pptViewerPrev" disabled>◀</button>
+            <button class="ppt-viewer__next" id="pptViewerNext" disabled>▶</button>
         </div>
     </div>
 
@@ -533,9 +532,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxviewjs/dist/PptxViewJS.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
 <script src="supabase.min.js"></script>
 <script src="auth.js?v=3.2"></script>
 <script src="script.js?v=4.3"></script>

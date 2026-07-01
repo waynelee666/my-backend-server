@@ -935,30 +935,15 @@ textarea.form-input { resize:vertical; }
     min-width: 60px; text-align: center;
 }
 
-.ppt-viewer__container {
-    flex: 1; width: 100%; overflow: hidden;
+/* Canvas 包裹层 */
+.ppt-viewer__canvas-wrap {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    overflow: hidden; padding: 8px;
 }
-.ppt-viewer__container .swiper-wrapper { align-items: center; }
-.ppt-viewer__container .swiper-slide {
-    display: flex; align-items: center; justify-content: center;
-    padding: 12px; box-sizing: border-box;
-    overflow-y: auto;
-}
-.ppt-viewer__container .swiper-slide canvas {
+.ppt-viewer__canvas-wrap canvas {
     max-width: 100%; max-height: 100%;
     object-fit: contain;
-}
-/* Swiper 页码 */
-.ppt-viewer__container .swiper-pagination {
-    bottom: 8px !important;
-}
-.ppt-viewer__container .swiper-pagination-bullet {
-    background: rgba(255,255,255,.35) !important;
-    opacity: 1 !important;
-    width: 8px; height: 8px;
-}
-.ppt-viewer__container .swiper-pagination-bullet-active {
-    background: #fff !important;
+    display: block;
 }
 
 /* 底部控制栏 */

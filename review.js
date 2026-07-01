@@ -1,14 +1,21 @@
 /* ============================================================
-   复习模块  v4.1 — 极简：章节 + PPT（Supabase 云端同步）
+   复习模块  v5.0 — 服务端 PowerPoint COM 渲染，原版呈现
    ============================================================
 
-   ⚠️ 使用前先在 Supabase SQL Editor 执行以下建表语句：
+   流程：
+   上传 → server 保存 + COM 转 PNG → Supabase Storage 备份
+   查看 → 优先 server PNG 图片（100% 原版），fallback PptxViewJS
+
+   ⚠️ Supabase SQL Editor 执行以下建表语句（v5 更新）：
    ─────────────────────────────────────────────────────────
-   CREATE TABLE IF NOT EXISTS review_ppts (
+   DROP TABLE IF EXISTS review_ppts;  -- 如果旧表存在则删
+   CREATE TABLE review_ppts (
        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
        user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
        chapter_name TEXT NOT NULL,
-       storage_path TEXT NOT NULL,
+       pptx_path TEXT DEFAULT '',
+       slide_prefix TEXT NOT NULL DEFAULT '',
+       slides_count INTEGER NOT NULL DEFAULT 0,
        created_at TIMESTAMPTZ DEFAULT now(),
        UNIQUE(user_id, chapter_name)
    );
@@ -24,10 +31,10 @@ const REVIEW_CHAPTERS = [
 ];
 
 const SUPABASE_BUCKET = 'review-ppts';
-const REVIEW_KEY = 'review_ppt';  // localStorage 离线缓存 key
+const REVIEW_KEY = 'review_ppt';  // localStorage 离线缓存
 
-let _pptCache = null;           // { chapterName: storagePath }
-let _pptLoaded = false;         // 是否已从云端同步过
+let _pptCache = null;    // { chapterName: {pptx_path, slide_prefix, slides_count} }
+let _pptLoaded = false;
 
 // ==================== 数据层：Supabase 为主，localStorage 为缓存 ====================
 
@@ -43,7 +50,6 @@ function saveLocalCache(cache) {
     try { localStorage.setItem(REVIEW_KEY, JSON.stringify(cache)); } catch (e) {}
 }
 
-/** 从 Supabase 加载云端 PPT 记录，与本地缓存合并（云端优先） */
 async function loadPPTsFromDB() {
     try {
         const sb = Auth.getClient();
@@ -52,15 +58,22 @@ async function loadPPTsFromDB() {
 
         const { data, error } = await sb
             .from('review_ppts')
-            .select('chapter_name, storage_path')
+            .select('chapter_name, pptx_path, slide_prefix, slides_count')
             .eq('user_id', user.id);
 
         if (error) throw error;
 
-        // 云端数据优先覆盖本地
         const local = getLocalCache();
         const merged = { ...local };
-        (data || []).forEach(row => { merged[row.chapter_name] = row.storage_path; });
+        (data || []).forEach(row => {
+            if (row.slide_prefix || row.pptx_path) {
+                merged[row.chapter_name] = {
+                    pptx_path: row.pptx_path || '',
+                    slide_prefix: row.slide_prefix || '',
+                    slides_count: row.slides_count || 0,
+                };
+            }
+        });
         saveLocalCache(merged);
         _pptLoaded = true;
         return merged;
@@ -72,11 +85,15 @@ async function loadPPTsFromDB() {
 }
 
 function getChapterPPT(chapterName) {
-    return getLocalCache()[chapterName] || null;
+    const rec = getLocalCache()[chapterName];
+    if (!rec) return null;
+    // 兼容旧数据（纯字符串路径）
+    if (typeof rec === 'string') return { pptx_path: rec, slide_prefix: '', slides_count: 0 };
+    return rec;
 }
 
-async function setChapterPPT(chapterName, storagePath) {
-    // 1. 写 Supabase（主存储）
+async function setChapterPPT(chapterName, record) {
+    // 1. 写 Supabase
     try {
         const sb = Auth.getClient();
         const { data: { user } } = await sb.auth.getUser();
@@ -84,16 +101,16 @@ async function setChapterPPT(chapterName, storagePath) {
             await sb.from('review_ppts').upsert({
                 user_id: user.id,
                 chapter_name: chapterName,
-                storage_path: storagePath,
+                pptx_path: record.pptx_path || '',
+                slide_prefix: record.slide_prefix || '',
+                slides_count: record.slides_count || 0,
             }, { onConflict: 'user_id, chapter_name' });
         }
-    } catch (e) {
-        console.error('云端保存PPT失败:', e.message);
-    }
+    } catch (e) { console.error('云端保存PPT失败:', e.message); }
 
-    // 2. 同步本地缓存（离线兜底）
+    // 2. 同步本地缓存
     const cache = getLocalCache();
-    cache[chapterName] = storagePath;
+    cache[chapterName] = record;
     saveLocalCache(cache);
 }
 
@@ -104,12 +121,9 @@ async function removeChapterPPT(chapterName) {
         const { data: { user } } = await sb.auth.getUser();
         if (user) {
             await sb.from('review_ppts').delete()
-                .eq('user_id', user.id)
-                .eq('chapter_name', chapterName);
+                .eq('user_id', user.id).eq('chapter_name', chapterName);
         }
-    } catch (e) {
-        console.error('云端删除PPT失败:', e.message);
-    }
+    } catch (e) { console.error('云端删除PPT失败:', e.message); }
 
     // 2. 同步本地缓存
     const cache = getLocalCache();
@@ -117,22 +131,22 @@ async function removeChapterPPT(chapterName) {
     saveLocalCache(cache);
 }
 
-// ==================== 渲染 ====================
+// ==================== 渲染章节列表 ====================
 
 function renderReviewPlan() {
     const el = document.getElementById('reviewPlan');
     if (!el) return;
 
     el.innerHTML = REVIEW_CHAPTERS.map((name, i) => {
-        const path = getChapterPPT(name);
-        const hasPPT = !!path;
-        const pptName = hasPPT ? path.split('/').pop() : '';
+        const rec = getChapterPPT(name);
+        const hasPPT = !!(rec && (rec.slides_count > 0 || rec.pptx_path));
+        const label = rec && rec.slides_count > 0 ? `${rec.slides_count}页` : (rec && rec.pptx_path ? 'PPT' : '');
 
         return `<div class="review-chapter">
             <div class="review-chapter__row">
                 <span class="review-chapter__label">第${i + 1}章</span>
                 <span class="review-chapter__name">${esc(name)}</span>
-                <span class="review-chapter__ppt-filename">${hasPPT ? '📎 ' + esc(pptName) : ''}</span>
+                <span class="review-chapter__ppt-filename">${hasPPT ? '📎 ' + esc(label) : ''}</span>
                 <div class="review-chapter__ppt-actions">
                     <button class="btn btn--outline btn--sm review-ppt-upload-btn" data-ch="${i}">📤</button>
                     ${hasPPT ? `<button class="btn btn--primary btn--sm review-ppt-view-btn" data-ch="${i}">👁 查看</button>
@@ -168,7 +182,7 @@ function renderReviewPlan() {
     });
 }
 
-// ==================== PPT 上传到 Supabase Storage ====================
+// ==================== 上传：server COM 转换 + Supabase 备份 ====================
 let _pendingPPTChapter = -1;
 
 async function handlePPTFileSelected(event) {
@@ -179,20 +193,48 @@ async function handlePPTFileSelected(event) {
         event.target.value = ''; return;
     }
 
-    const name = REVIEW_CHAPTERS[_pendingPPTChapter];
-    const btn = document.querySelector(`.review-ppt-upload-btn[data-ch="${_pendingPPTChapter}"]`);
-    if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
-
-    const storagePath = `ch${_pendingPPTChapter + 1}/${Date.now()}_${file.name}`;
+    const chIdx = _pendingPPTChapter;
+    const name = REVIEW_CHAPTERS[chIdx];
+    const btn = document.querySelector(`.review-ppt-upload-btn[data-ch="${chIdx}"]`);
+    if (btn) { btn.textContent = '⏳ 上传中...'; btn.disabled = true; }
 
     try {
-        const { data, error } = await Auth.getClient().storage.from(SUPABASE_BUCKET).upload(storagePath, file, {
-            cacheControl: '3600', upsert: false
-        });
-        if (error) throw error;
+        // ① 上传到本地 server（快）
+        if (btn) btn.textContent = '⬆ 上传...';
+        const form = new FormData();
+        form.append('file', file);
+        const upResp = await fetch(`/api/upload-review-ppt?chapter=${chIdx + 1}`, { method: 'POST', body: form });
+        const upJson = await upResp.json();
+        if (!upJson.ok) throw new Error(upJson.error);
 
-        await setChapterPPT(name, data.path || storagePath);
-        showToast && showToast(`「${name}」上传成功`, 'success');
+        // ② 服务端 PowerPoint COM 转 PNG（100% 原版）
+        if (btn) btn.textContent = '🖼 转换...';
+        const cvResp = await fetch('/api/convert-ppt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: upJson.filename })
+        });
+        const cvJson = await cvResp.json();
+        if (!cvJson.ok) throw new Error(cvJson.error);
+
+        // ③ 上传 PPTX 到 Supabase Storage（跨设备备份，失败不影响主流程）
+        if (btn) btn.textContent = '☁ 备份...';
+        let pptxPath = '';
+        try {
+            const sp = `ch${chIdx + 1}/${Date.now()}_${file.name}`;
+            const { data: sbData, error: sbErr } = await Auth.getClient()
+                .storage.from(SUPABASE_BUCKET).upload(sp, file, { cacheControl: '3600', upsert: false });
+            if (!sbErr) pptxPath = sbData.path || sp;
+        } catch (e) { console.warn('Supabase备份失败:', e.message); }
+
+        // ④ 存入 Supabase DB + localStorage（跨设备同步）
+        await setChapterPPT(name, {
+            pptx_path: pptxPath,
+            slide_prefix: cvJson.prefix,
+            slides_count: cvJson.slides,
+        });
+
+        showToast && showToast(`「${name}」上传成功 · ${cvJson.slides} 页 · PowerPoint 原版渲染`, 'success');
         renderReviewPlan();
     } catch (err) {
         console.error(err);
@@ -203,35 +245,128 @@ async function handlePPTFileSelected(event) {
     event.target.value = '';
 }
 
-// ==================== PPT 查看器 ====================
-let pptViewer = null;
+// ==================== PPT 查看器（图片滑块 + PptxViewJS 降级）====================
+let _slideState = null;   // { mode:'images'|'pptxjs', prefix, total, current }
+let _pptViewerJS = null;  // PptxViewJS 实例（降级用）
+
+async function isServerAvailable() {
+    try {
+        const resp = await fetch('/api/health', { signal: AbortSignal.timeout(2000) });
+        return resp.ok;
+    } catch { return false; }
+}
+
+function getSlideURL(prefix, n) {
+    return `/uploads/review/${prefix}_slide_${n}.png`;
+}
 
 async function openPPTViewer(chapterIndex) {
     const name = REVIEW_CHAPTERS[chapterIndex];
-    const path = getChapterPPT(name);
-    if (!path) { showToast && showToast('请先上传PPT', 'error'); return; }
+    const rec = getChapterPPT(name);
+    if (!rec || (!rec.slides_count && !rec.pptx_path)) {
+        showToast && showToast('请先上传PPT', 'error'); return;
+    }
 
     const overlay = document.getElementById('pptViewerOverlay');
+    const img = document.getElementById('pptViewerImg');
     const canvas = document.getElementById('pptViewerCanvas');
+    const loading = document.getElementById('pptViewerLoading');
     document.getElementById('pptViewerTitle').textContent = name;
-    document.getElementById('pptViewerCounter').textContent = '加载中...';
     overlay.classList.add('active');
 
-    if (pptViewer) { try { pptViewer.destroy(); } catch (e) {} pptViewer = null; }
+    const serverOK = await isServerAvailable();
+
+    if (serverOK && rec.slide_prefix && rec.slides_count > 0) {
+        // ★ 原版呈现：加载服务器 PNG（PowerPoint COM 导出，100% 还原）
+        _slideState = { mode: 'images', prefix: rec.slide_prefix, total: rec.slides_count, current: 0 };
+        img.style.display = 'block';
+        canvas.style.display = 'none';
+        if (loading) { loading.style.display = 'none'; }
+        if (_pptViewerJS) { try { _pptViewerJS.destroy(); } catch (e) {} _pptViewerJS = null; }
+        loadSlide(0);
+    } else if (rec.pptx_path) {
+        // ★ 降级：PptxViewJS 渲染（移动端或服务器不可用时）
+        _slideState = { mode: 'pptxjs', pptx_path: rec.pptx_path };
+        img.style.display = 'none';
+        canvas.style.display = 'block';
+        if (loading) { loading.style.display = 'flex'; loading.textContent = '加载中...'; }
+        await openWithPptxJS(name, rec.pptx_path);
+    } else {
+        showToast && showToast('PPT文件不可用（服务器离线且无云端备份）', 'error');
+        closePPTViewer();
+    }
+}
+
+// ---- 图片模式 ----
+function loadSlide(index) {
+    if (!_slideState || _slideState.mode !== 'images') return;
+    _slideState.current = index;
+
+    const img = document.getElementById('pptViewerImg');
+    const loading = document.getElementById('pptViewerLoading');
+    img.style.opacity = '0';
+    if (loading) { loading.style.display = 'flex'; loading.textContent = '加载中...'; loading.style.color = '#aaa'; }
+
+    const url = getSlideURL(_slideState.prefix, index + 1);
+    img.src = url;
+    img.onload = () => {
+        img.style.opacity = '1';
+        if (loading) loading.style.display = 'none';
+    };
+    img.onerror = () => {
+        if (loading) { loading.textContent = '幻灯片加载失败'; loading.style.color = '#ef4444'; }
+    };
+
+    updateSlideNav();
+
+    // 预加载相邻页
+    if (index > 0) new Image().src = getSlideURL(_slideState.prefix, index);
+    if (index + 2 <= _slideState.total) new Image().src = getSlideURL(_slideState.prefix, index + 2);
+}
+
+function updateSlideNav() {
+    if (!_slideState || _slideState.mode !== 'images') return;
+    const { current, total } = _slideState;
+    document.getElementById('pptViewerCounter').textContent = `${current + 1} / ${total}`;
+    document.getElementById('pptViewerPrev').disabled = current <= 0;
+    document.getElementById('pptViewerNext').disabled = current >= total - 1;
+}
+
+function pptPrev() {
+    if (!_slideState) return;
+    if (_slideState.mode === 'images' && _slideState.current > 0) loadSlide(_slideState.current - 1);
+    else if (_slideState.mode === 'pptxjs' && _pptViewerJS) _pptViewerJS.previousSlide();
+}
+
+function pptNext() {
+    if (!_slideState) return;
+    if (_slideState.mode === 'images' && _slideState.current < _slideState.total - 1) loadSlide(_slideState.current + 1);
+    else if (_slideState.mode === 'pptxjs' && _pptViewerJS) _pptViewerJS.nextSlide();
+}
+
+// ---- PptxViewJS 降级模式（移动端）----
+async function openWithPptxJS(name, storagePath) {
+    const canvas = document.getElementById('pptViewerCanvas');
+    document.getElementById('pptViewerCounter').textContent = '加载中...';
+    document.getElementById('pptViewerPrev').disabled = true;
+    document.getElementById('pptViewerNext').disabled = true;
+
+    if (_pptViewerJS) { try { _pptViewerJS.destroy(); } catch (e) {} _pptViewerJS = null; }
 
     try {
         const sb = Auth.getClient();
-        const { data: urlData } = sb.storage.from(SUPABASE_BUCKET).getPublicUrl(path);
+        const { data: urlData } = sb.storage.from(SUPABASE_BUCKET).getPublicUrl(storagePath);
         const resp = await fetch(urlData.publicUrl);
-        if (!resp.ok) throw new Error('无法加载PPT');
+        if (!resp.ok) throw new Error('无法加载PPT文件');
         const blob = await resp.blob();
 
-        pptViewer = new PptxViewJS.PPTXViewer({ canvas, autoExposeGlobals: false });
-        pptViewer.on('loadComplete', updatePPTNav);
-        pptViewer.on('renderComplete', updatePPTNav);
+        _pptViewerJS = new PptxViewJS.PPTXViewer({ canvas, autoExposeGlobals: false });
+        _pptViewerJS.on('loadComplete', syncPptxNav);
+        _pptViewerJS.on('renderComplete', syncPptxNav);
 
-        await pptViewer.loadFile(new File([blob], name + '.pptx'));
-        bindPPTNav();
+        await _pptViewerJS.loadFile(new File([blob], name + '.pptx'));
+        const loading = document.getElementById('pptViewerLoading');
+        if (loading) loading.style.display = 'none';
     } catch (e) {
         console.error(e);
         showToast && showToast('加载失败: ' + e.message, 'error');
@@ -239,25 +374,23 @@ async function openPPTViewer(chapterIndex) {
     }
 }
 
-function updatePPTNav() {
-    if (!pptViewer) return;
+function syncPptxNav() {
+    if (!_pptViewerJS) return;
     try {
-        const total = pptViewer.getSlideCount();
-        const current = pptViewer.getCurrentSlideIndex();
+        const total = _pptViewerJS.getSlideCount();
+        const current = _pptViewerJS.getCurrentSlideIndex();
         document.getElementById('pptViewerCounter').textContent = `${current + 1} / ${total}`;
         document.getElementById('pptViewerPrev').disabled = current <= 0;
         document.getElementById('pptViewerNext').disabled = current >= total - 1;
     } catch (e) {}
 }
 
-function bindPPTNav() {
-    document.getElementById('pptViewerPrev').onclick = () => pptViewer && pptViewer.previousSlide();
-    document.getElementById('pptViewerNext').onclick = () => pptViewer && pptViewer.nextSlide();
-}
-
+// ---- 关闭 ----
 function closePPTViewer() {
-    if (pptViewer) { try { pptViewer.destroy(); } catch (e) {} pptViewer = null; }
+    if (_pptViewerJS) { try { _pptViewerJS.destroy(); } catch (e) {} _pptViewerJS = null; }
+    _slideState = null;
     document.getElementById('pptViewerOverlay').classList.remove('active');
+    document.getElementById('pptViewerImg').src = '';
 }
 
 // ==================== 入口 ====================
@@ -271,8 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('reviewPPTInput')?.addEventListener('change', handlePPTFileSelected);
 
     document.getElementById('reviewResetBtn')?.addEventListener('click', async () => {
-        if (!confirm('确定清除所有PPT记录？')) return;
-        // 逐个删除云端记录
+        if (!confirm('确定清除所有PPT记录？（PPT文件仍保留在服务器和云端）')) return;
         for (const name of REVIEW_CHAPTERS) {
             if (getChapterPPT(name)) await removeChapterPPT(name);
         }
@@ -280,27 +412,29 @@ document.addEventListener('DOMContentLoaded', () => {
         renderReviewPlan();
     });
 
+    document.getElementById('pptViewerPrev').onclick = pptPrev;
+    document.getElementById('pptViewerNext').onclick = pptNext;
     document.getElementById('pptViewerBack')?.addEventListener('click', closePPTViewer);
     document.getElementById('pptViewerClose')?.addEventListener('click', closePPTViewer);
 
     document.addEventListener('keydown', (e) => {
         if (!document.getElementById('pptViewerOverlay')?.classList.contains('active')) return;
         if (e.key === 'Escape') closePPTViewer();
-        if (e.key === 'ArrowLeft' && pptViewer) pptViewer.previousSlide();
-        if (e.key === 'ArrowRight' && pptViewer) pptViewer.nextSlide();
+        if (e.key === 'ArrowLeft') pptPrev();
+        if (e.key === 'ArrowRight') pptNext();
     });
 
     document.getElementById('pptViewerOverlay')?.addEventListener('click', (e) => {
         if (e.target === e.currentTarget) closePPTViewer();
     });
 
-    let touchStartX = 0;
+    let _touchStartX = 0;
     document.getElementById('pptViewerOverlay')?.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
+        _touchStartX = e.changedTouches[0].screenX;
     }, { passive: true });
     document.getElementById('pptViewerOverlay')?.addEventListener('touchend', (e) => {
-        if (!pptViewer) return;
-        const delta = touchStartX - e.changedTouches[0].screenX;
-        if (Math.abs(delta) > 60) delta > 0 ? pptViewer.nextSlide() : pptViewer.previousSlide();
+        if (!_slideState) return;
+        const delta = _touchStartX - e.changedTouches[0].screenX;
+        if (Math.abs(delta) > 60) delta > 0 ? pptNext() : pptPrev();
     }, { passive: true });
 });

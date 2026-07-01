@@ -298,7 +298,10 @@ def export_pptx_to_images(pptx_path, output_dir, prefix):
 
     try:
         ppt = win32com.client.Dispatch("PowerPoint.Application")
-        ppt.Visible = False
+        try:
+            ppt.Visible = False
+        except Exception:
+            pass  # PowerPoint 正在前台运行时不允许隐藏，忽略
         presentation = ppt.Presentations.Open(pptx_path, WithWindow=False)
 
         total = presentation.Slides.Count

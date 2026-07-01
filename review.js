@@ -1,6 +1,22 @@
 /* ============================================================
-   复习模块  v4.0 — 极简：章节 + PPT
-   ============================================================ */
+   复习模块  v4.1 — 极简：章节 + PPT（Supabase 云端同步）
+   ============================================================
+
+   ⚠️ 使用前先在 Supabase SQL Editor 执行以下建表语句：
+   ─────────────────────────────────────────────────────────
+   CREATE TABLE IF NOT EXISTS review_ppts (
+       id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+       user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+       chapter_name TEXT NOT NULL,
+       storage_path TEXT NOT NULL,
+       created_at TIMESTAMPTZ DEFAULT now(),
+       UNIQUE(user_id, chapter_name)
+   );
+   ALTER TABLE review_ppts ENABLE ROW LEVEL SECURITY;
+   CREATE POLICY "Users can manage their own review_ppts" ON review_ppts
+       FOR ALL USING (auth.uid() = user_id);
+   ─────────────────────────────────────────────────────────
+   */
 
 const REVIEW_CHAPTERS = [
     '数据结构', '操作系统', '计算机网络', '数据库原理', '高等数学',
@@ -8,39 +24,101 @@ const REVIEW_CHAPTERS = [
 ];
 
 const SUPABASE_BUCKET = 'review-ppts';
-const REVIEW_KEY = 'review_ppt';
+const REVIEW_KEY = 'review_ppt';  // localStorage 离线缓存 key
 
-let _pptCache = null;
+let _pptCache = null;           // { chapterName: storagePath }
+let _pptLoaded = false;         // 是否已从云端同步过
 
-function getPPTCache() {
+// ==================== 数据层：Supabase 为主，localStorage 为缓存 ====================
+
+function getLocalCache() {
     if (!_pptCache) {
         try { _pptCache = JSON.parse(localStorage.getItem(REVIEW_KEY) || '{}'); } catch (e) { _pptCache = {}; }
     }
     return _pptCache;
 }
 
-function savePPTCache(cache) {
+function saveLocalCache(cache) {
     _pptCache = cache;
-    localStorage.setItem(REVIEW_KEY, JSON.stringify(cache));
+    try { localStorage.setItem(REVIEW_KEY, JSON.stringify(cache)); } catch (e) {}
+}
+
+/** 从 Supabase 加载云端 PPT 记录，与本地缓存合并（云端优先） */
+async function loadPPTsFromDB() {
+    try {
+        const sb = Auth.getClient();
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) { _pptLoaded = true; return getLocalCache(); }
+
+        const { data, error } = await sb
+            .from('review_ppts')
+            .select('chapter_name, storage_path')
+            .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        // 云端数据优先覆盖本地
+        const local = getLocalCache();
+        const merged = { ...local };
+        (data || []).forEach(row => { merged[row.chapter_name] = row.storage_path; });
+        saveLocalCache(merged);
+        _pptLoaded = true;
+        return merged;
+    } catch (e) {
+        console.warn('加载云端PPT记录失败，使用本地缓存:', e.message);
+        _pptLoaded = true;
+        return getLocalCache();
+    }
 }
 
 function getChapterPPT(chapterName) {
-    return getPPTCache()[chapterName] || null;
+    return getLocalCache()[chapterName] || null;
 }
 
-function setChapterPPT(chapterName, path) {
-    const cache = getPPTCache();
-    cache[chapterName] = path;
-    savePPTCache(cache);
+async function setChapterPPT(chapterName, storagePath) {
+    // 1. 写 Supabase（主存储）
+    try {
+        const sb = Auth.getClient();
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) {
+            await sb.from('review_ppts').upsert({
+                user_id: user.id,
+                chapter_name: chapterName,
+                storage_path: storagePath,
+            }, { onConflict: 'user_id, chapter_name' });
+        }
+    } catch (e) {
+        console.error('云端保存PPT失败:', e.message);
+    }
+
+    // 2. 同步本地缓存（离线兜底）
+    const cache = getLocalCache();
+    cache[chapterName] = storagePath;
+    saveLocalCache(cache);
 }
 
-function removeChapterPPT(chapterName) {
-    const cache = getPPTCache();
+async function removeChapterPPT(chapterName) {
+    // 1. 删 Supabase
+    try {
+        const sb = Auth.getClient();
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) {
+            await sb.from('review_ppts').delete()
+                .eq('user_id', user.id)
+                .eq('chapter_name', chapterName);
+        }
+    } catch (e) {
+        console.error('云端删除PPT失败:', e.message);
+    }
+
+    // 2. 同步本地缓存
+    const cache = getLocalCache();
     delete cache[chapterName];
-    savePPTCache(cache);
+    saveLocalCache(cache);
 }
 
 // ==================== 渲染 ====================
+
 function renderReviewPlan() {
     const el = document.getElementById('reviewPlan');
     if (!el) return;
@@ -79,11 +157,11 @@ function renderReviewPlan() {
         });
     });
     el.querySelectorAll('.review-ppt-del-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
             e.stopPropagation();
             const name = REVIEW_CHAPTERS[parseInt(btn.dataset.ch)];
             if (confirm(`确定删除「${name}」的PPT？`)) {
-                removeChapterPPT(name);
+                await removeChapterPPT(name);
                 renderReviewPlan();
             }
         });
@@ -93,7 +171,7 @@ function renderReviewPlan() {
 // ==================== PPT 上传到 Supabase Storage ====================
 let _pendingPPTChapter = -1;
 
-function handlePPTFileSelected(event) {
+async function handlePPTFileSelected(event) {
     const file = event.target.files[0];
     if (!file) return;
     if (!file.name.toLowerCase().endsWith('.pptx')) {
@@ -107,18 +185,20 @@ function handlePPTFileSelected(event) {
 
     const storagePath = `ch${_pendingPPTChapter + 1}/${Date.now()}_${file.name}`;
 
-    Auth.getClient().storage.from(SUPABASE_BUCKET).upload(storagePath, file, {
-        cacheControl: '3600', upsert: false
-    }).then(({ data, error }) => {
+    try {
+        const { data, error } = await Auth.getClient().storage.from(SUPABASE_BUCKET).upload(storagePath, file, {
+            cacheControl: '3600', upsert: false
+        });
         if (error) throw error;
-        setChapterPPT(name, data.path);
+
+        await setChapterPPT(name, data.path || storagePath);
         showToast && showToast(`「${name}」上传成功`, 'success');
         renderReviewPlan();
-    }).catch(err => {
+    } catch (err) {
         console.error(err);
         showToast && showToast('上传失败: ' + (err.message || '未知错误'), 'error');
         if (btn) { btn.textContent = '📤'; btn.disabled = false; }
-    });
+    }
 
     event.target.value = '';
 }
@@ -181,14 +261,23 @@ function closePPTViewer() {
 }
 
 // ==================== 入口 ====================
-function renderReviewView() { renderReviewPlan(); }
+async function renderReviewView() {
+    if (!_pptLoaded) await loadPPTsFromDB();
+    renderReviewPlan();
+}
 
 // ==================== 事件绑定 ====================
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('reviewPPTInput')?.addEventListener('change', handlePPTFileSelected);
 
-    document.getElementById('reviewResetBtn')?.addEventListener('click', () => {
-        if (confirm('确定清除所有PPT记录？')) { savePPTCache({}); renderReviewPlan(); }
+    document.getElementById('reviewResetBtn')?.addEventListener('click', async () => {
+        if (!confirm('确定清除所有PPT记录？')) return;
+        // 逐个删除云端记录
+        for (const name of REVIEW_CHAPTERS) {
+            if (getChapterPPT(name)) await removeChapterPPT(name);
+        }
+        saveLocalCache({});
+        renderReviewPlan();
     });
 
     document.getElementById('pptViewerBack')?.addEventListener('click', closePPTViewer);

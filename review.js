@@ -288,9 +288,11 @@ async function handlePPTFileSelected(event) {
     event.target.value = '';
 }
 
-// ==================== PPT 查看器（Supabase PNG + PptxViewJS 降级）====================
+// ==================== PPT 查看器（全屏放映模式） ====================
 let _slideState = null;
 let _pptViewerJS = null;
+let _toolbarTimer = null;
+let _hintTimer = null;
 
 function getSupabaseSlideURL(slidePrefix, n) {
     const { data } = Auth.getClient().storage
@@ -313,8 +315,11 @@ async function openPPTViewer(chapterIndex) {
     document.getElementById('pptViewerTitle').textContent = name;
     overlay.classList.add('active');
 
-    // ★ 首选：Supabase PNG（全平台原版）
+    // 隐藏工具栏
+    hideToolbar();
+
     if (rec.slide_prefix && rec.slides_count > 0) {
+        // ★ 图片模式（全平台原版）
         _slideState = { mode: 'images', prefix: rec.slide_prefix, total: rec.slides_count, current: 0 };
         img.style.display = 'block';
         canvas.style.display = 'none';
@@ -322,7 +327,7 @@ async function openPPTViewer(chapterIndex) {
         if (_pptViewerJS) { try { _pptViewerJS.destroy(); } catch (e) {} _pptViewerJS = null; }
         loadSlide(0);
     } else if (rec.pptx_path) {
-        // ★ 降级：PptxViewJS（没有预转 PNG 的旧数据）
+        // ★ 降级：PptxViewJS
         _slideState = { mode: 'pptxjs', pptx_path: rec.pptx_path };
         img.style.display = 'none';
         canvas.style.display = 'block';
@@ -334,7 +339,35 @@ async function openPPTViewer(chapterIndex) {
     }
 }
 
-// ---- 图片模式（从 Supabase 加载）----
+// ---- 工具栏显示/隐藏 ----
+function showToolbar() {
+    document.getElementById('pptViewerTopbar').classList.add('visible');
+    document.getElementById('pptViewerControls').classList.add('visible');
+    resetToolbarTimer();
+}
+
+function hideToolbar() {
+    document.getElementById('pptViewerTopbar').classList.remove('visible');
+    document.getElementById('pptViewerControls').classList.remove('visible');
+    if (_toolbarTimer) { clearTimeout(_toolbarTimer); _toolbarTimer = null; }
+}
+
+function resetToolbarTimer() {
+    if (_toolbarTimer) clearTimeout(_toolbarTimer);
+    _toolbarTimer = setTimeout(hideToolbar, 3000);
+}
+
+// ---- 页码提示 ----
+function showHint() {
+    if (!_slideState || _slideState.mode !== 'images') return;
+    const hint = document.getElementById('pptViewerHint');
+    hint.textContent = `${_slideState.current + 1} / ${_slideState.total}`;
+    hint.classList.add('show');
+    if (_hintTimer) clearTimeout(_hintTimer);
+    _hintTimer = setTimeout(() => hint.classList.remove('show'), 1500);
+}
+
+// ---- 图片模式 ----
 function loadSlide(index) {
     if (!_slideState || _slideState.mode !== 'images') return;
     _slideState.current = index;
@@ -351,10 +384,11 @@ function loadSlide(index) {
         if (loading) loading.style.display = 'none';
     };
     img.onerror = () => {
-        if (loading) { loading.textContent = '幻灯片加载失败'; loading.style.color = '#ef4444'; }
+        if (loading) { loading.textContent = '加载失败'; loading.style.color = '#ef4444'; }
     };
 
     updateSlideNav();
+    showHint();
 
     // 预加载相邻页
     if (index > 0) new Image().src = getSupabaseSlideURL(_slideState.prefix, index);
@@ -371,20 +405,20 @@ function updateSlideNav() {
 
 function pptPrev() {
     if (!_slideState) return;
-    if (_slideState.mode === 'images' && _slideState.current > 0) loadSlide(_slideState.current - 1);
-    else if (_slideState.mode === 'pptxjs' && _pptViewerJS) _pptViewerJS.previousSlide();
+    if (_slideState.mode === 'images' && _slideState.current > 0) { loadSlide(_slideState.current - 1); resetToolbarTimer(); }
+    else if (_slideState.mode === 'pptxjs' && _pptViewerJS) { _pptViewerJS.previousSlide(); resetToolbarTimer(); }
 }
 
 function pptNext() {
     if (!_slideState) return;
-    if (_slideState.mode === 'images' && _slideState.current < _slideState.total - 1) loadSlide(_slideState.current + 1);
-    else if (_slideState.mode === 'pptxjs' && _pptViewerJS) _pptViewerJS.nextSlide();
+    if (_slideState.mode === 'images' && _slideState.current < _slideState.total - 1) { loadSlide(_slideState.current + 1); resetToolbarTimer(); }
+    else if (_slideState.mode === 'pptxjs' && _pptViewerJS) { _pptViewerJS.nextSlide(); resetToolbarTimer(); }
 }
 
-// ---- PptxViewJS 降级（无预转 PNG 时）----
+// ---- PptxViewJS 降级 ----
 async function openWithPptxJS(name, storagePath) {
     const canvas = document.getElementById('pptViewerCanvas');
-    document.getElementById('pptViewerCounter').textContent = '加载中...';
+    document.getElementById('pptViewerCounter').textContent = '...';
     document.getElementById('pptViewerPrev').disabled = true;
     document.getElementById('pptViewerNext').disabled = true;
 
@@ -423,6 +457,7 @@ function syncPptxNav() {
 }
 
 function closePPTViewer() {
+    hideToolbar();
     if (_pptViewerJS) { try { _pptViewerJS.destroy(); } catch (e) {} _pptViewerJS = null; }
     _slideState = null;
     document.getElementById('pptViewerOverlay').classList.remove('active');
@@ -437,6 +472,9 @@ async function renderReviewView() {
 
 // ==================== 事件绑定 ====================
 document.addEventListener('DOMContentLoaded', () => {
+    const overlay = document.getElementById('pptViewerOverlay');
+    const wrap = document.getElementById('pptViewerWrap');
+
     document.getElementById('reviewPPTInput')?.addEventListener('change', handlePPTFileSelected);
 
     document.getElementById('reviewResetBtn')?.addEventListener('click', async () => {
@@ -448,29 +486,63 @@ document.addEventListener('DOMContentLoaded', () => {
         renderReviewPlan();
     });
 
-    document.getElementById('pptViewerPrev').onclick = pptPrev;
-    document.getElementById('pptViewerNext').onclick = pptNext;
-    document.getElementById('pptViewerBack')?.addEventListener('click', closePPTViewer);
-    document.getElementById('pptViewerClose')?.addEventListener('click', closePPTViewer);
+    document.getElementById('pptViewerPrev').onclick = (e) => { e.stopPropagation(); pptPrev(); };
+    document.getElementById('pptViewerNext').onclick = (e) => { e.stopPropagation(); pptNext(); };
+    document.getElementById('pptViewerBack')?.addEventListener('click', (e) => { e.stopPropagation(); closePPTViewer(); });
+    document.getElementById('pptViewerClose')?.addEventListener('click', (e) => { e.stopPropagation(); closePPTViewer(); });
 
+    // ===== 键盘 =====
     document.addEventListener('keydown', (e) => {
-        if (!document.getElementById('pptViewerOverlay')?.classList.contains('active')) return;
+        if (!overlay?.classList.contains('active')) return;
         if (e.key === 'Escape') closePPTViewer();
         if (e.key === 'ArrowLeft') pptPrev();
         if (e.key === 'ArrowRight') pptNext();
     });
 
-    document.getElementById('pptViewerOverlay')?.addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) closePPTViewer();
+    // ===== 点击/触摸：左 1/3 上一页，右 2/3 下一页，中间显示工具栏 =====
+    wrap?.addEventListener('click', (e) => {
+        if (!_slideState) return;
+        const rect = wrap.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const third = rect.width / 3;
+
+        if (x < third) pptPrev();
+        else if (x > third * 2) pptNext();
+        else showToolbar();  // 中间 → 显示/隐藏工具栏
     });
 
-    let _touchStartX = 0;
-    document.getElementById('pptViewerOverlay')?.addEventListener('touchstart', (e) => {
-        _touchStartX = e.changedTouches[0].screenX;
+    // ===== 滑动切换 =====
+    let _touchStartX = 0, _touchStartY = 0, _touchMoved = false;
+
+    overlay?.addEventListener('touchstart', (e) => {
+        _touchStartX = e.touches[0].clientX;
+        _touchStartY = e.touches[0].clientY;
+        _touchMoved = false;
     }, { passive: true });
-    document.getElementById('pptViewerOverlay')?.addEventListener('touchend', (e) => {
-        if (!_slideState) return;
-        const delta = _touchStartX - e.changedTouches[0].screenX;
-        if (Math.abs(delta) > 60) delta > 0 ? pptNext() : pptPrev();
+
+    overlay?.addEventListener('touchmove', (e) => {
+        // 阻止页面滚动（在查看器内）
+        if (Math.abs(e.touches[0].clientY - _touchStartY) > 10) {
+            // 用户在做垂直滑动，允许
+        }
+        _touchMoved = true;
     }, { passive: true });
+
+    overlay?.addEventListener('touchend', (e) => {
+        if (!_slideState || !_touchMoved) return;
+        const deltaX = _touchStartX - e.changedTouches[0].clientX;
+        const deltaY = Math.abs(_touchStartY - e.changedTouches[0].clientY);
+
+        // 水平滑动 > 50px 且大于垂直滑动
+        if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > deltaY) {
+            deltaX > 0 ? pptNext() : pptPrev();
+        }
+    });
+
+    // ===== 双击切换工具栏 =====
+    overlay?.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        const topbar = document.getElementById('pptViewerTopbar');
+        topbar.classList.contains('visible') ? hideToolbar() : showToolbar();
+    });
 });

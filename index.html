@@ -10,7 +10,7 @@
     <link rel="apple-touch-icon" href="/icon.png?v=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="stylesheet" href="style.css?v=3.8">
+    <link rel="stylesheet" href="style.css?v=4.0">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 
 </head>
@@ -222,20 +222,21 @@
         <div class="review-plan" id="reviewPlan"></div>
     </section>
 
-    <!-- ===== PPT全屏查看器 ===== -->
+    <!-- ===== PPT全屏查看器（放映模式） ===== -->
     <div class="ppt-viewer-overlay" id="pptViewerOverlay">
-        <div class="ppt-viewer__topbar">
+        <div class="ppt-viewer__topbar" id="pptViewerTopbar">
             <button class="ppt-viewer__back" id="pptViewerBack">← 返回</button>
             <span class="ppt-viewer__title" id="pptViewerTitle">PPT 查看</span>
             <span class="ppt-viewer__counter" id="pptViewerCounter"></span>
             <button class="ppt-viewer__close" id="pptViewerClose">&times;</button>
         </div>
-        <div class="ppt-viewer__canvas-wrap">
+        <div class="ppt-viewer__canvas-wrap" id="pptViewerWrap">
             <img id="pptViewerImg" src="" alt="幻灯片" style="display:none;" />
             <canvas id="pptViewerCanvas" style="display:none;"></canvas>
             <div class="ppt-viewer__loading" id="pptViewerLoading" style="display:none;">加载中...</div>
         </div>
-        <div class="ppt-viewer__controls">
+        <div class="ppt-viewer__hint" id="pptViewerHint"></div>
+        <div class="ppt-viewer__controls" id="pptViewerControls">
             <button class="ppt-viewer__prev" id="pptViewerPrev" disabled>◀</button>
             <button class="ppt-viewer__next" id="pptViewerNext" disabled>▶</button>
         </div>

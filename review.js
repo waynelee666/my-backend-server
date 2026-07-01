@@ -309,7 +309,6 @@ async function openPPTViewer(chapterIndex) {
     }
 
     const overlay = document.getElementById('pptViewerOverlay');
-    const img = document.getElementById('pptViewerImg');
     const canvas = document.getElementById('pptViewerCanvas');
     const loading = document.getElementById('pptViewerLoading');
     document.getElementById('pptViewerTitle').textContent = name;
@@ -320,8 +319,12 @@ async function openPPTViewer(chapterIndex) {
 
     if (rec.slide_prefix && rec.slides_count > 0) {
         // ★ 图片模式（全平台原版）
-        _slideState = { mode: 'images', prefix: rec.slide_prefix, total: rec.slides_count, current: 0 };
-        img.style.display = 'block';
+        _slideState = { mode: 'images', prefix: rec.slide_prefix, total: rec.slides_count, current: -1 };
+        _activeImg = 'A';
+        const imgA = document.getElementById('pptViewerImgA');
+        const imgB = document.getElementById('pptViewerImgB');
+        imgA.style.display = ''; imgA.style.opacity = '0'; imgA.src = '';
+        imgB.style.display = ''; imgB.style.opacity = '0'; imgB.src = '';
         canvas.style.display = 'none';
         if (loading) { loading.style.display = 'none'; }
         if (_pptViewerJS) { try { _pptViewerJS.destroy(); } catch (e) {} _pptViewerJS = null; }
@@ -367,32 +370,43 @@ function showHint() {
     _hintTimer = setTimeout(() => hint.classList.remove('show'), 1500);
 }
 
-// ---- 图片模式 ----
+// ---- 图片模式（双图切换，无闪烁）----
+let _activeImg = 'A';  // 'A' or 'B'
+
 function loadSlide(index) {
     if (!_slideState || _slideState.mode !== 'images') return;
     _slideState.current = index;
 
-    const img = document.getElementById('pptViewerImg');
+    const oldImg = document.getElementById('pptViewerImg' + _activeImg);
+    const newKey = _activeImg === 'A' ? 'B' : 'A';
+    const newImg = document.getElementById('pptViewerImg' + newKey);
     const loading = document.getElementById('pptViewerLoading');
-    img.style.opacity = '0';
-    if (loading) { loading.style.display = 'flex'; loading.textContent = '加载中...'; loading.style.color = '#aaa'; }
 
     const url = getSupabaseSlideURL(_slideState.prefix, index + 1);
-    img.src = url;
-    img.onload = () => {
-        img.style.opacity = '1';
+
+    // 在新图层加载
+    newImg.src = url;
+    newImg.onload = () => {
+        // 加载完成 → 切换：新图层显示，旧图层隐藏
+        newImg.style.opacity = '1';
+        oldImg.style.opacity = '0';
         if (loading) loading.style.display = 'none';
+        _activeImg = newKey;
     };
-    img.onerror = () => {
+    newImg.onerror = () => {
         if (loading) { loading.textContent = '加载失败'; loading.style.color = '#ef4444'; }
     };
 
     updateSlideNav();
     showHint();
 
-    // 预加载相邻页
-    if (index > 0) new Image().src = getSupabaseSlideURL(_slideState.prefix, index);
-    if (index + 2 <= _slideState.total) new Image().src = getSupabaseSlideURL(_slideState.prefix, index + 2);
+    // 预加载相邻页到隐藏的旧图层
+    const nextIdx = index + 1;
+    if (nextIdx < _slideState.total) {
+        const preloadUrl = getSupabaseSlideURL(_slideState.prefix, nextIdx + 1);
+        // 用 Image 对象预加载到浏览器缓存
+        new Image().src = preloadUrl;
+    }
 }
 
 function updateSlideNav() {
@@ -461,7 +475,8 @@ function closePPTViewer() {
     if (_pptViewerJS) { try { _pptViewerJS.destroy(); } catch (e) {} _pptViewerJS = null; }
     _slideState = null;
     document.getElementById('pptViewerOverlay').classList.remove('active');
-    document.getElementById('pptViewerImg').src = '';
+    document.getElementById('pptViewerImgA').src = '';
+    document.getElementById('pptViewerImgB').src = '';
 }
 
 // ==================== 入口 ====================

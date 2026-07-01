@@ -198,8 +198,12 @@ async function handlePPTFileSelected(event) {
     const btn = document.querySelector(`.review-ppt-upload-btn[data-ch="${chIdx}"]`);
     if (btn) { btn.textContent = '⏳ 上传中...'; btn.disabled = true; }
 
+    let slide_prefix = '';
+    let slides_count = 0;
+    let useComRender = false;  // 是否用了 PowerPoint 原版渲染
+
+    // ===== 尝试 ①+②：server 上传 + COM 转换（仅 Windows/localhost 可用） =====
     try {
-        // ① 上传到本地 server（快）
         if (btn) btn.textContent = '⬆ 上传...';
         const form = new FormData();
         form.append('file', file);
@@ -207,7 +211,6 @@ async function handlePPTFileSelected(event) {
         const upJson = await upResp.json();
         if (!upJson.ok) throw new Error(upJson.error);
 
-        // ② 服务端 PowerPoint COM 转 PNG（100% 原版）
         if (btn) btn.textContent = '🖼 转换...';
         const cvResp = await fetch('/api/convert-ppt', {
             method: 'POST',
@@ -215,32 +218,48 @@ async function handlePPTFileSelected(event) {
             body: JSON.stringify({ filename: upJson.filename })
         });
         const cvJson = await cvResp.json();
-        if (!cvJson.ok) throw new Error(cvJson.error);
-
-        // ③ 上传 PPTX 到 Supabase Storage（跨设备备份，失败不影响主流程）
-        if (btn) btn.textContent = '☁ 备份...';
-        let pptxPath = '';
-        try {
-            const sp = `ch${chIdx + 1}/${Date.now()}_${file.name}`;
-            const { data: sbData, error: sbErr } = await Auth.getClient()
-                .storage.from(SUPABASE_BUCKET).upload(sp, file, { cacheControl: '3600', upsert: false });
-            if (!sbErr) pptxPath = sbData.path || sp;
-        } catch (e) { console.warn('Supabase备份失败:', e.message); }
-
-        // ④ 存入 Supabase DB + localStorage（跨设备同步）
-        await setChapterPPT(name, {
-            pptx_path: pptxPath,
-            slide_prefix: cvJson.prefix,
-            slides_count: cvJson.slides,
-        });
-
-        showToast && showToast(`「${name}」上传成功 · ${cvJson.slides} 页 · PowerPoint 原版渲染`, 'success');
-        renderReviewPlan();
-    } catch (err) {
-        console.error(err);
-        showToast && showToast('上传失败: ' + (err.message || '未知错误'), 'error');
-        if (btn) { btn.textContent = '📤'; btn.disabled = false; }
+        if (cvJson.ok) {
+            slide_prefix = cvJson.prefix;
+            slides_count = cvJson.slides;
+            useComRender = true;
+        } else {
+            // COM 不可用（Linux/Render），静默降级
+            console.warn('COM转换不可用，使用PptxViewJS降级:', cvJson.error);
+        }
+    } catch (e) {
+        // server 不可达（网络问题等），也静默降级
+        console.warn('服务器不可达，直接上传云端:', e.message);
     }
+
+    // ===== ③ 上传 PPTX 到 Supabase Storage =====
+    if (btn) btn.textContent = '☁ 上传云端...';
+    let pptxPath = '';
+    try {
+        const sp = `ch${chIdx + 1}/${Date.now()}_${file.name}`;
+        const { data: sbData, error: sbErr } = await Auth.getClient()
+            .storage.from(SUPABASE_BUCKET).upload(sp, file, { cacheControl: '3600', upsert: false });
+        if (!sbErr) pptxPath = sbData.path || sp;
+    } catch (e) { console.warn('Supabase上传失败:', e.message); }
+
+    if (!pptxPath && !useComRender) {
+        showToast && showToast('上传失败：无法连接到云存储', 'error');
+        if (btn) { btn.textContent = '📤'; btn.disabled = false; }
+        event.target.value = ''; return;
+    }
+
+    // ===== ④ 存入 Supabase DB + localStorage =====
+    await setChapterPPT(name, {
+        pptx_path: pptxPath,
+        slide_prefix: slide_prefix,
+        slides_count: slides_count,
+    });
+
+    if (useComRender) {
+        showToast && showToast(`「${name}」上传成功 · ${slides_count} 页 · PowerPoint 原版渲染`, 'success');
+    } else {
+        showToast && showToast(`「${name}」上传成功 · 云端同步 · 非原版渲染`, 'success');
+    }
+    renderReviewPlan();
 
     event.target.value = '';
 }

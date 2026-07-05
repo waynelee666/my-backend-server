@@ -344,9 +344,31 @@ class RequestHandler(BaseHTTPRequestHandler):
             return None
 
     # ---------- 路由 ----------
+    def do_HEAD(self):
+        """响应 UptimeRobot 等监控服务的 HEAD 请求"""
+        parsed = urlparse(self.path)
+        path = parsed.path
+        print(f"  [HEAD] {time.strftime('%H:%M:%S')} {path}")
+        if path == "/api/health":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            return
+        # 静态文件：检查是否存在
+        safe_path = path.lstrip("/")
+        if not safe_path: safe_path = "index.html"
+        file_path = os.path.normpath(os.path.join(SERVER_DIR, safe_path))
+        if file_path.startswith(os.path.normpath(SERVER_DIR)) and os.path.isfile(file_path):
+            self.send_response(200)
+            self.end_headers()
+        else:
+            self.send_response(404)
+            self.end_headers()
+
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
+        print(f"  [GET] {time.strftime('%H:%M:%S')} {path}")
 
         if path == "/api/health":
             self.send_json({

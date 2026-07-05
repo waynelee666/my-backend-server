@@ -45,14 +45,15 @@ async function lookupWordDetail(word, vocabObj) {
 }
 
 async function startVocabStudy() {
+    if (vocabUnit === '__mastered__') { showToast('已背列表无法复习', 'info'); return; }
     studyIsReview = vocabUnit === '__review__';
     studyModeDir = $('#vocabStudyMode')?.value || 'en2cn';
 
     const filtered = studyIsReview
-        ? vocabs.filter(v => v.review === true)
-        : vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
+        ? vocabs.filter(v => v.book === vocabBook && v.review === true)
+        : vocabs.filter(v => v.book === vocabBook && v.unit === vocabUnit && v.part === vocabPart && !v.mastered);
     if (!filtered.length) {
-        showToast(studyIsReview ? '复习表已清空 🎉' : '当前单元没有单词，请先添加或导入', 'error');
+        showToast(studyIsReview ? '复习表已清空 🎉' : '当前单元没有待背单词', 'error');
         return;
     }
 
@@ -64,6 +65,8 @@ async function startVocabStudy() {
                     count, modeDir: studyModeDir };
 
     // 进入加载状态
+    $('#vocabBookRow').style.display = 'none';
+    $('#vocabStatsRow').style.display = 'none';
     $('#vocabList').style.display = 'none';
     $('#vocabUnitRow').style.display = 'none';
     $('#vocabPartRow').style.display = 'none';
@@ -268,6 +271,9 @@ function renderStudyEnd() {
 }
 
 async function exitStudyMode() {
+    checkActive = false;
+    $('#vocabBookRow').style.display = '';
+    $('#vocabStatsRow').style.display = '';
     $('#vocabList').style.display = '';
     $('#vocabUnitRow').style.display = '';
     $('#vocabPartRow').style.display = '';
@@ -277,22 +283,226 @@ async function exitStudyMode() {
     renderVocabView();
 }
 
+// ==================== 检测模式（双轮） ====================
+let checkActive = false;
+let checkWords = [];
+let checkIndex = 0;
+let checkRound = 1;        // 1=en→cn, 2=cn→en
+let checkFlipped = false;
+let checkResults = {};     // { word_id: { round1: bool, round2: bool } }
+
+async function startCheckMode() {
+    const isReview = vocabUnit === '__review__';
+    const isMastered = vocabUnit === '__mastered__';
+    if (isReview || isMastered) {
+        showToast('检测模式仅适用于普通单元', 'info'); return;
+    }
+    const pool = vocabs.filter(v => v.book === vocabBook && v.unit === vocabUnit && v.part === vocabPart && !v.mastered);
+    if (!pool.length) { showToast('当前单元没有待检测单词', 'error'); return; }
+
+    const rawCount = parseInt($('#vocabStudyCount')?.value || '0');
+    const count = rawCount > 0 ? Math.min(rawCount, pool.length) : pool.length;
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    checkWords = shuffled.slice(0, count);
+    checkIndex = 0;
+    checkRound = 1;
+    checkFlipped = false;
+    checkResults = {};
+    checkActive = true;
+
+    // 隐藏列表，显示检测界面
+    $('#vocabList').style.display = 'none';
+    $('#vocabUnitRow').style.display = 'none';
+    $('#vocabPartRow').style.display = 'none';
+    document.querySelector('.vocab-actions').style.display = 'none';
+    $('#vocabStudy').style.display = '';
+    renderCheckCard();
+}
+
+function renderCheckCard() {
+    if (!checkActive) return;
+    const container = $('#vocabStudy');
+
+    // 第二轮开始提示
+    if (checkRound === 2 && checkIndex === 0 && !checkFlipped) {
+        showToast('🔁 第二轮：看中文说英文', 'info');
+    }
+
+    // 当前轮结束 → 切换或结算
+    if (checkIndex >= checkWords.length) {
+        if (checkRound === 1) {
+            // 进入第二轮
+            checkRound = 2;
+            checkIndex = 0;
+            checkFlipped = false;
+            showToast('🔁 进入第二轮：看中文说英文', 'info');
+            renderCheckCard();
+            return;
+        } else {
+            // 两轮全部完成 → 结算
+            renderCheckEnd();
+            return;
+        }
+    }
+
+    const word = checkWords[checkIndex];
+    const progress = `🔍 第${checkRound}轮 · ${checkIndex + 1}/${checkWords.length}`;
+    const pct = checkWords.length > 0 ? Math.round(checkIndex / checkWords.length * 100) : 0;
+    const isCn2en = checkRound === 2;
+    const frontText = isCn2en ? esc(word.meaning) : esc(word.word);
+    const backText = isCn2en ? esc(word.word) : esc(word.meaning);
+    const frontHint = isCn2en ? '回想英文拼写 ✏️' : '点击翻转 👆';
+
+    container.innerHTML = `
+        <div class="vocab-flashcard">
+            <div class="vocab-flashcard__progress" style="color:var(--color-primary);font-weight:600">${progress}</div>
+            <div class="vocab-flashcard__bar">
+                <div class="vocab-flashcard__fill" style="width:${pct}%"></div>
+            </div>
+            <div class="vocab-flashcard__card ${checkFlipped ? 'vocab-flashcard__card--flipped' : ''}" id="vocabFlashCard">
+                <div class="vocab-flashcard__front">
+                    <div class="${isCn2en ? 'vocab-flashcard__meaning' : 'vocab-flashcard__word'}">${frontText}</div>
+                    <div class="vocab-flashcard__hint">${frontHint}</div>
+                </div>
+                <div class="vocab-flashcard__back" style="${checkFlipped ? '' : 'display:none'}">
+                    <div class="${isCn2en ? 'vocab-flashcard__word' : 'vocab-flashcard__meaning'}">${backText}</div>
+                </div>
+            </div>
+            <div class="vocab-flashcard__buttons" id="vocabFlashBtns" style="${checkFlipped ? '' : 'display:none'}">
+                <button class="vocab-flashcard__btn vocab-flashcard__btn--no" id="vocabBtnNo">不太熟 ❌</button>
+                <button class="vocab-flashcard__btn vocab-flashcard__btn--yes" id="vocabBtnYes">已掌握 ✅</button>
+            </div>
+            <div class="vocab-flashcard__exit">
+                <button class="btn btn--outline btn--sm" id="vocabCheckExitBtn">← 返回列表</button>
+            </div>
+        </div>
+    `;
+
+    const card = document.getElementById('vocabFlashCard');
+    if (card) card.addEventListener('click', () => flipCheckCard());
+    if (checkFlipped) {
+        const btnYes = document.getElementById('vocabBtnYes');
+        const btnNo = document.getElementById('vocabBtnNo');
+        if (btnYes) btnYes.addEventListener('click', () => checkAnswer(true));
+        if (btnNo) btnNo.addEventListener('click', () => checkAnswer(false));
+    }
+    const exitBtn = document.getElementById('vocabCheckExitBtn');
+    if (exitBtn) exitBtn.addEventListener('click', () => { checkActive = false; exitStudyMode(); });
+}
+
+function flipCheckCard() {
+    if (!checkActive) return;
+    if (!checkFlipped) { checkFlipped = true; renderCheckCard(); }
+}
+
+async function checkAnswer(passed) {
+    if (!checkActive) return;
+    const word = checkWords[checkIndex];
+    const key = word.id;
+    if (!checkResults[key]) checkResults[key] = {};
+
+    if (checkRound === 1) {
+        checkResults[key].round1 = passed;
+    } else {
+        checkResults[key].round2 = passed;
+    }
+
+    // 第二轮结束后判定
+    if (checkRound === 2) {
+        const r1 = checkResults[key].round1;
+        const r2 = checkResults[key].round2;
+        const mastered = r1 === true && r2 === true;
+        if (mastered) {
+            try {
+                await DS.update('vocabulary', word.id, { mastered: true });
+                const v = vocabs.find(x => x.id === word.id);
+                if (v) v.mastered = true;
+            } catch (e) { console.warn('更新已背状态失败:', e); }
+        }
+    }
+
+    checkFlipped = false;
+    checkIndex++;
+    renderCheckCard();
+}
+
+function renderCheckEnd() {
+    checkActive = false;
+    const total = checkWords.length;
+    let masteredCount = 0;
+    checkWords.forEach(w => {
+        const r = checkResults[w.id];
+        if (r && r.round1 === true && r.round2 === true) masteredCount++;
+    });
+    const pct = total > 0 ? Math.round(masteredCount / total * 100) : 0;
+    let emoji = '🎉', message = '太厉害了！';
+    if (pct < 50) { emoji = '💪'; message = '继续加油！'; }
+    else if (pct < 80) { emoji = '👍'; message = '不错，继续努力！'; }
+
+    const container = $('#vocabStudy');
+    container.innerHTML = `
+        <div class="vocab-study-end">
+            <div class="vocab-study-end__emoji">${emoji}</div>
+            <div class="vocab-study-end__message">${message}</div>
+            <div class="vocab-study-end__score">
+                <span class="vocab-study-end__big">${masteredCount}</span>
+                <span>个已背 / ${total} 个总词</span>
+            </div>
+            <div class="vocab-study-end__stats">
+                <div class="vocab-study-end__stat vocab-study-end__stat--yes">
+                    <span>✅ 已掌握（两轮通过）</span><strong>${masteredCount}</strong>
+                </div>
+                <div class="vocab-study-end__stat vocab-study-end__stat--no">
+                    <span>❌ 未通过</span><strong>${total - masteredCount}</strong>
+                </div>
+            </div>
+            <div class="vocab-study-end__buttons">
+                <button class="btn btn--primary" id="vocabCheckAgain">🔁 再检一次</button>
+                <button class="btn btn--outline" id="vocabCheckBack">📋 返回列表</button>
+            </div>
+        </div>
+    `;
+    document.getElementById('vocabCheckAgain').addEventListener('click', () => {
+        checkActive = true;
+        checkIndex = 0; checkRound = 1; checkFlipped = false; checkResults = {};
+        checkWords = checkWords.sort(() => Math.random() - 0.5);
+        renderCheckCard();
+    });
+    document.getElementById('vocabCheckBack').addEventListener('click', exitStudyMode);
+}
+
+// 检测模式按钮
+$('#vocabCheckBtn')?.addEventListener('click', startCheckMode);
+
 // 键盘快捷键：Enter 翻转，左右箭头作答
 document.addEventListener('keydown', e => {
-    if ($('#vocabStudy').style.display === 'none') return;
+    const studyVisible = $('#vocabStudy').style.display !== 'none';
+    if (!studyVisible) return;
+
+    // 检测模式快捷键
+    if (checkActive) {
+        if (checkIndex >= checkWords.length) return;
+        if (!checkFlipped && e.key === 'Enter') {
+            e.preventDefault(); flipCheckCard();
+        } else if (checkFlipped) {
+            if (e.key === 'ArrowLeft') { e.preventDefault(); checkAnswer(true); }
+            else if (e.key === 'ArrowRight') { e.preventDefault(); checkAnswer(false); }
+        }
+        return;
+    }
+
+    // 复习模式快捷键
     if (studyIndex >= studyWords.length) return;
     if (!studyFlipped && e.key === 'Enter') {
         e.preventDefault();
         flipCard();
     } else if (studyFlipped === true) {
-        // 翻到背面后：Enter 查 AI，左右箭头作答
         if (e.key === 'Enter') {
             e.preventDefault();
             flipCard();
         } else if (e.key === 'ArrowLeft') { e.preventDefault(); answerCard(true); }
         else if (e.key === 'ArrowRight') { e.preventDefault(); answerCard(false); }
     } else if (studyFlipped === 'ai') {
-        // AI 详情已显示：左右箭头作答
         if (e.key === 'ArrowLeft') { e.preventDefault(); answerCard(true); }
         else if (e.key === 'ArrowRight') { e.preventDefault(); answerCard(false); }
     }
@@ -321,7 +531,7 @@ let practiceFullPool = [];       // 保存全量词池供"换主题"使用
 function getAvailableUnits() {
     const combos = new Set();
     vocabs.forEach(v => {
-        if (v.unit && v.part) combos.add(`${v.unit}-${v.part}`);
+        if (v.book === vocabBook && v.unit && v.part && !v.mastered) combos.add(`${v.unit}-${v.part}`);
     });
     // 按 U1-P1, U1-P2, U2-P1, ... 排序
     return [...combos].sort((a, b) => {
@@ -333,6 +543,9 @@ function getAvailableUnits() {
 }
 
 function enterPracticeMode() {
+    if (vocabUnit === '__mastered__') { showToast('已背列表无法练习', 'info'); return; }
+    $('#vocabBookRow').style.display = 'none';
+    $('#vocabStatsRow').style.display = 'none';
     $('#vocabList').style.display = 'none';
     $('#vocabUnitRow').style.display = 'none';
     $('#vocabPartRow').style.display = 'none';
@@ -575,7 +788,7 @@ $('#practiceStartBtn')?.addEventListener('click', async () => {
     }
     practiceDifficulty = $('#practiceDifficulty')?.value || 'medium';
     practiceWordRange = $('#practiceWordRange')?.value || 'all';
-    const pool = vocabs.filter(v => selectedUnits.has(`${v.unit}-${v.part}`));
+    const pool = vocabs.filter(v => v.book === vocabBook && selectedUnits.has(`${v.unit}-${v.part}`) && !v.mastered);
     if (!pool.length) {
         showToast('选中范围内没有单词', 'error');
         return;
@@ -879,6 +1092,8 @@ function exitPracticeMode() {
     practiceWordRange = 'all';
     selectedUnits.clear();
     $('#vocabPractice').style.display = 'none';
+    $('#vocabBookRow').style.display = '';
+    $('#vocabStatsRow').style.display = '';
     $('#vocabList').style.display = '';
     $('#vocabUnitRow').style.display = '';
     $('#vocabPartRow').style.display = '';

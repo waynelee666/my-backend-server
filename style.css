@@ -470,6 +470,33 @@ textarea.form-input { resize:vertical; }
 .thought-card:hover { box-shadow:0 2px 10px var(--color-shadow); }
 
 /* ==================== 单词 ==================== */
+/* 词书选择器 */
+.vocab-book-row { display:flex; gap:12px; margin-bottom:14px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
+.vocab-book-btn { display:flex; flex-direction:column; align-items:center; gap:4px; padding:14px 22px; border:2px solid var(--color-border); border-radius:16px; background:#fff; font-family:inherit; cursor:pointer; transition:all var(--transition); min-width:130px; flex-shrink:0; }
+.vocab-book-btn:hover { border-color:var(--color-primary); box-shadow:0 2px 12px var(--color-shadow); transform:translateY(-2px); }
+.vocab-book-btn--active { border-color:var(--color-primary); background:linear-gradient(135deg,#eef2ff,#faf5ff); box-shadow:0 2px 12px rgba(79,70,229,.15); transform:translateY(-2px); }
+.vocab-book-btn__icon { font-size:1.8rem; }
+.vocab-book-btn__label { font-size:.9rem; font-weight:600; color:var(--color-text); }
+.vocab-book-btn--active .vocab-book-btn__label { color:var(--color-primary); }
+.vocab-book-btn__count { font-size:.72rem; color:var(--color-text-light); background:var(--color-bg-alt); padding:2px 10px; border-radius:12px; }
+.vocab-book-btn--active .vocab-book-btn__count { background:var(--color-primary); color:#fff; }
+
+/* 统计栏 */
+.vocab-stats-row { display:flex; gap:16px; margin-bottom:12px; }
+.vocab-stat { font-size:.82rem; color:var(--color-text-light); }
+.vocab-stat strong { color:var(--color-primary); font-size:.95rem; }
+
+/* 已背按钮 */
+.vocab-unit-btn--mastered { border-color:#bbf7d0; color:#065f46; font-weight:600; }
+.vocab-unit-btn--mastered:hover { border-color:#10b981; color:#059669; background:#ecfdf5; }
+.vocab-unit-btn--mastered.vocab-unit-btn--active { background:#10b981; color:#fff; border-color:#10b981; }
+
+/* 空词书引导 */
+.vocab-empty-book { display:flex; flex-direction:column; align-items:center; gap:12px; padding:48px 24px; text-align:center; background:linear-gradient(135deg,#f8fafc,#f0f4ff); border:2px dashed var(--color-border); border-radius:16px; margin-top:8px; }
+.vocab-empty-book__icon { font-size:3rem; }
+.vocab-empty-book h3 { font-size:1.1rem; font-weight:700; color:var(--color-text); margin:0; }
+.vocab-empty-book p { font-size:.85rem; color:var(--color-text-light); margin:0; max-width:280px; }
+
 .vocab-unit-row { display:flex; gap:6px; margin-bottom:10px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
 .vocab-unit-btn { padding:6px 16px; border:1px solid var(--color-border); border-radius:20px; background:#fff; font-family:inherit; font-size:.85rem; font-weight:500; cursor:pointer; white-space:nowrap; transition:all var(--transition); color:var(--color-text-light); }
 .vocab-unit-btn:hover { border-color:var(--color-primary); color:var(--color-primary); }
@@ -595,6 +622,9 @@ textarea.form-input { resize:vertical; }
 }
 
 @media (max-width:480px) {
+    .vocab-book-btn { padding:10px 14px; min-width:100px; }
+    .vocab-book-btn__icon { font-size:1.4rem; }
+    .vocab-book-btn__label { font-size:.78rem; }
     .vocab-unit-btn { padding:5px 12px; font-size:.78rem; }
     .vocab-flashcard__card { min-height:180px; }
     .vocab-flashcard__word { font-size:1.3rem; }

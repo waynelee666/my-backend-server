@@ -11,8 +11,12 @@ let currentTab = 'home';
 let todoDate = new Date().toISOString().slice(0, 10);
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 let selectedCalDate = null;
-let vocabUnit = 'U1', vocabPart = 'P1', vocabEditId = null;
+let vocabBook = '六级', vocabUnit = 'U1', vocabPart = 'P1', vocabEditId = null;
 let vocabEditMode = false;  // 编辑模式：显示复选框和编辑/删除按钮
+const VOCAB_BOOKS = [
+    { key: '六级', label: '六级', emoji: '📘' },
+    { key: '大英四', label: '大英四', emoji: '📗' },
+];
 /** 查找相似科目名（"微积分" ≈ "微积分（甲）Ⅱ"） */
 function findSimilarSubject(name) {
     if (!name) return null;
@@ -483,8 +487,8 @@ async function saveEditThought(id) { await saveScriptEditor(); }
 // ==================== 单词视图 ====================
 async function autoDedupVocab(unit, part) {
     // 仅在非复习模式下自动去重
-    if (unit === '__review__') return false;
-    const target = vocabs.filter(v => v.unit === unit && v.part === part);
+    if (unit === '__review__' || unit === '__mastered__') return false;
+    const target = vocabs.filter(v => v.book === vocabBook && v.unit === unit && v.part === part);
     if (target.length < 2) return false;
     const seen = new Map();
     const toDelete = [];
@@ -512,33 +516,70 @@ async function autoDedupVocab(unit, part) {
 
 function renderVocabView() {
     const isReview = vocabUnit === '__review__';
-    // 后台自动去重，不阻塞渲染；完成后自动刷新
-    if (!isReview) {
+    const isMastered = vocabUnit === '__mastered__';
+    const isSpecial = isReview || isMastered;
+
+    // 后台自动去重，不阻塞渲染
+    if (!isSpecial) {
         autoDedupVocab(vocabUnit, vocabPart).then(changed => {
             if (changed) renderVocabView();
         }).catch(e => console.warn('[去重] 后台去重失败:', e));
     }
-    const filtered = isReview
-        ? vocabs.filter(v => v.review === true)
-        : vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
-    const countEl = $('#vocabCount');
-    const label = isReview ? '🔄 复习' : `${vocabUnit} ${vocabPart}`;
-    if (countEl) countEl.textContent = filtered.length ? `${label} · ${filtered.length}词` : '';
 
-    // Unit 选择器：最前面加复习按钮
-    const reviewCount = vocabs.filter(v => v.review === true).length;
+    // === 词书选择器 ===
+    const bookHTML = VOCAB_BOOKS.map(b => {
+        const cnt = vocabs.filter(v => v.book === b.key).length;
+        const mastered = vocabs.filter(v => v.book === b.key && v.mastered === true).length;
+        const cls = b.key === vocabBook ? ' vocab-book-btn--active' : '';
+        return `<button class="vocab-book-btn${cls}" data-book="${b.key}">
+            <span class="vocab-book-btn__icon">${b.emoji}</span>
+            <span class="vocab-book-btn__label">${b.label}</span>
+            <span class="vocab-book-btn__count">${cnt} 词 · 已背 ${mastered}</span>
+        </button>`;
+    }).join('');
+    $('#vocabBookRow').innerHTML = bookHTML;
+
+    // === 统计栏 ===
+    const bookTotal = vocabs.filter(v => v.book === vocabBook).length;
+    const bookMastered = vocabs.filter(v => v.book === vocabBook && v.mastered === true).length;
+    $('#vocabStatsRow').innerHTML = `
+        <span class="vocab-stat">📚 总词数 <strong>${bookTotal}</strong></span>
+        <span class="vocab-stat">✅ 已背 <strong>${bookMastered}</strong></span>
+    `;
+
+    // === 过滤 ===
+    let filtered;
+    if (isReview) {
+        filtered = vocabs.filter(v => v.book === vocabBook && v.review === true);
+    } else if (isMastered) {
+        filtered = vocabs.filter(v => v.book === vocabBook && v.mastered === true);
+    } else {
+        filtered = vocabs.filter(v => v.book === vocabBook && v.unit === vocabUnit && v.part === vocabPart && !v.mastered);
+    }
+    const countEl = $('#vocabCount');
+    let label;
+    if (isReview) label = '🔄 复习';
+    else if (isMastered) label = '✅ 已背';
+    else label = `${vocabUnit} ${vocabPart}`;
+    if (countEl) countEl.textContent = filtered.length ? `${label} · ${filtered.length}词` : label;
+
+    // === Unit 选择器 ===
+    const reviewCount = vocabs.filter(v => v.book === vocabBook && v.review === true).length;
+    const masteredCount = vocabs.filter(v => v.book === vocabBook && v.mastered === true).length;
     const reviewCls = isReview ? ' vocab-unit-btn--review vocab-unit-btn--active' : ' vocab-unit-btn--review';
+    const masteredCls = isMastered ? ' vocab-unit-btn--mastered vocab-unit-btn--active' : ' vocab-unit-btn--mastered';
     let unitHTML = `<button class="vocab-unit-btn${reviewCls}" data-unit="__review__">🔄 复习<span class="vocab-unit-count">${reviewCount}</span></button>`;
+    unitHTML += `<button class="vocab-unit-btn${masteredCls}" data-unit="__mastered__">✅ 已背<span class="vocab-unit-count">${masteredCount}</span></button>`;
     const units = ['U1','U2','U3','U4','U5','U6','U7','U8'];
     unitHTML += units.map(u => {
-        const cnt = vocabs.filter(v => v.unit === u).length;
+        const cnt = vocabs.filter(v => v.book === vocabBook && v.unit === u && !v.mastered).length;
         const cls = u === vocabUnit ? ' vocab-unit-btn--active' : '';
         return `<button class="vocab-unit-btn${cls}" data-unit="${u}">${u}<span class="vocab-unit-count">${cnt}</span></button>`;
     }).join('');
     $('#vocabUnitRow').innerHTML = unitHTML;
 
-    // Part 选择器：复习模式隐藏
-    if (isReview) {
+    // === Part 选择器 ===
+    if (isSpecial) {
         $('#vocabPartRow').style.display = 'none';
     } else {
         $('#vocabPartRow').style.display = '';
@@ -548,36 +589,54 @@ function renderVocabView() {
         }).join('');
     }
 
-    // 编辑工具栏
+    // === 编辑工具栏 ===
     const editTools = $('#vocabEditTools');
-    if (editTools) {
-        editTools.style.display = vocabEditMode && !isReview ? '' : 'none';
-    }
-    // 编辑按钮：复习模式隐藏
+    if (editTools) editTools.style.display = vocabEditMode && !isSpecial ? '' : 'none';
     const editBtn = $('#vocabEditBtn');
     if (editBtn) {
-        if (isReview) {
-            editBtn.style.display = 'none';
-        } else {
+        if (isSpecial) { editBtn.style.display = 'none'; }
+        else {
             editBtn.style.display = '';
             editBtn.textContent = vocabEditMode ? '✏️ 完成' : '✏️ 编辑';
             editBtn.classList.toggle('btn--active', vocabEditMode);
         }
     }
 
+    // === 检测按钮 ===
+    const checkBtn = $('#vocabCheckBtn');
+    if (checkBtn) checkBtn.style.display = isSpecial ? 'none' : '';
+
+    // === 列表 ===
     const listEl = $('#vocabList');
     if (!filtered.length) {
-        listEl.innerHTML = isReview
-            ? '<p class="empty-text">🎉 复习表已清空，没有需要复习的条目</p>'
-            : '<p class="empty-text">还没有单词或短语，点击上方添加或导入 📖</p>';
+        if (isReview) {
+            listEl.innerHTML = '<p class="empty-text">🎉 复习表已清空，没有需要复习的条目</p>';
+        } else if (isMastered) {
+            listEl.innerHTML = '<p class="empty-text">📭 还没有已背单词，去检测模式里通关吧 💪</p>';
+        } else if (bookTotal === 0) {
+            listEl.innerHTML = `<div class="vocab-empty-book">
+                <div class="vocab-empty-book__icon">${VOCAB_BOOKS.find(b => b.key === vocabBook)?.emoji || '📖'}</div>
+                <h3>${vocabBook}词书还是空的</h3>
+                <p>添加或导入单词开始学习吧</p>
+                <div style="display:flex;gap:8px;margin-top:4px">
+                    <button class="btn btn--primary btn--sm" id="vocabEmptyAddBtn">➕ 添加单词</button>
+                    <button class="btn btn--outline btn--sm" id="vocabEmptyImportBtn">📥 批量导入</button>
+                </div>
+            </div>`;
+            $('#vocabEmptyAddBtn')?.addEventListener('click', () => { vocabEditId = null; openVocabEditModal(null); });
+            $('#vocabEmptyImportBtn')?.addEventListener('click', () => { $('#vocabImportBtn').click(); });
+        } else {
+            listEl.innerHTML = '<p class="empty-text">本单元还没有单词，点击上方添加或导入 📖</p>';
+        }
     } else {
+        const showCheck = !isSpecial && vocabEditMode;
         listEl.innerHTML = filtered.map(v => `
             <div class="vocab-word-card" data-id="${v.id}">
-                ${vocabEditMode && !isReview ? `<input type="checkbox" class="vocab-word-card__check" data-id="${v.id}" title="选中">` : ''}
+                ${showCheck ? `<input type="checkbox" class="vocab-word-card__check" data-id="${v.id}" title="选中">` : ''}
                 <div class="vocab-word-card__word">${esc(v.word)}</div>
                 <div class="vocab-word-card__meaning">${esc(v.meaning)}</div>
                 <div class="vocab-word-card__unit-label">${v.unit} ${v.part}</div>
-                ${vocabEditMode && !isReview ? `
+                ${showCheck ? `
                 <div class="vocab-word-card__actions" style="opacity:1">
                     <button data-action="edit-vocab" data-id="${v.id}" title="编辑">✏️</button>
                     <button class="btn-del" data-action="delete-vocab" data-id="${v.id}" title="删除">🗑️</button>
@@ -689,6 +748,20 @@ $('#vocabDetailModal').addEventListener('click', e => {
 });
 
 // ==================== 单词事件绑定 ====================
+$('#vocabBookRow').addEventListener('click', e => {
+    const btn = e.target.closest('.vocab-book-btn');
+    if (btn) {
+        const book = btn.dataset.book;
+        if (book && book !== vocabBook) {
+            vocabBook = book;
+            vocabUnit = 'U1';
+            vocabPart = 'P1';
+            vocabEditMode = false;
+            vocabSelected.clear();
+            renderVocabView();
+        }
+    }
+});
 $('#vocabUnitRow').addEventListener('click', e => {
     const btn = e.target.closest('.vocab-unit-btn');
     if (btn) { vocabUnit = btn.dataset.unit; vocabEditMode = false; vocabSelected.clear(); renderVocabView(); }
@@ -743,9 +816,9 @@ $('#vocabStudyBtn').addEventListener('click', () => {
 
 // 去重：删除当前 unit+part 中重复的单词，保留最早创建的
 $('#vocabDedupBtn').addEventListener('click', async () => {
-    const isReview = vocabUnit === '__review__';
-    if (isReview) { showToast('复习模式下不支持去重', 'info'); return; }
-    const target = vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
+    const isReview = vocabUnit === '__review__' || vocabUnit === '__mastered__';
+    if (isReview) { showToast('特殊列表不支持去重', 'info'); return; }
+    const target = vocabs.filter(v => v.book === vocabBook && v.unit === vocabUnit && v.part === vocabPart);
     if (target.length < 2) { showToast(`${vocabUnit} ${vocabPart} 条目不足，无需去重`, 'info'); return; }
     const seen = new Map(); // word.lower() -> vocab item
     const toDelete = [];
@@ -773,9 +846,9 @@ $('#vocabDedupBtn').addEventListener('click', async () => {
 
 // AI 重新翻译当前单元
 $('#vocabRetranslateBtn').addEventListener('click', async () => {
-    const isReview = vocabUnit === '__review__';
-    if (isReview) { showToast('复习模式下不支持重译', 'info'); return; }
-    const target = vocabs.filter(v => v.unit === vocabUnit && v.part === vocabPart);
+    const isReview = vocabUnit === '__review__' || vocabUnit === '__mastered__';
+    if (isReview) { showToast('特殊列表不支持重译', 'info'); return; }
+    const target = vocabs.filter(v => v.book === vocabBook && v.unit === vocabUnit && v.part === vocabPart);
     if (!target.length) { showToast(`${vocabUnit} ${vocabPart} 没有条目`, 'info'); return; }
     if (!confirm(`${vocabUnit} ${vocabPart} 共 ${target.length} 个条目，将用 AI 重新翻译全部中文释义，确认？`)) return;
 
@@ -894,9 +967,9 @@ $('#vocabEditSave').addEventListener('click', async () => {
     const part = $('#vocabEditPart').value;
     try {
         if (vocabEditId) {
-            await DS.update('vocabulary', vocabEditId, { unit, part, word, meaning });
+            await DS.update('vocabulary', vocabEditId, { book: vocabBook, unit, part, word, meaning });
         } else {
-            await DS.create('vocabulary', { unit, part, word, meaning });
+            await DS.create('vocabulary', { book: vocabBook, unit, part, word, meaning });
         }
         await refreshAll();
         closeVocabEditModal();
@@ -1043,7 +1116,7 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
         const skipped = [];
         for (const t of translations) {
             if (t.word && t.meaning) {
-                await DS.create('vocabulary', { unit, part, word: t.word, meaning: t.meaning });
+                await DS.create('vocabulary', { book: vocabBook, unit, part, word: t.word, meaning: t.meaning });
                 count++;
             } else {
                 skipped.push(t.word || '?');

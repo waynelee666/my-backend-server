@@ -1,5 +1,5 @@
-﻿/* ============================================================
-   TaskFlow - 瀛︿笟绠＄悊 鏍峰紡琛?   ============================================================ */
+/* ============================================================
+   TaskFlow - 学业管理 样式表   ============================================================ */
 :root {
     --color-primary: #4f46e5; --color-primary-dark: #4338ca;
     --color-text: #1e293b; --color-text-light: #64748b;
@@ -16,7 +16,7 @@ body { font-family:var(--font-sans); color:var(--color-text); background:var(--c
 a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .container { max-width:var(--max-width); margin:0 auto; padding:0 24px; }
 
-/* 鎸夐挳 */
+/* 按钮 */
 .btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border-radius:8px; font-size:.9rem; font-weight:600; font-family:inherit; border:2px solid transparent; cursor:pointer; transition:all var(--transition); }
 .btn--primary { background:var(--color-primary); color:#fff; }
 .btn--primary:hover { background:var(--color-primary-dark); }
@@ -28,7 +28,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .btn--danger { color:var(--color-danger); border-color:var(--color-danger); }
 .btn--danger:hover { background:var(--color-danger); color:#fff; }
 
-/* 瀵艰埅鏍?*/
+/* 导航栏*/
 .header { position:fixed; top:0; left:0; width:100%; height:var(--header-height); background:rgba(255,255,255,.9); backdrop-filter:blur(10px); border-bottom:1px solid var(--color-border); z-index:100; }
 .nav { display:flex; align-items:center; justify-content:space-between; height:100%; gap:24px; }
 .nav__logo { font-size:1.2rem; font-weight:700; color:var(--color-primary); cursor:pointer; white-space:nowrap; }
@@ -42,7 +42,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .nav__link--logout { color:var(--color-danger); font-size:.88rem; font-weight:500; }
 .nav__link--logout:hover { color:#dc2626; }
 
-/* 涓夌偣鑿滃崟锛堟墜鏈虹锛?*/
+/* 三点菜单（手机端）*/
 .nav__user { position: relative; display: flex; align-items: center; }
 .nav__more-btn { display: none; width: 36px; height: 36px; border: none; background: none; font-size: 1.4rem; cursor: pointer; color: var(--color-text-light); border-radius: 8px; line-height: 1; }
 .nav__more-btn:hover { background: var(--color-bg-alt); }
@@ -52,7 +52,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .nav__dropdown a { display: block; padding: 8px 4px; font-size: .85rem; color: var(--color-danger); text-decoration: none; border-radius: 6px; }
 .nav__dropdown a:hover { background: #fef2f2; }
 
-/* 涓诲唴瀹瑰尯 */
+/* 主内容区 */
 .main { margin-top:calc(var(--header-height) + 24px); margin-bottom:40px; min-height:calc(100vh - var(--header-height) - 64px); }
 .view { display:none; }
 .view.active { display:block; }
@@ -64,7 +64,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .date-input:focus { border-color:var(--color-primary); }
 .empty-text { text-align:center; color:var(--color-text-light); padding:40px 0; font-size:.9rem; }
 
-/* ==================== 寰呭姙鍒楄〃 ==================== */
+/* ==================== 待办列表 ==================== */
 .day-events { margin-bottom:16px; }
 .day-event-item { padding:10px 14px; margin-bottom:4px; border-radius:8px; font-size:.85rem; display:flex; align-items:center; gap:8px; }
 .day-event-item--exam { background:#fef2f2; color:#991b1b; border-left:3px solid var(--color-exam); }
@@ -96,15 +96,15 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .todo-card__actions button:hover { background:var(--color-bg-alt); }
 .todo-card__actions .btn-del:hover { background:#fef2f2; color:var(--color-danger); border-color:#fecaca; }
 .priority-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; vertical-align:middle; }
-.priority--楂?{ background:var(--color-danger); }
-.priority--涓?{ background:var(--color-warning); }
-.priority--浣?{ background:var(--color-success); }
+.priority--高 { background:var(--color-danger); }
+.priority--中 { background:var(--color-warning); }
+.priority--低 { background:var(--color-success); }
 .status-badge { font-size:.75rem; padding:2px 8px; border-radius:12px; font-weight:500; }
 .status-badge--todo { background:#f1f5f9; color:#64748b; }
 .status-badge--doing { background:#fef3c7; color:#b45309; }
 .status-badge--done { background:#d1fae5; color:#065f46; }
 
-/* ==================== 鏃ュ巻 ==================== */
+/* ==================== 日历 ==================== */
 .cal__nav { display:flex; align-items:center; gap:8px; }
 .cal__month-label { font-size:1rem; font-weight:600; min-width:140px; text-align:center; }
 .cal__weekdays { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:.7rem; font-weight:600; color:var(--color-text-light); margin-bottom:2px; padding:2px 0; }
@@ -122,7 +122,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .cal__dot--deadline { background:var(--color-deadline); }
 .cal__dot--other { background:var(--color-other); }
 
-/* 鏃ユ湡鍗＄墖 */
+/* 日期卡片 */
 .day-card { margin-top:16px; background:var(--color-bg); border:1px solid var(--color-border); border-radius:var(--radius); padding:20px; }
 .day-card__header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
 .day-card__date { font-weight:700; font-size:1rem; }
@@ -138,7 +138,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .day-card__event button:hover { color:var(--color-danger); }
 .day-card__actions { display:flex; gap:8px; }
 
-/* ==================== 绉戠洰 ==================== */
+/* ==================== 科目 ==================== */
 .subject-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
 .subject-card { padding:20px 24px; border:1px solid var(--color-border); border-radius:var(--radius); background:var(--color-bg); cursor:pointer; transition:all var(--transition); }
 .subject-card:hover { box-shadow:0 4px 16px var(--color-shadow); transform:translateY(-2px); }
@@ -151,7 +151,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .subject-card__move button:hover:not(:disabled) { background:var(--color-bg-alt); color:var(--color-primary); }
 .subject-card__move button:disabled { opacity:.3; cursor:default; }
 
-/* 缁╃偣鍒嗛厤 */
+/* 绩点分配 */
 .component-list { display:flex; flex-direction:column; gap:8px; }
 .component-item { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--color-border); border-radius:8px; }
 .component-item input { flex:1; padding:6px 10px; border:1px solid var(--color-border); border-radius:4px; font-family:inherit; font-size:.85rem; }
@@ -161,7 +161,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .total-bar--ok { background:#ecfdf5; color:#065f46; }
 .total-bar--bad { background:#fef2f2; color:#991b1b; }
 
-/* ==================== 妯℃€佹 ==================== */
+/* ==================== 模态框 ==================== */
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:200; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(2px); }
 .modal { background:#fff; border-radius:var(--radius); width:100%; max-width:480px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.15); }
 .modal--lg { max-width:600px; }
@@ -185,7 +185,7 @@ textarea.form-input { resize:vertical; }
 }
 .gpa-summary strong { font-size: 1.8rem; margin: 0 4px; }
 
-/* ==================== 棣栭〉 ==================== */
+/* ==================== 首页 ==================== */
 .back-btn { font-weight: 700; font-size: 1rem; padding: 6px 12px; margin-right: 4px; }
 .home-header { text-align: center; padding: 24px 0 8px; }
 .home-greeting { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
@@ -218,18 +218,18 @@ textarea.form-input { resize:vertical; }
 .home-nav-card__icon { font-size: 1.8rem; }
 .home-nav-card__label { font-size: .85rem; font-weight: 600; color: var(--color-text); }
 
-/* ==================== 鍝嶅簲寮?==================== */
+/* ==================== 响应式 ==================== */
 
-/* ---- 瑙︽懜璁惧锛氬缁堟樉绀烘搷浣滄寜閽紙鏃?hover锛?--- */
+/* ---- 触摸设备：始终显示操作按钮（无 hover）--- */
 @media (hover: none) {
     .todo-card__actions { opacity: 1 !important; }
 }
 
-/* ---- 骞虫澘鍙婁互涓?(鈮?68px) ---- */
+/* ---- 平板及以下 (≤768px) ---- */
 @media (max-width: 768px) {
     .container { padding: 0 16px; }
 
-    /* 瀵艰埅鏍?*/
+    /* 导航栏*/
     .header { height: 72px; }
     .nav { gap: 8px; position: relative; }
     .nav__logo { font-size: 1.5rem; cursor: pointer; }
@@ -277,7 +277,7 @@ textarea.form-input { resize:vertical; }
     .cal__weekdays { font-size: .65rem; }
     .cal__month-label { font-size: .9rem; min-width: auto; }
 
-    /* 鏃ユ湡鍗＄墖 */
+    /* 日期卡片 */
     .day-card { padding: 14px; }
     .day-card__actions { flex-direction: column; }
 
@@ -289,7 +289,7 @@ textarea.form-input { resize:vertical; }
     .gpa-summary { font-size: .9rem; padding: 12px 16px; }
     .gpa-summary strong { font-size: 1.3rem; }
 
-    /* 琛ㄥ崟 */
+    /* 表单 */
     .form-row { flex-direction: column; }
 
     /* 妯℃€佹 */
@@ -299,7 +299,7 @@ textarea.form-input { resize:vertical; }
     .modal__header { padding: 14px 16px; }
     .modal__title { font-size: 1rem; }
 
-    /* 鑱婂ぉ */
+    /* 聊天 */
     .chat-container { height: calc(100vh - 220px); min-height: 350px; }
     .chat-msg { max-width: 90%; }
     .chat-msg__bubble { padding: 10px 14px; font-size: .85rem; }
@@ -322,7 +322,7 @@ textarea.form-input { resize:vertical; }
     .toast { left: 16px; right: 16px; bottom: 16px; text-align: center; }
 }
 
-/* ---- 鎵嬫満 (鈮?80px) ---- */
+/* ---- 手机 (≤480px) ---- */
 @media (max-width: 480px) {
     .container { padding: 0 10px; }
 
@@ -347,25 +347,25 @@ textarea.form-input { resize:vertical; }
     .subject-card { padding: 12px 14px; }
     .subject-card__move button { padding: 4px 10px; font-size: .65rem; }
 
-    /* 妯℃€佹鍏ㄥ睆 */
+    /* 模态框全屏 */
     .modal { max-width: 100vw; max-height: 100vh; border-radius: 0; }
     .modal--lg { max-width: 100vw; }
     .modal__body { padding: 14px; gap: 12px; }
     .modal__header { padding: 12px 14px; }
 
-    /* 鑱婂ぉ */
+    /* 聊天 */
     .chat-container { height: calc(100vh - 180px); min-height: 280px; }
     .chat-msg { max-width: 93%; }
     .chat-msg__bubble { padding: 8px 12px; font-size: .82rem; }
     .chat-messages { padding: 10px; }
     .chat-mode-btn { padding: 4px 8px; font-size: .7rem; }
 
-    /* 缁勪欢椤?*/
+    /* 组件项*/
     .component-item { flex-wrap: wrap; gap: 4px; padding: 6px 8px; }
     .component-item input { font-size: .78rem; padding: 4px 6px; }
     .component-item input[type="number"] { width: 55px; }
 
-    /* 鐧诲綍椤?*/
+    /* 登录页*/
     .auth-page { padding: 16px; }
     .auth-card { padding: 32px 24px; border-radius: 16px; }
     .auth-card__title { font-size: 1.4rem; }
@@ -387,12 +387,12 @@ textarea.form-input { resize:vertical; }
     .home-nav-card__icon { font-size: 1.2rem; }
     .home-nav-card__label { font-size: .75rem; }
 
-    /* 妯℃€佹搴曢儴鎸夐挳 */
+    /* 妯℃€佹搴曢儴按钮 */
     .modal__footer { flex-direction: column; }
     .modal__footer .btn { width: 100%; justify-content: center; }
 }
 
-/* 鐧诲綍椤垫牱寮忥紙淇濈暀锛?*/
+/* 登录页样式（保留）*/
 .auth-page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#667eea,#764ba2); padding:24px; position:relative; overflow:hidden; }
 .auth-bg { position:fixed; inset:0; pointer-events:none; z-index:0; }
 .auth-bg__circle { position:absolute; border-radius:50%; opacity:.12; }
@@ -418,12 +418,12 @@ textarea.form-input { resize:vertical; }
 .auth-card__toggle a { color:#667eea; font-weight:600; margin-left:4px; transition:color .2s; }
 .auth-card__toggle a:hover { color:#764ba2; text-decoration:underline; }
 
-/* ==================== 妯″紡鎸夐挳 ==================== */
+/* ==================== 模式按钮 ==================== */
 .chat-mode-btn { padding:6px 14px; border:none; background:transparent; font-family:inherit; font-size:.82rem; font-weight:500; border-radius:6px; cursor:pointer; transition:all .2s; color:var(--color-text-light); }
 .chat-mode-btn:hover { color:var(--color-text); }
 .chat-mode-btn.active { background:#fff; color:var(--color-primary); box-shadow:0 1px 3px rgba(0,0,0,.1); }
 
-/* ==================== 鑱婂ぉ ==================== */
+/* ==================== 聊天 ==================== */
 .chat-container { display:flex; flex-direction:column; height:calc(100vh - 200px); min-height:400px; border:1px solid var(--color-border); border-radius:var(--radius); background:var(--color-bg); overflow:hidden; }
 .chat-messages { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:12px; }
 .chat-msg { display:flex; max-width:85%; }
@@ -440,7 +440,7 @@ textarea.form-input { resize:vertical; }
 .chat-hint { padding:8px 14px; border:1px solid var(--color-border); border-radius:20px; background:#fff; cursor:pointer; font-family:inherit; font-size:.8rem; color:var(--color-primary); transition:all var(--transition); }
 .chat-hint:hover { background:var(--color-primary); color:#fff; border-color:var(--color-primary); }
 
-/* ==================== 鑴氭湰 ==================== */
+/* ==================== 脚本 ==================== */
 .thoughts-container { max-width:700px; margin:0 auto; }
 .thoughts-input-row { margin-bottom:20px; }
 .thoughts-input-area { display:flex; flex-direction:column; gap:8px; padding:16px; border:1px solid var(--color-border); border-radius:12px; background:#fff; }
@@ -459,7 +459,7 @@ textarea.form-input { resize:vertical; }
 .thought-card { display:flex; flex-direction:column; gap:6px; padding:14px 16px; border:1px solid var(--color-border); border-radius:12px; background:#fff; transition:all var(--transition); }
 .thought-card:hover { box-shadow:0 2px 10px var(--color-shadow); }
 
-/* ==================== 鍗曡瘝 ==================== */
+/* ==================== 单词 ==================== */
 /* 璇嶄功閫夋嫨鍣?*/
 .vocab-book-row { display:flex; gap:12px; margin-bottom:14px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
 .vocab-book-btn { display:flex; flex-direction:column; align-items:center; gap:4px; padding:14px 22px; border:2px solid var(--color-border); border-radius:16px; background:#fff; font-family:inherit; cursor:pointer; transition:all var(--transition); min-width:130px; flex-shrink:0; }
@@ -476,7 +476,7 @@ textarea.form-input { resize:vertical; }
 .vocab-stat { font-size:.82rem; color:var(--color-text-light); }
 .vocab-stat strong { color:var(--color-primary); font-size:.95rem; }
 
-/* 宸茶儗鎸夐挳 */
+/* 宸茶儗按钮 */
 .vocab-unit-btn--mastered { border-color:#bbf7d0; color:#065f46; font-weight:600; }
 .vocab-unit-btn--mastered:hover { border-color:#10b981; color:#059669; background:#ecfdf5; }
 .vocab-unit-btn--mastered.vocab-unit-btn--active { background:#10b981; color:#fff; border-color:#10b981; }
@@ -505,7 +505,7 @@ textarea.form-input { resize:vertical; }
 .vocab-count-select { padding:6px 10px; border:1px solid var(--color-border); border-radius:8px; font-family:inherit; font-size:.8rem; background:#fff; color:var(--color-text); outline:none; cursor:pointer; }
 .vocab-count-select:focus { border-color:var(--color-primary); }
 
-/* 缂栬緫妯″紡宸ュ叿鏍?*/
+/* 编辑模式工具栏*/
 .vocab-edit-tools {
     display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center;
     padding:12px 16px; background:linear-gradient(135deg,#fefce8,#fef3c7);
@@ -529,7 +529,7 @@ textarea.form-input { resize:vertical; }
 .vocab-word-card__actions button:hover { background:var(--color-bg-alt); }
 .vocab-word-card__actions .btn-del:hover { background:#fef2f2; color:var(--color-danger); border-color:#fecaca; }
 
-/* 闂崱瀛︿範 */
+/* 闪卡学习 */
 .vocab-study { max-width:500px; margin:0 auto; }
 .vocab-flashcard { display:flex; flex-direction:column; align-items:center; gap:16px; }
 .vocab-flashcard__progress { font-size:.9rem; color:var(--color-text-light); font-weight:500; }
@@ -554,12 +554,12 @@ textarea.form-input { resize:vertical; }
 .vocab-study-loading { display:flex; flex-direction:column; align-items:center; gap:16px; padding:60px 20px; color:var(--color-text-light); font-size:.95rem; }
 .vocab-flashcard__exit { margin-top:16px; text-align:center; }
 
-/* 缁冧範妯″紡锛氬崟绌洪噴涔夋彁绀烘寜閽?*/
+/* 练习模式锛氬崟绌洪噴涔夋彁绀烘寜閽?*/
 .practice-answer-hint-btn { padding:2px 6px; border:1px solid var(--color-border); border-radius:6px; background:#fafafa; font-family:inherit; font-size:.85rem; cursor:pointer; transition:all var(--transition); }
 .practice-answer-hint-btn:hover { background:#eef2ff; border-color:var(--color-primary); transform:scale(1.1); }
 .practice-answer-meaning--revealed { animation:fadeIn .3s ease; }
 
-/* 闂崱 AI 鐗涙触閲婁箟 */
+/* 闪卡 AI 牛津释义 */
 .vocab-flashcard__ai { width:100%; padding:16px 20px; background:#fafcff; border:1px solid #d0d5f0; border-radius:12px; text-align:left; font-size:.88rem; line-height:1.6; color:var(--color-text); }
 .vocab-flashcard__ai--loading { display:flex; align-items:center; justify-content:center; gap:10px; color:var(--color-text-light); font-size:.9rem; }
 .vocab-flashcard__ai-spinner { width:20px; height:20px; border:3px solid #e0e0f0; border-top-color:var(--color-primary); border-radius:50%; animation:spin .8s linear infinite; }
@@ -570,7 +570,7 @@ textarea.form-input { resize:vertical; }
 .vocab-flashcard__ai-examples ul { margin:6px 0 0 16px; padding:0; }
 .vocab-flashcard__ai-examples li { margin-bottom:4px; color:var(--color-text-light); }
 
-/* 鍗曡瘝璇︽儏寮圭獥锛堝垪琛ㄩ〉锛?*/
+/* 单词详情弹窗（列表页）*/
 .vocab-detail-modal { max-width:480px; }
 .vocab-detail__loading { display:flex;align-items:center;justify-content:center;gap:10px;padding:30px;color:var(--color-text-light); }
 .vocab-detail__content { padding:0; }
@@ -583,7 +583,7 @@ textarea.form-input { resize:vertical; }
 .vocab-detail__examples li { margin-bottom:5px; }
 .vocab-detail__error { text-align:center;padding:30px;color:var(--color-text-light); }
 
-/* 缁撴潫椤?*/
+/* 结束页*/
 .vocab-study-end { display:flex; flex-direction:column; align-items:center; gap:16px; padding:40px 20px; text-align:center; }
 .vocab-study-end__emoji { font-size:4rem; }
 .vocab-study-end__message { font-size:1.3rem; font-weight:700; color:var(--color-text); }
@@ -621,7 +621,7 @@ textarea.form-input { resize:vertical; }
     .vocab-flashcard__meaning { font-size:1.1rem; }
     .vocab-flashcard__btn { padding:12px 0; font-size:.9rem; }
 }
-/* ==================== 鍗曡瘝缁冧範妯″紡 ==================== */
+/* ==================== 单词练习模式 ==================== */
 .vocab-practice { max-width:720px; margin:0 auto; }
 
 .practice__title { font-size:1.3rem; color:var(--color-text); margin-bottom:4px; }
@@ -679,7 +679,7 @@ textarea.form-input { resize:vertical; }
 .practice-loading__text { font-size:1.3rem; font-weight:600; color:var(--color-text); margin-bottom:8px; }
 .practice-loading__sub { font-size:.85rem; color:var(--color-text-light); }
 
-/* Exam 鈥?鏂囩珷鍖?*/
+/* Exam — 文章区*/
 .practice-exam__header { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
 .practice-exam__header .practice-exam__title { flex:1; min-width:150px; }
 .practice-exam__header .practice-exam__info { font-size:.8rem; color:var(--color-text-light); }
@@ -781,7 +781,7 @@ textarea.form-input { resize:vertical; }
 
 .practice-result__actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
 
-/* 绉诲姩绔€傞厤 */
+/* 移动端适配 */
 @media (max-width: 640px) {
     .practice-exam__passage { padding:16px; font-size:.88rem; line-height:1.8; }
     .practice-score-circle { padding:18px 28px; }
@@ -812,7 +812,7 @@ textarea.form-input { resize:vertical; }
 .thought-edit-area { width:100%; min-height:100px; padding:10px 12px; border:1px solid var(--color-primary); border-radius:8px; font-family:inherit; font-size:.9rem; line-height:1.6; resize:vertical; outline:none; }
 .thought-edit-actions { display:flex; gap:6px; justify-content:flex-end; align-items:center; }
 
-/* ==================== 鑴氭湰鍏ㄥ睆缂栬緫鍣?==================== */
+/* ==================== 脚本全屏编辑器 ==================== */
 .script-editor-overlay {
     position: fixed; inset: 0; z-index: 1000;
     background: rgba(0,0,0,.45); backdrop-filter: blur(4px);
@@ -864,7 +864,7 @@ textarea.form-input { resize:vertical; }
 }
 .script-editor__hints { color: #bbb; font-size: .75rem; }
 
-/* 鑴氭湰鍗＄墖鐐瑰嚮鎻愮ず */
+/* 脚本卡片点击提示 */
 .thought-card { cursor: pointer; }
 .thought-card__btn { position: relative; z-index: 1; }
 

@@ -1,6 +1,5 @@
 /* ============================================================
-   TaskFlow - 学业管理 样式表
-   ============================================================ */
+   TaskFlow - 学业管理 样式�?   ============================================================ */
 :root {
     --color-primary: #4f46e5; --color-primary-dark: #4338ca;
     --color-text: #1e293b; --color-text-light: #64748b;
@@ -29,7 +28,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .btn--danger { color:var(--color-danger); border-color:var(--color-danger); }
 .btn--danger:hover { background:var(--color-danger); color:#fff; }
 
-/* 导航栏 */
+/* 导航�?*/
 .header { position:fixed; top:0; left:0; width:100%; height:var(--header-height); background:rgba(255,255,255,.9); backdrop-filter:blur(10px); border-bottom:1px solid var(--color-border); z-index:100; }
 .nav { display:flex; align-items:center; justify-content:space-between; height:100%; gap:24px; }
 .nav__logo { font-size:1.2rem; font-weight:700; color:var(--color-primary); cursor:pointer; white-space:nowrap; }
@@ -43,7 +42,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .nav__link--logout { color:var(--color-danger); font-size:.88rem; font-weight:500; }
 .nav__link--logout:hover { color:#dc2626; }
 
-/* 三点菜单（手机端） */
+/* 三点菜单（手机端�?*/
 .nav__user { position: relative; display: flex; align-items: center; }
 .nav__more-btn { display: none; width: 36px; height: 36px; border: none; background: none; font-size: 1.4rem; cursor: pointer; color: var(--color-text-light); border-radius: 8px; line-height: 1; }
 .nav__more-btn:hover { background: var(--color-bg-alt); }
@@ -97,9 +96,9 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .todo-card__actions button:hover { background:var(--color-bg-alt); }
 .todo-card__actions .btn-del:hover { background:#fef2f2; color:var(--color-danger); border-color:#fecaca; }
 .priority-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; vertical-align:middle; }
-.priority--高 { background:var(--color-danger); }
-.priority--中 { background:var(--color-warning); }
-.priority--低 { background:var(--color-success); }
+.priority--�?{ background:var(--color-danger); }
+.priority--�?{ background:var(--color-warning); }
+.priority--�?{ background:var(--color-success); }
 .status-badge { font-size:.75rem; padding:2px 8px; border-radius:12px; font-weight:500; }
 .status-badge--todo { background:#f1f5f9; color:#64748b; }
 .status-badge--doing { background:#fef3c7; color:#b45309; }
@@ -219,18 +218,18 @@ textarea.form-input { resize:vertical; }
 .home-nav-card__icon { font-size: 1.8rem; }
 .home-nav-card__label { font-size: .85rem; font-weight: 600; color: var(--color-text); }
 
-/* ==================== 响应式 ==================== */
+/* ==================== 响应�?==================== */
 
-/* ---- 触摸设备：始终显示操作按钮（无 hover）---- */
+/* ---- 触摸设备：始终显示操作按钮（�?hover�?--- */
 @media (hover: none) {
     .todo-card__actions { opacity: 1 !important; }
 }
 
-/* ---- 平板及以下 (≤768px) ---- */
+/* ---- 平板及以�?(�?68px) ---- */
 @media (max-width: 768px) {
     .container { padding: 0 16px; }
 
-    /* 导航栏 */
+    /* 导航�?*/
     .header { height: 72px; }
     .nav { gap: 8px; position: relative; }
     .nav__logo { font-size: 1.5rem; cursor: pointer; }
@@ -256,7 +255,7 @@ textarea.form-input { resize:vertical; }
     .nav__username, .nav__logout, .nav__link--logout { display: none !important; }
     .nav__more-btn { display: flex; align-items: center; justify-content: center; }
 
-    /* 主区域 */
+    /* 主区�?*/
     .main { margin-top: 92px; }
 
     /* 视图标题 */
@@ -310,10 +309,6 @@ textarea.form-input { resize:vertical; }
     .chat-mode-btn { padding: 5px 10px; font-size: .78rem; }
     .chat-hint { font-size: .75rem; padding: 6px 10px; }
 
-    /* 复习 */
-    .review-chapter { padding: 10px 12px; }
-    .review-chapter__name { font-size: .82rem; }
-
     /* 首页 */
     .home-greeting { font-size: 1.3rem; }
     .home-countdowns { grid-template-columns: 1fr; gap: 10px; }
@@ -327,7 +322,7 @@ textarea.form-input { resize:vertical; }
     .toast { left: 16px; right: 16px; bottom: 16px; text-align: center; }
 }
 
-/* ---- 手机 (≤480px) ---- */
+/* ---- 手机 (�?80px) ---- */
 @media (max-width: 480px) {
     .container { padding: 0 10px; }
 
@@ -365,17 +360,12 @@ textarea.form-input { resize:vertical; }
     .chat-messages { padding: 10px; }
     .chat-mode-btn { padding: 4px 8px; font-size: .7rem; }
 
-    /* 复习 */
-    .review-chapter { padding: 8px 10px; }
-    .review-chapter__name { font-size: .78rem; }
-    .review-chapter__label { font-size: .7rem; }
-
-    /* 组件项 */
+    /* 组件�?*/
     .component-item { flex-wrap: wrap; gap: 4px; padding: 6px 8px; }
     .component-item input { font-size: .78rem; padding: 4px 6px; }
     .component-item input[type="number"] { width: 55px; }
 
-    /* 登录页 */
+    /* 登录�?*/
     .auth-page { padding: 16px; }
     .auth-card { padding: 32px 24px; border-radius: 16px; }
     .auth-card__title { font-size: 1.4rem; }
@@ -402,7 +392,7 @@ textarea.form-input { resize:vertical; }
     .modal__footer .btn { width: 100%; justify-content: center; }
 }
 
-/* 登录页样式（保留） */
+/* 登录页样式（保留�?*/
 .auth-page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#667eea,#764ba2); padding:24px; position:relative; overflow:hidden; }
 .auth-bg { position:fixed; inset:0; pointer-events:none; z-index:0; }
 .auth-bg__circle { position:absolute; border-radius:50%; opacity:.12; }
@@ -470,7 +460,7 @@ textarea.form-input { resize:vertical; }
 .thought-card:hover { box-shadow:0 2px 10px var(--color-shadow); }
 
 /* ==================== 单词 ==================== */
-/* 词书选择器 */
+/* 词书选择�?*/
 .vocab-book-row { display:flex; gap:12px; margin-bottom:14px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
 .vocab-book-btn { display:flex; flex-direction:column; align-items:center; gap:4px; padding:14px 22px; border:2px solid var(--color-border); border-radius:16px; background:#fff; font-family:inherit; cursor:pointer; transition:all var(--transition); min-width:130px; flex-shrink:0; }
 .vocab-book-btn:hover { border-color:var(--color-primary); box-shadow:0 2px 12px var(--color-shadow); transform:translateY(-2px); }
@@ -481,7 +471,7 @@ textarea.form-input { resize:vertical; }
 .vocab-book-btn__count { font-size:.72rem; color:var(--color-text-light); background:var(--color-bg-alt); padding:2px 10px; border-radius:12px; }
 .vocab-book-btn--active .vocab-book-btn__count { background:var(--color-primary); color:#fff; }
 
-/* 统计栏 */
+/* 统计�?*/
 .vocab-stats-row { display:flex; gap:16px; margin-bottom:12px; }
 .vocab-stat { font-size:.82rem; color:var(--color-text-light); }
 .vocab-stat strong { color:var(--color-primary); font-size:.95rem; }
@@ -491,7 +481,7 @@ textarea.form-input { resize:vertical; }
 .vocab-unit-btn--mastered:hover { border-color:#10b981; color:#059669; background:#ecfdf5; }
 .vocab-unit-btn--mastered.vocab-unit-btn--active { background:#10b981; color:#fff; border-color:#10b981; }
 
-/* 空词书引导 */
+/* 空词书引�?*/
 .vocab-empty-book { display:flex; flex-direction:column; align-items:center; gap:12px; padding:48px 24px; text-align:center; background:linear-gradient(135deg,#f8fafc,#f0f4ff); border:2px dashed var(--color-border); border-radius:16px; margin-top:8px; }
 .vocab-empty-book__icon { font-size:3rem; }
 .vocab-empty-book h3 { font-size:1.1rem; font-weight:700; color:var(--color-text); margin:0; }
@@ -515,7 +505,7 @@ textarea.form-input { resize:vertical; }
 .vocab-count-select { padding:6px 10px; border:1px solid var(--color-border); border-radius:8px; font-family:inherit; font-size:.8rem; background:#fff; color:var(--color-text); outline:none; cursor:pointer; }
 .vocab-count-select:focus { border-color:var(--color-primary); }
 
-/* 编辑模式工具栏 */
+/* 编辑模式工具�?*/
 .vocab-edit-tools {
     display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center;
     padding:12px 16px; background:linear-gradient(135deg,#fefce8,#fef3c7);
@@ -564,7 +554,7 @@ textarea.form-input { resize:vertical; }
 .vocab-study-loading { display:flex; flex-direction:column; align-items:center; gap:16px; padding:60px 20px; color:var(--color-text-light); font-size:.95rem; }
 .vocab-flashcard__exit { margin-top:16px; text-align:center; }
 
-/* 练习模式：单空释义提示按钮 */
+/* 练习模式：单空释义提示按�?*/
 .practice-answer-hint-btn { padding:2px 6px; border:1px solid var(--color-border); border-radius:6px; background:#fafafa; font-family:inherit; font-size:.85rem; cursor:pointer; transition:all var(--transition); }
 .practice-answer-hint-btn:hover { background:#eef2ff; border-color:var(--color-primary); transform:scale(1.1); }
 .practice-answer-meaning--revealed { animation:fadeIn .3s ease; }
@@ -580,7 +570,7 @@ textarea.form-input { resize:vertical; }
 .vocab-flashcard__ai-examples ul { margin:6px 0 0 16px; padding:0; }
 .vocab-flashcard__ai-examples li { margin-bottom:4px; color:var(--color-text-light); }
 
-/* 单词详情弹窗（列表页） */
+/* 单词详情弹窗（列表页�?*/
 .vocab-detail-modal { max-width:480px; }
 .vocab-detail__loading { display:flex;align-items:center;justify-content:center;gap:10px;padding:30px;color:var(--color-text-light); }
 .vocab-detail__content { padding:0; }
@@ -593,7 +583,7 @@ textarea.form-input { resize:vertical; }
 .vocab-detail__examples li { margin-bottom:5px; }
 .vocab-detail__error { text-align:center;padding:30px;color:var(--color-text-light); }
 
-/* 结束页 */
+/* 结束�?*/
 .vocab-study-end { display:flex; flex-direction:column; align-items:center; gap:16px; padding:40px 20px; text-align:center; }
 .vocab-study-end__emoji { font-size:4rem; }
 .vocab-study-end__message { font-size:1.3rem; font-weight:700; color:var(--color-text); }
@@ -689,7 +679,7 @@ textarea.form-input { resize:vertical; }
 .practice-loading__text { font-size:1.3rem; font-weight:600; color:var(--color-text); margin-bottom:8px; }
 .practice-loading__sub { font-size:.85rem; color:var(--color-text-light); }
 
-/* Exam — 文章区 */
+/* Exam �?文章�?*/
 .practice-exam__header { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
 .practice-exam__header .practice-exam__title { flex:1; min-width:150px; }
 .practice-exam__header .practice-exam__info { font-size:.8rem; color:var(--color-text-light); }
@@ -822,7 +812,7 @@ textarea.form-input { resize:vertical; }
 .thought-edit-area { width:100%; min-height:100px; padding:10px 12px; border:1px solid var(--color-primary); border-radius:8px; font-family:inherit; font-size:.9rem; line-height:1.6; resize:vertical; outline:none; }
 .thought-edit-actions { display:flex; gap:6px; justify-content:flex-end; align-items:center; }
 
-/* ==================== 脚本全屏编辑器 ==================== */
+/* ==================== 脚本全屏编辑�?==================== */
 .script-editor-overlay {
     position: fixed; inset: 0; z-index: 1000;
     background: rgba(0,0,0,.45); backdrop-filter: blur(4px);
@@ -904,17 +894,17 @@ textarea.form-input { resize:vertical; }
     display:flex; gap:4px; flex-shrink:0; margin-left:auto;
 }
 
-/* ==================== PPT 全屏查看器（放映模式） ==================== */
+/* ==================== PPT 全屏查看器（放映模式�?==================== */
 .ppt-viewer-overlay {
     position: fixed; inset: 0; z-index: 1100;
     background: #000;
     opacity: 0; pointer-events: none;
     transition: opacity .25s ease;
-    /* 不再用 flex column——子元素全部 absolute */
+    /* 不再�?flex column——子元素全部 absolute */
 }
 .ppt-viewer-overlay.active { opacity: 1; pointer-events: auto; }
 
-/* 幻灯片——铺满整个屏幕（双图叠加消除闪烁） */
+/* 幻灯片——铺满整个屏幕（双图叠加消除闪烁�?*/
 .ppt-viewer__canvas-wrap {
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
@@ -1005,7 +995,7 @@ textarea.form-input { resize:vertical; }
 }
 .ppt-viewer__hint.show { opacity: 1; }
 
-/* 加载状态 */
+/* 加载状�?*/
 .ppt-viewer__loading {
     position: absolute; inset: 0; z-index: 5;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -1014,7 +1004,7 @@ textarea.form-input { resize:vertical; }
 }
 .ppt-viewer__error { color: #ef4444; font-size: .9rem; text-align: center; padding: 20px; }
 
-/* ==================== 移动端 ==================== */
+/* ==================== 移动�?==================== */
 @media (max-width: 768px) {
     .ppt-viewer__topbar { padding: 2px 6px; }
     .ppt-viewer__title { font-size: .78rem; }

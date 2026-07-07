@@ -22,7 +22,7 @@
         <a href="#" class="nav__logo" data-tab="todos">📋 TaskFlow</a>
         <div class="nav__tabs">
             <button class="nav__tab active" data-tab="home">🏠 首页</button>
-            <button class="nav__tab" data-tab="todos">✅ 待办</button>
+            <button class="nav__tab" data-tab="todos">�?待办</button>
             <button class="nav__tab" data-tab="calendar">📅 日历</button>
             <button class="nav__tab" data-tab="subjects">📚 科目</button>
             <button class="nav__tab" data-tab="chat">💬 小马</button>
@@ -37,21 +37,21 @@
             <li><button class="btn btn--primary btn--sm" id="installBtn" style="display:none;">📲 安装应用</button></li>
             <li class="nav__user">
                 <span id="nav-username" class="nav__username" style="display:none;"></span>
-                <a href="#" id="nav-logout" class="nav__link nav__link--logout" style="display:none;">退出</a>
-                <button class="nav__more-btn" id="navMoreBtn" aria-label="菜单">⋮</button>
+                <a href="#" id="nav-logout" class="nav__link nav__link--logout" style="display:none;">退�?/a>
+                <button class="nav__more-btn" id="navMoreBtn" aria-label="菜单">�?/button>
                 <div class="nav__dropdown" id="navDropdown" style="display:none;">
                     <div class="nav__dropdown-user" id="navDropdownUser"></div>
                     <a href="#" id="navDropdownRefresh">🔄 刷新数据</a>
-                    <a href="#" id="navDropdownInstall" style="display:none;">📲 添加到桌面</a>
+                    <a href="#" id="navDropdownInstall" style="display:none;">📲 添加到桌�?/a>
                     <hr class="nav__dropdown-divider">
-                    <a href="#" id="navDropdownLogout">🚪 退出登录</a>
+                    <a href="#" id="navDropdownLogout">🚪 退出登�?/a>
                 </div>
             </li>
         </ul>
     </nav>
 </header>
 <input type="file" id="importFile" accept=".txt,.csv,.md,.docx" style="display:none;">
-<input type="file" id="reviewPPTInput" accept=".pptx" style="display:none;">
+
 
 <!-- ==================== 主内容区 ==================== -->
 <main class="main container">
@@ -65,7 +65,7 @@
         <div class="home-countdowns" id="homeCountdowns"></div>
         <div class="home-nav">
             <button class="home-nav-card" data-tab="todos">
-                <span class="home-nav-card__icon">✅</span>
+                <span class="home-nav-card__icon">�?/span>
                 <span class="home-nav-card__label">待办</span>
             </button>
             <button class="home-nav-card" data-tab="calendar">
@@ -84,10 +84,7 @@
                 <span class="home-nav-card__icon">🎬</span>
                 <span class="home-nav-card__label">脚本</span>
             </button>
-            <button class="home-nav-card" data-tab="review">
-                <span class="home-nav-card__icon">📝</span>
-                <span class="home-nav-card__label">复习</span>
-            </button>
+
             <button class="home-nav-card" data-tab="vocab">
                 <span class="home-nav-card__icon">📖</span>
                 <span class="home-nav-card__label">单词</span>
@@ -99,12 +96,12 @@
     <section class="view" id="view-todos">
         <div class="view__header">
             <div class="view__header-left">
-                <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
-                <h2>✅ 待办清单</h2>
+                <button class="btn btn--icon back-btn" data-back="home" title="返回首页">�?/button>
+                <h2>�?待办清单</h2>
                 <div class="date-picker">
                     <button class="btn btn--icon" id="todoPrevDay">◀</button>
                     <input type="date" id="todoDate" class="date-input">
-                    <button class="btn btn--icon" id="todoNextDay">▶</button>
+                    <button class="btn btn--icon" id="todoNextDay">�?/button>
                     <button class="btn btn--icon" id="todoToday">今天</button>
                 </div>
             </div>
@@ -121,15 +118,15 @@
     <!-- ===== 日历视图 ===== -->
     <section class="view" id="view-calendar">
         <div class="view__header">
-            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
+            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">�?/button>
             <h2>📅 日历</h2>
             <div class="cal__nav">
                 <button class="btn btn--icon" id="calPrev">◀</button>
                 <span class="cal__month-label" id="calMonthLabel"></span>
-                <button class="btn btn--icon" id="calNext">▶</button>
+                <button class="btn btn--icon" id="calNext">�?/button>
             </div>
         </div>
-        <div class="cal__weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+        <div class="cal__weekdays"><span>�?/span><span>一</span><span>�?/span><span>�?/span><span>�?/span><span>�?/span><span>�?/span></div>
         <div class="cal__grid" id="calGrid"></div>
         <!-- 点击日期弹窗 -->
         <div class="day-card" id="dayCard" style="display:none;">
@@ -148,36 +145,36 @@
     <!-- ===== 科目视图 ===== -->
     <section class="view" id="view-subjects">
         <div class="view__header">
-            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
+            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">�?/button>
             <h2>📚 科目管理</h2>
             <button class="btn btn--primary btn--sm" id="addSubjectBtn">+ 添加科目</button>
         </div>
         <div class="subject-grid" id="subjectGrid">
-            <p class="empty-text">暂无科目，点击上方按钮添加</p>
+            <p class="empty-text">暂无科目，点击上方按钮添�?/p>
         </div>
     </section>
 
     <!-- ===== 脚本视图 ===== -->
     <section class="view" id="view-thoughts">
         <div class="view__header">
-            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
+            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">�?/button>
             <h2>🎬 脚本</h2>
             <span style="font-size:.85rem;color:var(--color-text-light)" id="thoughtCount"></span>
         </div>
         <div class="thoughts-container">
             <div class="thoughts-input-row">
                 <div class="thoughts-input-area">
-                    <input type="text" class="thought-title-input" id="thoughtTitleInput" placeholder="视频标题，如：产品开箱测评 v3" maxlength="100">
-                    <textarea class="thoughts-input" id="thoughtInput" placeholder="写视频脚本..."
+                    <input type="text" class="thought-title-input" id="thoughtTitleInput" placeholder="视频标题，如：产品开箱测�?v3" maxlength="100">
+                    <textarea class="thoughts-input" id="thoughtInput" placeholder="写视频脚�?.."
                               maxlength="3000" rows="4"
-                              title="用 --- 分隔不同场景"></textarea>
+                              title="�?--- 分隔不同场景"></textarea>
                     <div class="script-stats-row">
-                        <span class="script-stats" id="scriptStats">📊 0 个场景 · 0 字</span>
+                        <span class="script-stats" id="scriptStats">📊 0 个场�?· 0 �?/span>
                         <div class="script-actions">
                             <select class="thought-status-select" id="thoughtStatusSelect">
-                                <option value="draft">🏷️ 草稿</option>
-                                <option value="filming">🎥 拍摄中</option>
-                                <option value="done">✅ 已完成</option>
+                                <option value="draft">🏷�?草稿</option>
+                                <option value="filming">🎥 拍摄�?/option>
+                                <option value="done">�?已完�?/option>
                             </select>
                             <button class="btn btn--primary btn--sm" id="thoughtAddBtn">保存</button>
                         </div>
@@ -185,68 +182,39 @@
                 </div>
             </div>
             <div class="thoughts-list" id="thoughtsList">
-                <p class="empty-text">暂无脚本，在上方开始写吧 🎬</p>
+                <p class="empty-text">暂无脚本，在上方开始写�?🎬</p>
             </div>
         </div>
     </section>
 
-    <!-- ===== 脚本全屏编辑器 ===== -->
+    <!-- ===== 脚本全屏编辑�?===== -->
     <div class="script-editor-overlay" id="scriptEditorOverlay">
         <div class="script-editor">
             <div class="script-editor__topbar">
-                <button class="btn btn--icon script-editor__back" id="scriptEditorBack" title="返回列表">← 返回列表</button>
+                <button class="btn btn--icon script-editor__back" id="scriptEditorBack" title="返回列表">�?返回列表</button>
                 <input type="text" class="script-editor__title" id="scriptEditorTitle" placeholder="输入脚本标题..." maxlength="100">
                 <select class="thought-status-select" id="scriptEditorStatus">
-                    <option value="draft">🏷️ 草稿</option>
-                    <option value="filming">🎥 拍摄中</option>
-                    <option value="done">✅ 已完成</option>
+                    <option value="draft">🏷�?草稿</option>
+                    <option value="filming">🎥 拍摄�?/option>
+                    <option value="done">�?已完�?/option>
                 </select>
                 <button class="btn btn--primary btn--sm" id="scriptEditorSave">💾 保存</button>
-                <button class="btn btn--outline btn--sm script-editor__del" id="scriptEditorDelete" title="删除">🗑️</button>
+                <button class="btn btn--outline btn--sm script-editor__del" id="scriptEditorDelete" title="删除">🗑�?/button>
             </div>
             <textarea class="script-editor__content" id="scriptEditorContent" placeholder="写视频脚本…用 --- 分隔不同场景"></textarea>
             <div class="script-editor__bottombar">
-                <span class="script-stats" id="scriptEditorStats">📊 0 个场景 · 0 字</span>
+                <span class="script-stats" id="scriptEditorStats">📊 0 个场�?· 0 �?/span>
                 <span class="script-editor__hints">Ctrl+Enter 保存 · Esc 关闭</span>
             </div>
         </div>
     </div>
 
-    <!-- ===== 复习视图 ===== -->
-    <section class="view" id="view-review">
-        <div class="view__header">
-            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
-            <h2>📝 复习</h2>
-            <button class="btn btn--outline btn--sm" id="reviewResetBtn">🔄 重置进度</button>
-        </div>
-        <div class="review-plan" id="reviewPlan"></div>
-    </section>
 
-    <!-- ===== PPT全屏查看器（放映模式） ===== -->
-    <div class="ppt-viewer-overlay" id="pptViewerOverlay">
-        <div class="ppt-viewer__topbar" id="pptViewerTopbar">
-            <button class="ppt-viewer__back" id="pptViewerBack">← 返回</button>
-            <span class="ppt-viewer__title" id="pptViewerTitle">PPT 查看</span>
-            <span class="ppt-viewer__counter" id="pptViewerCounter"></span>
-            <button class="ppt-viewer__close" id="pptViewerClose">&times;</button>
-        </div>
-        <div class="ppt-viewer__canvas-wrap" id="pptViewerWrap">
-            <img id="pptViewerImgA" src="" alt="" class="ppt-slide" />
-            <img id="pptViewerImgB" src="" alt="" class="ppt-slide" style="opacity:0;" />
-            <canvas id="pptViewerCanvas" style="display:none;"></canvas>
-            <div class="ppt-viewer__loading" id="pptViewerLoading" style="display:none;">加载中...</div>
-        </div>
-        <div class="ppt-viewer__hint" id="pptViewerHint"></div>
-        <div class="ppt-viewer__controls" id="pptViewerControls">
-            <button class="ppt-viewer__prev" id="pptViewerPrev" disabled>◀</button>
-            <button class="ppt-viewer__next" id="pptViewerNext" disabled>▶</button>
-        </div>
-    </div>
 
     <!-- ===== 问答视图 ===== -->
     <section class="view" id="view-chat">
         <div class="view__header">
-            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
+            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">�?/button>
             <h2>💬 小马</h2>
             <div style="display:flex;gap:6px;align-items:center">
                 <div style="display:flex;gap:2px;background:#f1f5f9;border-radius:8px;padding:3px" id="modeGroup">
@@ -259,16 +227,16 @@
                     <button class="chat-mode-btn calc-sub-btn active" data-calc-mode="calc-learn">🎓 学习</button>
                     <button class="chat-mode-btn calc-sub-btn" data-calc-mode="calc-review">🔗 复习</button>
                     <button class="chat-mode-btn calc-sub-btn" data-calc-mode="calc-knowledge">📖 知识</button>
-                    <button class="chat-mode-btn calc-sub-btn" data-calc-mode="calc-think">🧠 思考</button>
+                    <button class="chat-mode-btn calc-sub-btn" data-calc-mode="calc-think">🧠 思�?/button>
                 </div>
-                <button class="btn btn--outline btn--sm" id="chatClearBtn">🗑️ 清空对话</button>
+                <button class="btn btn--outline btn--sm" id="chatClearBtn">🗑�?清空对话</button>
             </div>
         </div>
         <div class="chat-container">
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input-row">
                 <input type="text" class="chat-input" id="chatInput" placeholder="输入你的问题..." maxlength="500">
-                <button class="btn btn--primary" id="chatSendBtn">发送</button>
+                <button class="btn btn--primary" id="chatSendBtn">发�?/button>
             </div>
         </div>
     </section>
@@ -276,7 +244,7 @@
     <!-- ===== 单词视图 ===== -->
     <section class="view" id="view-vocab">
         <div class="view__header">
-            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">←</button>
+            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">�?/button>
             <h2>📖 单词</h2>
             <span style="font-size:.85rem;color:var(--color-text-light)" id="vocabCount"></span>
         </div>
@@ -285,33 +253,33 @@
         <div class="vocab-unit-row" id="vocabUnitRow"></div>
         <div class="vocab-part-row" id="vocabPartRow"></div>
         <div class="vocab-actions">
-            <button class="btn btn--primary btn--sm" id="vocabAddBtn">➕ 添加</button>
+            <button class="btn btn--primary btn--sm" id="vocabAddBtn">�?添加</button>
             <button class="btn btn--outline btn--sm" id="vocabEditBtn">✏️ 编辑</button>
-            <button class="btn btn--primary btn--sm" id="vocabCheckBtn">🔍 检测</button>
+            <button class="btn btn--primary btn--sm" id="vocabCheckBtn">🔍 检�?/button>
             <button class="btn btn--outline btn--sm" id="vocabStudyBtn">🎯 复习</button>
             <button class="btn btn--primary btn--sm" id="vocabPracticeBtn">📝 练习模式</button>
             <select class="vocab-count-select" id="vocabStudyCount">
                 <option value="0">全部</option>
-                <option value="10">10词</option>
-                <option value="20" selected>20词</option>
-                <option value="40">40词</option>
-                <option value="60">60词</option>
+                <option value="10">10�?/option>
+                <option value="20" selected>20�?/option>
+                <option value="40">40�?/option>
+                <option value="60">60�?/option>
             </select>
             <select class="vocab-count-select" id="vocabStudyMode">
-                <option value="en2cn" selected>👀 看英文想意思</option>
+                <option value="en2cn" selected>👀 看英文想意�?/option>
                 <option value="cn2en">✏️ 看中文拼英文</option>
             </select>
         </div>
-        <!-- 编辑模式工具栏 -->
+        <!-- 编辑模式工具�?-->
         <div class="vocab-edit-tools" id="vocabEditTools" style="display:none;">
-            <button class="btn btn--outline btn--sm" id="vocabSelectAllBtn">☐ 全选</button>
+            <button class="btn btn--outline btn--sm" id="vocabSelectAllBtn">�?全�?/button>
             <button class="btn btn--outline btn--sm" id="vocabImportBtn">📥 批量导入</button>
             <button class="btn btn--outline btn--sm" id="vocabDedupBtn" title="删除当前单元重复单词">🔧 去重</button>
-            <button class="btn btn--outline btn--sm" id="vocabRetranslateBtn" title="用 AI 重新翻译当前单元所有释义">🤖 重译</button>
-            <button class="btn btn--danger btn--sm" id="vocabDeleteSelectedBtn" title="删除选中的单词" style="display:none">🗑️ 删除选中</button>
+            <button class="btn btn--outline btn--sm" id="vocabRetranslateBtn" title="�?AI 重新翻译当前单元所有释�?>🤖 重译</button>
+            <button class="btn btn--danger btn--sm" id="vocabDeleteSelectedBtn" title="删除选中的单�? style="display:none">🗑�?删除选中</button>
         </div>
         <div class="vocab-list" id="vocabList">
-            <p class="empty-text">还没有单词，点击上方添加或导入 📖</p>
+            <p class="empty-text">还没有单词，点击上方添加或导�?📖</p>
         </div>
         <div class="vocab-study" id="vocabStudy" style="display:none;"></div>
         <!-- 练习模式 -->
@@ -319,33 +287,33 @@
             <!-- 阶段1: 配置面板 -->
             <div class="practice-config" id="practiceConfig">
                 <h3 class="practice__title">📝 选词填空练习</h3>
-                <p class="practice__desc">勾选要练习的单元范围，选择出题数量，AI 将为你生成一篇短文填空。</p>
+                <p class="practice__desc">勾选要练习的单元范围，选择出题数量，AI 将为你生成一篇短文填空�?/p>
                 <div class="practice-units" id="practiceUnits"></div>
                 <div class="practice-count-row">
-                    <label class="practice__label">出题数量：</label>
+                    <label class="practice__label">出题数量�?/label>
                     <div class="practice-count-options">
-                        <button class="practice-count-btn active" data-count="10">10 题</button>
-                        <button class="practice-count-btn" data-count="15">15 题</button>
-                        <button class="practice-count-btn" data-count="20">20 题</button>
-                        <button class="practice-count-btn" data-count="custom">自定义</button>
+                        <button class="practice-count-btn active" data-count="10">10 �?/button>
+                        <button class="practice-count-btn" data-count="15">15 �?/button>
+                        <button class="practice-count-btn" data-count="20">20 �?/button>
+                        <button class="practice-count-btn" data-count="custom">自定�?/button>
                     </div>
                     <input type="number" class="practice-custom-count" id="practiceCustomCount" value="10" min="1" max="30" style="display:none" placeholder="题数">
                 </div>
                 <div class="practice-options">
                     <div class="practice-difficulty-row">
-                        <label class="practice__label">单词范围：</label>
+                        <label class="practice__label">单词范围�?/label>
                         <select class="practice-difficulty-select" id="practiceWordRange">
-                            <option value="all" selected>📊 全部难度 (80%四六级+20%其他)</option>
+                            <option value="all" selected>📊 全部难度 (80%四六�?20%其他)</option>
                             <option value="cet4">📗 四级高频 (80%四级+20%其他)</option>
                             <option value="cet6">📘 六级高频 (80%六级+20%其他)</option>
                         </select>
                     </div>
                     <div class="practice-difficulty-row">
-                        <label class="practice__label">文章难度：</label>
+                        <label class="practice__label">文章难度�?/label>
                         <select class="practice-difficulty-select" id="practiceDifficulty">
-                            <option value="easy">⭐ 简单</option>
+                            <option value="easy">�?简�?/option>
                             <option value="medium" selected>⭐⭐ 中等</option>
-                            <option value="hard">⭐⭐⭐ 较难</option>
+                            <option value="hard">⭐⭐�?较难</option>
                         </select>
                     </div>
                     <label class="practice-meaning-toggle">
@@ -354,14 +322,14 @@
                     </label>
                 </div>
                 <div class="practice-actions">
-                    <button class="btn btn--outline" id="practiceBackBtn">← 返回列表</button>
-                    <button class="btn btn--primary btn--lg" id="practiceStartBtn">🚀 开始出题</button>
+                    <button class="btn btn--outline" id="practiceBackBtn">�?返回列表</button>
+                    <button class="btn btn--primary btn--lg" id="practiceStartBtn">🚀 开始出�?/button>
                 </div>
             </div>
-            <!-- 阶段2: 出题中 -->
+            <!-- 阶段2: 出题�?-->
             <div class="practice-loading" id="practiceLoading" style="display:none;">
                 <div class="practice-loading__spinner"></div>
-                <p class="practice-loading__text">出题中<span id="practiceLoadingDots">...</span></p>
+                <p class="practice-loading__text">出题�?span id="practiceLoadingDots">...</span></p>
                 <p class="practice-loading__sub">AI 正在为你创作一篇精彩的文章 🤔</p>
             </div>
             <!-- 阶段3: 文章+答题 -->
@@ -369,7 +337,7 @@
                 <div class="practice-exam__header">
                     <h3 class="practice-exam__title" id="practiceExamTitle"></h3>
                     <span class="practice-exam__info" id="practiceExamInfo"></span>
-                    <button class="btn btn--outline btn--sm practice-theme-btn" id="practiceThemeBtn" title="保持范围不变，重新出题">🔄 换主题</button>
+                    <button class="btn btn--outline btn--sm practice-theme-btn" id="practiceThemeBtn" title="保持范围不变，重新出�?>🔄 换主�?/button>
                 </div>
                 <div class="practice-exam__passage" id="practiceExamPassage"></div>
                 <div class="practice-exam__answers" id="practiceExamAnswers">
@@ -401,8 +369,8 @@
             </div>
             <div class="form-group"><label>绩点分配</label></div>
             <div class="component-list" id="componentList"></div>
-            <button class="btn btn--outline btn--sm" id="addComponentBtn">+ 添加分配项</button>
-            <div class="total-bar" id="totalBar">合计：0%</div>
+            <button class="btn btn--outline btn--sm" id="addComponentBtn">+ 添加分配�?/button>
+            <div class="total-bar" id="totalBar">合计�?%</div>
             <div class="modal__footer">
                 <button class="btn btn--danger btn--sm" id="deleteSubjectBtn">删除科目</button>
                 <button class="btn btn--primary" id="saveSubjectBtn">保存</button>
@@ -435,18 +403,18 @@
                 </div>
             </div>
             <div class="form-group">
-                <label>粘贴英文（可含中文释义，自动忽略）</label>
+                <label>粘贴英文（可含中文释义，自动忽略�?/label>
                 <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
                     <input type="file" id="vocabImportFile" accept=".txt,.csv,.md" style="display:none">
                     <button type="button" class="btn btn--outline btn--sm" id="vocabImportFileBtn" style="font-size:.75rem">📁 选择文件</button>
                     <span style="font-size:.7rem;color:var(--color-text-light)" id="vocabImportFileName">未选择文件</span>
                 </div>
-                <textarea class="form-input" id="vocabImportText" rows="10" placeholder="每行一个英文单词，支持逗号/分号/Tab分隔&#10;自动忽略中文和多余内容，只提取英文&#10;例如：&#10;apple&#10;commencement （大学或高中的）毕业典礼&#10;confront  处理，解决（问题或困境）"></textarea>
+                <textarea class="form-input" id="vocabImportText" rows="10" placeholder="每行一个英文单词，支持逗号/分号/Tab分隔&#10;自动忽略中文和多余内容，只提取英�?#10;例如�?#10;apple&#10;commencement （大学或高中的）毕业典礼&#10;confront  处理，解决（问题或困境）"></textarea>
                 <span style="font-size:.75rem;color:var(--color-text-light);margin-top:4px">🤖 自动提取英文部分，中文释义由 AI 翻译（含空格→短语，否则→单词）</span>
             </div>
             <div class="modal__footer">
                 <button class="btn btn--outline" id="vocabImportCancel">取消</button>
-                <button class="btn btn--primary" id="vocabImportConfirm">🤖 翻译并导入</button>
+                <button class="btn btn--primary" id="vocabImportConfirm">🤖 翻译并导�?/button>
             </div>
         </div>
     </div>
@@ -480,7 +448,7 @@
             </div>
             <div class="form-group">
                 <label>英文单词/短语 *</label>
-                <input class="form-input" id="vocabEditWord" maxlength="200" required placeholder="apple 或 look after">
+                <input class="form-input" id="vocabEditWord" maxlength="200" required placeholder="apple �?look after">
             </div>
             <div class="form-group">
                 <label>中文释义 *</label>
@@ -526,7 +494,7 @@
     </div>
 </div>
 
-<!-- ==================== 通用模态框（科目/事件/待办） ==================== -->
+<!-- ==================== 通用模态框（科�?事件/待办�?==================== -->
 <div class="modal-overlay" id="modalOverlay" style="display:none;">
     <div class="modal">
         <div class="modal__header">
@@ -541,12 +509,12 @@
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pptxviewjs/dist/PptxViewJS.min.js"></script>
+
 
 <script src="supabase.min.js"></script>
 <script src="auth.js?v=3.2"></script>
 <script src="script.js?v=4.4"></script>
-<script src="review.js?v=5.3"></script>
+
 <script src="chat.js?v=1.3"></script>
 <script src="vocab.js?v=2.0"></script>
 
@@ -555,14 +523,12 @@ function showAuthUI(username) {
     const ue = document.getElementById('nav-username'), le = document.getElementById('nav-logout');
     if (ue) { ue.textContent = username; ue.style.display = ''; }
     if (le) { le.style.display = ''; le.addEventListener('click', e => { e.preventDefault(); Auth.logout(); }); }
-    // 下拉菜单（手机端）
-    const du = document.getElementById('navDropdownUser'), dl = document.getElementById('navDropdownLogout');
+    // 下拉菜单（手机端�?    const du = document.getElementById('navDropdownUser'), dl = document.getElementById('navDropdownLogout');
     if (du) { du.textContent = '👤 ' + username; }
     if (dl) { dl.addEventListener('click', e => { e.preventDefault(); Auth.logout(); }); }
 }
 
-// 三点菜单开关
-document.addEventListener('DOMContentLoaded', () => {
+// 三点菜单开�?document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('navMoreBtn'), dropdown = document.getElementById('navDropdown');
     if (btn && dropdown) {
         btn.addEventListener('click', (e) => {
@@ -587,14 +553,14 @@ document.addEventListener('DOMContentLoaded', () => {
 // Service Worker（带自动更新检测）
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').then(reg => {
-        // 检测到新版本 → 自动刷新
+        // 检测到新版�?�?自动刷新
         reg.addEventListener('updatefound', () => {
             const newSW = reg.installing;
             if (!newSW) return;
             newSW.addEventListener('statechange', () => {
                 if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-                    // 新 SW 已就绪，提示用户刷新
-                    showToast('🔄 有新版本，正在更新...', 'info');
+                    // �?SW 已就绪，提示用户刷新
+                    showToast('🔄 有新版本，正在更�?..', 'info');
                     setTimeout(() => {
                         newSW.postMessage('skipWaiting');
                         window.location.reload();
@@ -603,16 +569,14 @@ if ('serviceWorker' in navigator) {
             });
         });
     });
-    // 定期检查更新（每 30 分钟）
-    setInterval(() => {
+    // 定期检查更新（�?30 分钟�?    setInterval(() => {
         navigator.serviceWorker.getRegistration().then(reg => {
             if (reg) reg.update();
         });
     }, 30 * 60 * 1000);
 }
 
-// 安装按钮（PWA / 手动添加指引）
-let deferredPrompt = null;
+// 安装按钮（PWA / 手动添加指引�?let deferredPrompt = null;
 const installBtn = document.getElementById('installBtn');
 const installDrop = document.getElementById('navDropdownInstall');
 const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
@@ -629,7 +593,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 if (isMobile && !deferredPrompt) {
-    setTimeout(() => { showInstallBtn('📲 添加到桌面'); }, 1500);
+    setTimeout(() => { showInstallBtn('📲 添加到桌�?); }, 1500);
 }
 
 async function doInstall() {
@@ -637,18 +601,18 @@ async function doInstall() {
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
-            if (installBtn) { installBtn.textContent = '✅ 已安装'; installBtn.disabled = true; }
-            if (installDrop) { installDrop.textContent = '✅ 已安装'; }
+            if (installBtn) { installBtn.textContent = '�?已安�?; installBtn.disabled = true; }
+            if (installDrop) { installDrop.textContent = '�?已安�?; }
         }
         deferredPrompt = null;
     } else {
         alert(
             '📲 添加到桌面步骤：\n\n' +
             '1. 点浏览器底部「分享」按钮\n' +
-            '   （或右上角 ⋮ 菜单）\n' +
+            '   （或右上�?�?菜单）\n' +
             '2. 找到「添加到主屏幕」\n' +
             '3. 点「添加」完成\n\n' +
-            '💡 Chrome 浏览器体验更好'
+            '💡 Chrome 浏览器体验更�?
         );
     }
 }
@@ -657,8 +621,8 @@ installBtn && installBtn.addEventListener('click', doInstall);
 installDrop && installDrop.addEventListener('click', (e) => { e.preventDefault(); doInstall(); });
 
 window.addEventListener('appinstalled', () => {
-    if (installBtn) { installBtn.textContent = '✅ 已安装'; installBtn.disabled = true; }
-    if (installDrop) { installDrop.textContent = '✅ 已安装'; }
+    if (installBtn) { installBtn.textContent = '�?已安�?; installBtn.disabled = true; }
+    if (installDrop) { installDrop.textContent = '�?已安�?; }
 });
 </script>
 </body>

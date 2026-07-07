@@ -235,30 +235,8 @@ function buildUserContext() {
         }
     }
 
-    // 复习进度（从 localStorage 读取）
-    try {
-        const reviewProgress = JSON.parse(localStorage.getItem('review_progress') || '{}');
-        const chapterNames = Object.keys(reviewProgress).filter(k => !k.startsWith('_'));
-        if (chapterNames.length > 0) {
-            const reviewSummary = chapterNames.map(chName => {
-                const chData = reviewProgress[chName] || {};
-                const sections = Object.keys(chData).filter(k => !k.startsWith('_'));
-                const doneCount = sections.filter(s => chData[s] && chData[s].done).length;
-                const total = sections.length || 0;
-                const chDate = chData._date || '';
-                const undone = sections.filter(s => !(chData[s] && chData[s].done));
-                let detail = `${chName}：${doneCount}/${total} 已完成`;
-                if (chDate) detail += `，计划${chDate}复习`;
-                if (undone.length > 0 && undone.length <= 5) {
-                    detail += `，待完成：${undone.join('、')}`;
-                } else if (undone.length > 5) {
-                    detail += `，${undone.length}个小节待完成`;
-                }
-                return detail;
-            }).join('\n');
-            parts.push(`复习进度：\n${reviewSummary}`);
-        }
-    } catch (e) {}
+
+
 
     // 查重
     const dupTodos = findDuplicates(todos, t => `${t.title}|${t.date}`);

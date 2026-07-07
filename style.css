@@ -1,5 +1,5 @@
-/* ============================================================
-   TaskFlow - 学业管理 样式�?   ============================================================ */
+﻿/* ============================================================
+   TaskFlow - 瀛︿笟绠＄悊 鏍峰紡琛?   ============================================================ */
 :root {
     --color-primary: #4f46e5; --color-primary-dark: #4338ca;
     --color-text: #1e293b; --color-text-light: #64748b;
@@ -16,7 +16,7 @@ body { font-family:var(--font-sans); color:var(--color-text); background:var(--c
 a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .container { max-width:var(--max-width); margin:0 auto; padding:0 24px; }
 
-/* 按钮 */
+/* 鎸夐挳 */
 .btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border-radius:8px; font-size:.9rem; font-weight:600; font-family:inherit; border:2px solid transparent; cursor:pointer; transition:all var(--transition); }
 .btn--primary { background:var(--color-primary); color:#fff; }
 .btn--primary:hover { background:var(--color-primary-dark); }
@@ -28,7 +28,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .btn--danger { color:var(--color-danger); border-color:var(--color-danger); }
 .btn--danger:hover { background:var(--color-danger); color:#fff; }
 
-/* 导航�?*/
+/* 瀵艰埅鏍?*/
 .header { position:fixed; top:0; left:0; width:100%; height:var(--header-height); background:rgba(255,255,255,.9); backdrop-filter:blur(10px); border-bottom:1px solid var(--color-border); z-index:100; }
 .nav { display:flex; align-items:center; justify-content:space-between; height:100%; gap:24px; }
 .nav__logo { font-size:1.2rem; font-weight:700; color:var(--color-primary); cursor:pointer; white-space:nowrap; }
@@ -42,7 +42,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .nav__link--logout { color:var(--color-danger); font-size:.88rem; font-weight:500; }
 .nav__link--logout:hover { color:#dc2626; }
 
-/* 三点菜单（手机端�?*/
+/* 涓夌偣鑿滃崟锛堟墜鏈虹锛?*/
 .nav__user { position: relative; display: flex; align-items: center; }
 .nav__more-btn { display: none; width: 36px; height: 36px; border: none; background: none; font-size: 1.4rem; cursor: pointer; color: var(--color-text-light); border-radius: 8px; line-height: 1; }
 .nav__more-btn:hover { background: var(--color-bg-alt); }
@@ -52,7 +52,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .nav__dropdown a { display: block; padding: 8px 4px; font-size: .85rem; color: var(--color-danger); text-decoration: none; border-radius: 6px; }
 .nav__dropdown a:hover { background: #fef2f2; }
 
-/* 主内容区 */
+/* 涓诲唴瀹瑰尯 */
 .main { margin-top:calc(var(--header-height) + 24px); margin-bottom:40px; min-height:calc(100vh - var(--header-height) - 64px); }
 .view { display:none; }
 .view.active { display:block; }
@@ -64,7 +64,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .date-input:focus { border-color:var(--color-primary); }
 .empty-text { text-align:center; color:var(--color-text-light); padding:40px 0; font-size:.9rem; }
 
-/* ==================== 待办列表 ==================== */
+/* ==================== 寰呭姙鍒楄〃 ==================== */
 .day-events { margin-bottom:16px; }
 .day-event-item { padding:10px 14px; margin-bottom:4px; border-radius:8px; font-size:.85rem; display:flex; align-items:center; gap:8px; }
 .day-event-item--exam { background:#fef2f2; color:#991b1b; border-left:3px solid var(--color-exam); }
@@ -96,15 +96,15 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .todo-card__actions button:hover { background:var(--color-bg-alt); }
 .todo-card__actions .btn-del:hover { background:#fef2f2; color:var(--color-danger); border-color:#fecaca; }
 .priority-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:4px; vertical-align:middle; }
-.priority--�?{ background:var(--color-danger); }
-.priority--�?{ background:var(--color-warning); }
-.priority--�?{ background:var(--color-success); }
+.priority--楂?{ background:var(--color-danger); }
+.priority--涓?{ background:var(--color-warning); }
+.priority--浣?{ background:var(--color-success); }
 .status-badge { font-size:.75rem; padding:2px 8px; border-radius:12px; font-weight:500; }
 .status-badge--todo { background:#f1f5f9; color:#64748b; }
 .status-badge--doing { background:#fef3c7; color:#b45309; }
 .status-badge--done { background:#d1fae5; color:#065f46; }
 
-/* ==================== 日历 ==================== */
+/* ==================== 鏃ュ巻 ==================== */
 .cal__nav { display:flex; align-items:center; gap:8px; }
 .cal__month-label { font-size:1rem; font-weight:600; min-width:140px; text-align:center; }
 .cal__weekdays { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:.7rem; font-weight:600; color:var(--color-text-light); margin-bottom:2px; padding:2px 0; }
@@ -122,7 +122,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .cal__dot--deadline { background:var(--color-deadline); }
 .cal__dot--other { background:var(--color-other); }
 
-/* 日期卡片 */
+/* 鏃ユ湡鍗＄墖 */
 .day-card { margin-top:16px; background:var(--color-bg); border:1px solid var(--color-border); border-radius:var(--radius); padding:20px; }
 .day-card__header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
 .day-card__date { font-weight:700; font-size:1rem; }
@@ -138,7 +138,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .day-card__event button:hover { color:var(--color-danger); }
 .day-card__actions { display:flex; gap:8px; }
 
-/* ==================== 科目 ==================== */
+/* ==================== 绉戠洰 ==================== */
 .subject-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
 .subject-card { padding:20px 24px; border:1px solid var(--color-border); border-radius:var(--radius); background:var(--color-bg); cursor:pointer; transition:all var(--transition); }
 .subject-card:hover { box-shadow:0 4px 16px var(--color-shadow); transform:translateY(-2px); }
@@ -151,7 +151,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .subject-card__move button:hover:not(:disabled) { background:var(--color-bg-alt); color:var(--color-primary); }
 .subject-card__move button:disabled { opacity:.3; cursor:default; }
 
-/* 绩点分配 */
+/* 缁╃偣鍒嗛厤 */
 .component-list { display:flex; flex-direction:column; gap:8px; }
 .component-item { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--color-border); border-radius:8px; }
 .component-item input { flex:1; padding:6px 10px; border:1px solid var(--color-border); border-radius:4px; font-family:inherit; font-size:.85rem; }
@@ -161,7 +161,7 @@ a { text-decoration:none; color:inherit; } ul { list-style:none; }
 .total-bar--ok { background:#ecfdf5; color:#065f46; }
 .total-bar--bad { background:#fef2f2; color:#991b1b; }
 
-/* ==================== 模态框 ==================== */
+/* ==================== 妯℃€佹 ==================== */
 .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:200; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(2px); }
 .modal { background:#fff; border-radius:var(--radius); width:100%; max-width:480px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.15); }
 .modal--lg { max-width:600px; }
@@ -185,7 +185,7 @@ textarea.form-input { resize:vertical; }
 }
 .gpa-summary strong { font-size: 1.8rem; margin: 0 4px; }
 
-/* ==================== 首页 ==================== */
+/* ==================== 棣栭〉 ==================== */
 .back-btn { font-weight: 700; font-size: 1rem; padding: 6px 12px; margin-right: 4px; }
 .home-header { text-align: center; padding: 24px 0 8px; }
 .home-greeting { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
@@ -218,18 +218,18 @@ textarea.form-input { resize:vertical; }
 .home-nav-card__icon { font-size: 1.8rem; }
 .home-nav-card__label { font-size: .85rem; font-weight: 600; color: var(--color-text); }
 
-/* ==================== 响应�?==================== */
+/* ==================== 鍝嶅簲寮?==================== */
 
-/* ---- 触摸设备：始终显示操作按钮（�?hover�?--- */
+/* ---- 瑙︽懜璁惧锛氬缁堟樉绀烘搷浣滄寜閽紙鏃?hover锛?--- */
 @media (hover: none) {
     .todo-card__actions { opacity: 1 !important; }
 }
 
-/* ---- 平板及以�?(�?68px) ---- */
+/* ---- 骞虫澘鍙婁互涓?(鈮?68px) ---- */
 @media (max-width: 768px) {
     .container { padding: 0 16px; }
 
-    /* 导航�?*/
+    /* 瀵艰埅鏍?*/
     .header { height: 72px; }
     .nav { gap: 8px; position: relative; }
     .nav__logo { font-size: 1.5rem; cursor: pointer; }
@@ -255,33 +255,33 @@ textarea.form-input { resize:vertical; }
     .nav__username, .nav__logout, .nav__link--logout { display: none !important; }
     .nav__more-btn { display: flex; align-items: center; justify-content: center; }
 
-    /* 主区�?*/
+    /* 涓诲尯鍩?*/
     .main { margin-top: 92px; }
 
-    /* 视图标题 */
+    /* 瑙嗗浘鏍囬 */
     .view__header { flex-direction: column; align-items: flex-start; }
     .view__header h2 { font-size: 1.15rem; }
     .view__header-left { gap: 8px; }
     .date-picker { flex-wrap: wrap; }
 
-    /* 待办卡片 */
+    /* 寰呭姙鍗＄墖 */
     .todo-card { padding: 12px 14px; }
     .todo-card__title { font-size: .88rem; }
     .todo-card__meta { font-size: .72rem; gap: 6px; }
     .todo-card__actions button { padding: 6px 8px; font-size: .8rem; }
 
-    /* 日历 */
+    /* 鏃ュ巻 */
     .cal__grid { padding: 2px; gap: 1px; }
     .cal__cell { height: 30px; font-size: .7rem; }
     .cal__dot { width: 3px; height: 3px; }
     .cal__weekdays { font-size: .65rem; }
     .cal__month-label { font-size: .9rem; min-width: auto; }
 
-    /* 日期卡片 */
+    /* 鏃ユ湡鍗＄墖 */
     .day-card { padding: 14px; }
     .day-card__actions { flex-direction: column; }
 
-    /* 科目 */
+    /* 绉戠洰 */
     .subject-grid { grid-template-columns: 1fr; }
     .subject-card { padding: 14px 16px; }
     .subject-card__name { font-size: 1rem; }
@@ -289,17 +289,17 @@ textarea.form-input { resize:vertical; }
     .gpa-summary { font-size: .9rem; padding: 12px 16px; }
     .gpa-summary strong { font-size: 1.3rem; }
 
-    /* 表单 */
+    /* 琛ㄥ崟 */
     .form-row { flex-direction: column; }
 
-    /* 模态框 */
+    /* 妯℃€佹 */
     .modal { max-width: 95vw; max-height: 95vh; border-radius: 12px; }
     .modal--lg { max-width: 95vw; }
     .modal__body { padding: 16px; }
     .modal__header { padding: 14px 16px; }
     .modal__title { font-size: 1rem; }
 
-    /* 聊天 */
+    /* 鑱婂ぉ */
     .chat-container { height: calc(100vh - 220px); min-height: 350px; }
     .chat-msg { max-width: 90%; }
     .chat-msg__bubble { padding: 10px 14px; font-size: .85rem; }
@@ -309,7 +309,7 @@ textarea.form-input { resize:vertical; }
     .chat-mode-btn { padding: 5px 10px; font-size: .78rem; }
     .chat-hint { font-size: .75rem; padding: 6px 10px; }
 
-    /* 首页 */
+    /* 棣栭〉 */
     .home-greeting { font-size: 1.3rem; }
     .home-countdowns { grid-template-columns: 1fr; gap: 10px; }
     .home-countdown-card { padding: 14px 16px; }
@@ -322,50 +322,50 @@ textarea.form-input { resize:vertical; }
     .toast { left: 16px; right: 16px; bottom: 16px; text-align: center; }
 }
 
-/* ---- 手机 (�?80px) ---- */
+/* ---- 鎵嬫満 (鈮?80px) ---- */
 @media (max-width: 480px) {
     .container { padding: 0 10px; }
 
-    /* 导航 */
+    /* 瀵艰埅 */
     .nav__tab { padding: 10px 16px; font-size: .82rem; }
     .nav__logo { font-size: 1.3rem; }
     .nav__tabs { padding: 8px 10px; gap: 4px; }
     .nav__more-btn { width: 44px; height: 44px; font-size: 1.6rem; }
     .nav__dropdown { min-width: 140px; padding: 10px; }
 
-    /* 待办 */
+    /* 寰呭姙 */
     .todo-card { padding: 10px 10px; gap: 6px; }
     .todo-card__title { font-size: .82rem; }
     .todo-card__desc { font-size: .75rem; }
     .todo-card__meta { font-size: .68rem; gap: 4px; }
     .todo-card__actions button { padding: 5px 7px; font-size: .75rem; }
 
-    /* 日历 */
+    /* 鏃ュ巻 */
     .cal__cell { height: 26px; font-size: .65rem; }
 
-    /* 科目 */
+    /* 绉戠洰 */
     .subject-card { padding: 12px 14px; }
     .subject-card__move button { padding: 4px 10px; font-size: .65rem; }
 
-    /* 模态框全屏 */
+    /* 妯℃€佹鍏ㄥ睆 */
     .modal { max-width: 100vw; max-height: 100vh; border-radius: 0; }
     .modal--lg { max-width: 100vw; }
     .modal__body { padding: 14px; gap: 12px; }
     .modal__header { padding: 12px 14px; }
 
-    /* 聊天 */
+    /* 鑱婂ぉ */
     .chat-container { height: calc(100vh - 180px); min-height: 280px; }
     .chat-msg { max-width: 93%; }
     .chat-msg__bubble { padding: 8px 12px; font-size: .82rem; }
     .chat-messages { padding: 10px; }
     .chat-mode-btn { padding: 4px 8px; font-size: .7rem; }
 
-    /* 组件�?*/
+    /* 缁勪欢椤?*/
     .component-item { flex-wrap: wrap; gap: 4px; padding: 6px 8px; }
     .component-item input { font-size: .78rem; padding: 4px 6px; }
     .component-item input[type="number"] { width: 55px; }
 
-    /* 登录�?*/
+    /* 鐧诲綍椤?*/
     .auth-page { padding: 16px; }
     .auth-card { padding: 32px 24px; border-radius: 16px; }
     .auth-card__title { font-size: 1.4rem; }
@@ -378,7 +378,7 @@ textarea.form-input { resize:vertical; }
     .auth-bg__circle--2 { width: 180px; height: 180px; }
     .auth-bg__circle--3 { width: 120px; height: 120px; }
 
-    /* 首页 */
+    /* 棣栭〉 */
     .home-greeting { font-size: 1.1rem; }
     .home-countdown-card__icon { font-size: 1.6rem; }
     .home-countdown-card__countdown { font-size: 1rem; min-width: 80px; }
@@ -387,12 +387,12 @@ textarea.form-input { resize:vertical; }
     .home-nav-card__icon { font-size: 1.2rem; }
     .home-nav-card__label { font-size: .75rem; }
 
-    /* 模态框底部按钮 */
+    /* 妯℃€佹搴曢儴鎸夐挳 */
     .modal__footer { flex-direction: column; }
     .modal__footer .btn { width: 100%; justify-content: center; }
 }
 
-/* 登录页样式（保留�?*/
+/* 鐧诲綍椤垫牱寮忥紙淇濈暀锛?*/
 .auth-page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#667eea,#764ba2); padding:24px; position:relative; overflow:hidden; }
 .auth-bg { position:fixed; inset:0; pointer-events:none; z-index:0; }
 .auth-bg__circle { position:absolute; border-radius:50%; opacity:.12; }
@@ -418,12 +418,12 @@ textarea.form-input { resize:vertical; }
 .auth-card__toggle a { color:#667eea; font-weight:600; margin-left:4px; transition:color .2s; }
 .auth-card__toggle a:hover { color:#764ba2; text-decoration:underline; }
 
-/* ==================== 模式按钮 ==================== */
+/* ==================== 妯″紡鎸夐挳 ==================== */
 .chat-mode-btn { padding:6px 14px; border:none; background:transparent; font-family:inherit; font-size:.82rem; font-weight:500; border-radius:6px; cursor:pointer; transition:all .2s; color:var(--color-text-light); }
 .chat-mode-btn:hover { color:var(--color-text); }
 .chat-mode-btn.active { background:#fff; color:var(--color-primary); box-shadow:0 1px 3px rgba(0,0,0,.1); }
 
-/* ==================== 聊天 ==================== */
+/* ==================== 鑱婂ぉ ==================== */
 .chat-container { display:flex; flex-direction:column; height:calc(100vh - 200px); min-height:400px; border:1px solid var(--color-border); border-radius:var(--radius); background:var(--color-bg); overflow:hidden; }
 .chat-messages { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:12px; }
 .chat-msg { display:flex; max-width:85%; }
@@ -440,7 +440,7 @@ textarea.form-input { resize:vertical; }
 .chat-hint { padding:8px 14px; border:1px solid var(--color-border); border-radius:20px; background:#fff; cursor:pointer; font-family:inherit; font-size:.8rem; color:var(--color-primary); transition:all var(--transition); }
 .chat-hint:hover { background:var(--color-primary); color:#fff; border-color:var(--color-primary); }
 
-/* ==================== 脚本 ==================== */
+/* ==================== 鑴氭湰 ==================== */
 .thoughts-container { max-width:700px; margin:0 auto; }
 .thoughts-input-row { margin-bottom:20px; }
 .thoughts-input-area { display:flex; flex-direction:column; gap:8px; padding:16px; border:1px solid var(--color-border); border-radius:12px; background:#fff; }
@@ -459,8 +459,8 @@ textarea.form-input { resize:vertical; }
 .thought-card { display:flex; flex-direction:column; gap:6px; padding:14px 16px; border:1px solid var(--color-border); border-radius:12px; background:#fff; transition:all var(--transition); }
 .thought-card:hover { box-shadow:0 2px 10px var(--color-shadow); }
 
-/* ==================== 单词 ==================== */
-/* 词书选择�?*/
+/* ==================== 鍗曡瘝 ==================== */
+/* 璇嶄功閫夋嫨鍣?*/
 .vocab-book-row { display:flex; gap:12px; margin-bottom:14px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
 .vocab-book-btn { display:flex; flex-direction:column; align-items:center; gap:4px; padding:14px 22px; border:2px solid var(--color-border); border-radius:16px; background:#fff; font-family:inherit; cursor:pointer; transition:all var(--transition); min-width:130px; flex-shrink:0; }
 .vocab-book-btn:hover { border-color:var(--color-primary); box-shadow:0 2px 12px var(--color-shadow); transform:translateY(-2px); }
@@ -471,17 +471,17 @@ textarea.form-input { resize:vertical; }
 .vocab-book-btn__count { font-size:.72rem; color:var(--color-text-light); background:var(--color-bg-alt); padding:2px 10px; border-radius:12px; }
 .vocab-book-btn--active .vocab-book-btn__count { background:var(--color-primary); color:#fff; }
 
-/* 统计�?*/
+/* 缁熻鏍?*/
 .vocab-stats-row { display:flex; gap:16px; margin-bottom:12px; }
 .vocab-stat { font-size:.82rem; color:var(--color-text-light); }
 .vocab-stat strong { color:var(--color-primary); font-size:.95rem; }
 
-/* 已背按钮 */
+/* 宸茶儗鎸夐挳 */
 .vocab-unit-btn--mastered { border-color:#bbf7d0; color:#065f46; font-weight:600; }
 .vocab-unit-btn--mastered:hover { border-color:#10b981; color:#059669; background:#ecfdf5; }
 .vocab-unit-btn--mastered.vocab-unit-btn--active { background:#10b981; color:#fff; border-color:#10b981; }
 
-/* 空词书引�?*/
+/* 绌鸿瘝涔﹀紩瀵?*/
 .vocab-empty-book { display:flex; flex-direction:column; align-items:center; gap:12px; padding:48px 24px; text-align:center; background:linear-gradient(135deg,#f8fafc,#f0f4ff); border:2px dashed var(--color-border); border-radius:16px; margin-top:8px; }
 .vocab-empty-book__icon { font-size:3rem; }
 .vocab-empty-book h3 { font-size:1.1rem; font-weight:700; color:var(--color-text); margin:0; }
@@ -505,7 +505,7 @@ textarea.form-input { resize:vertical; }
 .vocab-count-select { padding:6px 10px; border:1px solid var(--color-border); border-radius:8px; font-family:inherit; font-size:.8rem; background:#fff; color:var(--color-text); outline:none; cursor:pointer; }
 .vocab-count-select:focus { border-color:var(--color-primary); }
 
-/* 编辑模式工具�?*/
+/* 缂栬緫妯″紡宸ュ叿鏍?*/
 .vocab-edit-tools {
     display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center;
     padding:12px 16px; background:linear-gradient(135deg,#fefce8,#fef3c7);
@@ -529,7 +529,7 @@ textarea.form-input { resize:vertical; }
 .vocab-word-card__actions button:hover { background:var(--color-bg-alt); }
 .vocab-word-card__actions .btn-del:hover { background:#fef2f2; color:var(--color-danger); border-color:#fecaca; }
 
-/* 闪卡学习 */
+/* 闂崱瀛︿範 */
 .vocab-study { max-width:500px; margin:0 auto; }
 .vocab-flashcard { display:flex; flex-direction:column; align-items:center; gap:16px; }
 .vocab-flashcard__progress { font-size:.9rem; color:var(--color-text-light); font-weight:500; }
@@ -554,12 +554,12 @@ textarea.form-input { resize:vertical; }
 .vocab-study-loading { display:flex; flex-direction:column; align-items:center; gap:16px; padding:60px 20px; color:var(--color-text-light); font-size:.95rem; }
 .vocab-flashcard__exit { margin-top:16px; text-align:center; }
 
-/* 练习模式：单空释义提示按�?*/
+/* 缁冧範妯″紡锛氬崟绌洪噴涔夋彁绀烘寜閽?*/
 .practice-answer-hint-btn { padding:2px 6px; border:1px solid var(--color-border); border-radius:6px; background:#fafafa; font-family:inherit; font-size:.85rem; cursor:pointer; transition:all var(--transition); }
 .practice-answer-hint-btn:hover { background:#eef2ff; border-color:var(--color-primary); transform:scale(1.1); }
 .practice-answer-meaning--revealed { animation:fadeIn .3s ease; }
 
-/* 闪卡 AI 牛津释义 */
+/* 闂崱 AI 鐗涙触閲婁箟 */
 .vocab-flashcard__ai { width:100%; padding:16px 20px; background:#fafcff; border:1px solid #d0d5f0; border-radius:12px; text-align:left; font-size:.88rem; line-height:1.6; color:var(--color-text); }
 .vocab-flashcard__ai--loading { display:flex; align-items:center; justify-content:center; gap:10px; color:var(--color-text-light); font-size:.9rem; }
 .vocab-flashcard__ai-spinner { width:20px; height:20px; border:3px solid #e0e0f0; border-top-color:var(--color-primary); border-radius:50%; animation:spin .8s linear infinite; }
@@ -570,7 +570,7 @@ textarea.form-input { resize:vertical; }
 .vocab-flashcard__ai-examples ul { margin:6px 0 0 16px; padding:0; }
 .vocab-flashcard__ai-examples li { margin-bottom:4px; color:var(--color-text-light); }
 
-/* 单词详情弹窗（列表页�?*/
+/* 鍗曡瘝璇︽儏寮圭獥锛堝垪琛ㄩ〉锛?*/
 .vocab-detail-modal { max-width:480px; }
 .vocab-detail__loading { display:flex;align-items:center;justify-content:center;gap:10px;padding:30px;color:var(--color-text-light); }
 .vocab-detail__content { padding:0; }
@@ -583,7 +583,7 @@ textarea.form-input { resize:vertical; }
 .vocab-detail__examples li { margin-bottom:5px; }
 .vocab-detail__error { text-align:center;padding:30px;color:var(--color-text-light); }
 
-/* 结束�?*/
+/* 缁撴潫椤?*/
 .vocab-study-end { display:flex; flex-direction:column; align-items:center; gap:16px; padding:40px 20px; text-align:center; }
 .vocab-study-end__emoji { font-size:4rem; }
 .vocab-study-end__message { font-size:1.3rem; font-weight:700; color:var(--color-text); }
@@ -621,7 +621,7 @@ textarea.form-input { resize:vertical; }
     .vocab-flashcard__meaning { font-size:1.1rem; }
     .vocab-flashcard__btn { padding:12px 0; font-size:.9rem; }
 }
-/* ==================== 单词练习模式 ==================== */
+/* ==================== 鍗曡瘝缁冧範妯″紡 ==================== */
 .vocab-practice { max-width:720px; margin:0 auto; }
 
 .practice__title { font-size:1.3rem; color:var(--color-text); margin-bottom:4px; }
@@ -679,7 +679,7 @@ textarea.form-input { resize:vertical; }
 .practice-loading__text { font-size:1.3rem; font-weight:600; color:var(--color-text); margin-bottom:8px; }
 .practice-loading__sub { font-size:.85rem; color:var(--color-text-light); }
 
-/* Exam �?文章�?*/
+/* Exam 鈥?鏂囩珷鍖?*/
 .practice-exam__header { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:20px; }
 .practice-exam__header .practice-exam__title { flex:1; min-width:150px; }
 .practice-exam__header .practice-exam__info { font-size:.8rem; color:var(--color-text-light); }
@@ -781,7 +781,7 @@ textarea.form-input { resize:vertical; }
 
 .practice-result__actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
 
-/* 移动端适配 */
+/* 绉诲姩绔€傞厤 */
 @media (max-width: 640px) {
     .practice-exam__passage { padding:16px; font-size:.88rem; line-height:1.8; }
     .practice-score-circle { padding:18px 28px; }
@@ -812,7 +812,7 @@ textarea.form-input { resize:vertical; }
 .thought-edit-area { width:100%; min-height:100px; padding:10px 12px; border:1px solid var(--color-primary); border-radius:8px; font-family:inherit; font-size:.9rem; line-height:1.6; resize:vertical; outline:none; }
 .thought-edit-actions { display:flex; gap:6px; justify-content:flex-end; align-items:center; }
 
-/* ==================== 脚本全屏编辑�?==================== */
+/* ==================== 鑴氭湰鍏ㄥ睆缂栬緫鍣?==================== */
 .script-editor-overlay {
     position: fixed; inset: 0; z-index: 1000;
     background: rgba(0,0,0,.45); backdrop-filter: blur(4px);
@@ -864,162 +864,107 @@ textarea.form-input { resize:vertical; }
 }
 .script-editor__hints { color: #bbb; font-size: .75rem; }
 
-/* 脚本卡片点击提示 */
+/* 鑴氭湰鍗＄墖鐐瑰嚮鎻愮ず */
 .thought-card { cursor: pointer; }
 .thought-card__btn { position: relative; z-index: 1; }
 
-/* ==================== 复习 ==================== */
-.review-plan { display:flex; flex-direction:column; gap:6px; }
-.review-chapter {
-    border:1px solid var(--color-border); border-radius:10px; background:#fff;
-    padding: 12px 14px; transition:all var(--transition);
+/* ==================== 目标 ==================== */
+.goals-content { min-height: 200px; }
+.goals-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.goal-card {
+    display:flex; align-items:center; gap:12px;
+    padding: 14px 16px; border:1px solid var(--color-border);
+    border-radius:12px; background:#fff; cursor:pointer;
+    transition: all var(--transition);
+    border-left: 4px solid var(--goal-color, var(--color-primary));
 }
-.review-chapter__row {
-    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+.goal-card:hover { box-shadow:0 2px 12px var(--color-shadow); transform:translateY(-1px); }
+.goal-card__icon { font-size:1.6rem; flex-shrink:0; width:44px; text-align:center; }
+.goal-card__info { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.goal-card__name { font-size:.92rem; font-weight:600; }
+.goal-card__stat { font-size:.72rem; color:var(--color-text-light); }
+.goal-card__bar { height:6px; background:#f1f5f9; border-radius:3px; overflow:hidden; }
+.goal-card__bar-fill { height:100%; border-radius:3px; transition:width .4s ease; }
+.goal-card__arrow { font-size:1.2rem; color:#ccc; flex-shrink:0; }
+
+/* 目标详情 */
+.goal-detail { display:flex; flex-direction:column; gap:16px; }
+.goal-breadcrumb {
+    display:flex; align-items:center; gap:6px;
+    font-size:.82rem; color:var(--color-primary); cursor:pointer;
+    padding: 4px 0; user-select:none;
 }
-.review-chapter__label {
-    font-size:.75rem; font-weight:600; color:var(--color-primary);
-    background:var(--color-bg); padding:2px 8px; border-radius:4px;
-    white-space:nowrap;
+.goal-breadcrumb__back { font-weight:500; }
+.goal-breadcrumb__back:hover { text-decoration:underline; }
+.goal-breadcrumb__sep { color:#ccc; }
+.goal-breadcrumb__current { color:var(--color-text); font-weight:600; }
+.goal-detail__header { display:flex; align-items:center; gap:14px; padding-bottom:16px; border-bottom:1px solid var(--color-border); }
+.goal-detail__icon { font-size:2.4rem; flex-shrink:0; }
+.goal-detail__meta { flex:1; display:flex; flex-direction:column; gap:4px; }
+.goal-detail__title { font-size:1.2rem; font-weight:700; margin:0; }
+.goal-detail__progress { font-size:.82rem; color:var(--color-text-light); }
+.goal-detail__bar { margin-top:6px; }
+
+/* 子目标列表 */
+.subgoal-list { display:flex; flex-direction:column; gap:8px; }
+.subgoal-item {
+    border:1px solid var(--color-border); border-radius:10px;
+    background:#fff; overflow:hidden; transition:all var(--transition);
 }
-.review-chapter__name {
-    font-size:.92rem; font-weight:600; flex:1; min-width:80px;
+.subgoal-item--open { border-color:var(--color-primary); box-shadow:0 1px 6px var(--color-shadow); }
+.subgoal-header {
+    display:flex; align-items:center; gap:8px;
+    padding: 12px 14px; cursor:pointer;
+    user-select:none; transition:background .15s;
 }
-.review-chapter__ppt-filename {
-    font-size:.7rem; color:var(--color-text-light);
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    max-width:160px;
+.subgoal-header:hover { background:#f8fafc; }
+.subgoal-header__arrow { font-size:.75rem; color:#999; width:16px; text-align:center; transition:transform .2s; }
+.subgoal-header__name { font-size:.92rem; font-weight:600; flex:1; }
+.subgoal-header__stat { font-size:.75rem; color:var(--color-text-light); background:#f1f5f9; padding:2px 8px; border-radius:10px; }
+.subgoal-body { border-top:1px solid var(--color-border); }
+
+/* 行动列表 */
+.action-list { display:flex; flex-direction:column; }
+.action-item {
+    display:flex; align-items:center; gap:8px;
+    padding: 10px 14px 10px 32px; cursor:pointer;
+    transition:background .15s;
 }
-.review-chapter__ppt-actions {
-    display:flex; gap:4px; flex-shrink:0; margin-left:auto;
+.action-item:hover { background:#f8fafc; }
+.action-item__cb { display:none; }
+.action-item__check {
+    width:18px; height:18px; border:2px solid #d1d5db;
+    border-radius:4px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    transition:all .2s; font-size:.7rem; color:#fff;
+}
+.action-item__cb:checked + .action-item__check {
+    background:var(--color-primary); border-color:var(--color-primary);
+}
+.action-item__cb:checked + .action-item__check::after {
+    content:'\2713';
+}
+.action-item__text { font-size:.88rem; }
+.action-item--done .action-item__text {
+    text-decoration:line-through; color:#9ca3af;
 }
 
-/* ==================== PPT 全屏查看器（放映模式�?==================== */
-.ppt-viewer-overlay {
-    position: fixed; inset: 0; z-index: 1100;
-    background: #000;
-    opacity: 0; pointer-events: none;
-    transition: opacity .25s ease;
-    /* 不再�?flex column——子元素全部 absolute */
-}
-.ppt-viewer-overlay.active { opacity: 1; pointer-events: auto; }
-
-/* 幻灯片——铺满整个屏幕（双图叠加消除闪烁�?*/
-.ppt-viewer__canvas-wrap {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden;
-    background: #000;
-}
-.ppt-slide {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: contain;
-    transition: opacity .08s ease;
-}
-.ppt-viewer__canvas-wrap canvas {
-    width: 100%; height: 100%;
-    object-fit: contain;
-    display: block;
-}
-
-/* 顶部栏——浮动覆盖，默认隐藏 */
-.ppt-viewer__topbar {
-    position: absolute; top: 0; left: 0; right: 0; z-index: 10;
-    display: flex; align-items: center; gap: 8px;
-    padding: 4px 8px;
-    background: linear-gradient(180deg, rgba(0,0,0,.7) 0%, transparent 100%);
-    opacity: 0; transform: translateY(-100%);
-    transition: opacity .25s, transform .25s;
-    pointer-events: none;
-}
-.ppt-viewer__topbar.visible {
-    opacity: 1; transform: translateY(0);
-    pointer-events: auto;
-}
-.ppt-viewer__back,
-.ppt-viewer__close {
-    background: transparent !important;
-    border: none !important;
-    color: #fff !important;
-    font-size: .9rem; padding: 6px 10px;
-    border-radius: 4px; cursor: pointer;
-    text-shadow: 0 1px 3px rgba(0,0,0,.5);
-}
-.ppt-viewer__title {
-    flex: 1; font-size: .85rem; font-weight: 600;
-    text-align: center; color: #fff;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.ppt-viewer__counter {
-    font-size: .75rem; color: #ccc;
-    min-width: 54px; text-align: center;
-}
-
-/* 底部控制栏——浮动覆盖，默认隐藏 */
-.ppt-viewer__controls {
-    position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
-    display: flex; align-items: center; justify-content: center; gap: 20px;
-    padding: 4px 12px;
-    background: linear-gradient(0deg, rgba(0,0,0,.7) 0%, transparent 100%);
-    opacity: 0; transform: translateY(100%);
-    transition: opacity .25s, transform .25s;
-    pointer-events: none;
-}
-.ppt-viewer__controls.visible {
-    opacity: 1; transform: translateY(0);
-    pointer-events: auto;
-}
-.ppt-viewer__prev,
-.ppt-viewer__next {
-    background: rgba(255,255,255,.12) !important;
-    border: none !important; color: #fff !important;
-    font-size: 1rem; width: 40px; height: 40px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: background .2s;
-}
-.ppt-viewer__prev:active,
-.ppt-viewer__next:active { background: rgba(255,255,255,.3) !important; }
-.ppt-viewer__prev:disabled,
-.ppt-viewer__next:disabled { opacity: .25; }
-
-/* 浮动页码（幻灯片切换时短暂显示） */
-.ppt-viewer__hint {
-    position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); z-index: 5;
-    background: rgba(0,0,0,.65); color: #fff;
-    padding: 4px 14px; border-radius: 12px;
-    font-size: .8rem; letter-spacing: .5px;
-    opacity: 0; transition: opacity .3s;
-    pointer-events: none;
-}
-.ppt-viewer__hint.show { opacity: 1; }
-
-/* 加载状�?*/
-.ppt-viewer__loading {
-    position: absolute; inset: 0; z-index: 5;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 12px; color: #aaa; font-size: .95rem;
-    pointer-events: none;
-}
-.ppt-viewer__error { color: #ef4444; font-size: .9rem; text-align: center; padding: 20px; }
-
-/* ==================== 移动�?==================== */
+/* ==================== 移动端 目标 ==================== */
 @media (max-width: 768px) {
-    .ppt-viewer__topbar { padding: 2px 6px; }
-    .ppt-viewer__title { font-size: .78rem; }
-    .ppt-viewer__counter { font-size: .7rem; min-width: 46px; }
-    .ppt-viewer__back, .ppt-viewer__close { font-size: .82rem; padding: 4px 8px; }
-    .ppt-viewer__controls { gap: 16px; padding: 4px 10px; }
-    .ppt-viewer__prev, .ppt-viewer__next { width: 36px; height: 36px; }
-    .ppt-viewer__hint { bottom: 50px; font-size: .75rem; padding: 3px 12px; }
+    .goals-grid { grid-template-columns:1fr 1fr; gap:8px; }
+    .goal-card { padding:12px; gap:8px; }
+    .goal-card__icon { font-size:1.4rem; width:36px; }
+    .goal-card__name { font-size:.85rem; }
+    .goal-detail__icon { font-size:2rem; }
+    .goal-detail__title { font-size:1.1rem; }
+    .subgoal-header { padding:10px 12px; }
+    .action-item { padding:10px 12px 10px 24px; }
 }
 @media (max-width: 480px) {
-    .ppt-viewer__topbar { padding: 1px 4px; gap: 4px; }
-    .ppt-viewer__title { font-size: .72rem; }
-    .ppt-viewer__counter { font-size: .65rem; min-width: 40px; }
-    .ppt-viewer__back, .ppt-viewer__close { font-size: .75rem; padding: 2px 6px; }
-    .ppt-viewer__controls { gap: 12px; padding: 2px 8px; }
-    .ppt-viewer__prev, .ppt-viewer__next { width: 32px; height: 32px; font-size: .9rem; }
-    .ppt-viewer__hint { bottom: 44px; font-size: .7rem; }
+    .goals-grid { grid-template-columns:1fr; }
+    .goal-card { padding:10px 12px; }
+    .goal-detail__header { gap:10px; }
+    .goal-detail__icon { font-size:1.8rem; }
+    .subgoal-header__name { font-size:.85rem; }
+    .action-item__text { font-size:.82rem; }
 }

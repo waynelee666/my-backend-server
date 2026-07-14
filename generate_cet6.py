@@ -11,7 +11,7 @@ import os
 
 # ── 配置 ──
 WORDS_PER_PART = 80
-BOOK_NAME = "CET6"
+BOOK_NAME = "六级"
 DESKTOP = os.path.join(os.environ['USERPROFILE'], 'Desktop')
 INPUT_FILE = "CET6_3.json"
 OUTPUT_JSON = "cet6_import.json"

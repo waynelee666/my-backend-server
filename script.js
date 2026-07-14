@@ -571,7 +571,18 @@ function renderVocabView() {
     const masteredCls = isMastered ? ' vocab-unit-btn--mastered vocab-unit-btn--active' : ' vocab-unit-btn--mastered';
     let unitHTML = `<button class="vocab-unit-btn${reviewCls}" data-unit="__review__">🔄 复习<span class="vocab-unit-count">${reviewCount}</span></button>`;
     unitHTML += `<button class="vocab-unit-btn${masteredCls}" data-unit="__mastered__">✅ 已背<span class="vocab-unit-count">${masteredCount}</span></button>`;
-    const units = ['U1','U2','U3','U4','U5','U6','U7','U8'];
+    // 动态获取所有 unit（从 vocabs 数据中提取）
+    const unitSet = new Set();
+    vocabs.filter(v => v.book === vocabBook).forEach(v => { if (v.unit) unitSet.add(v.unit); });
+    const units = [...unitSet].sort((a, b) => {
+        // 智能排序：CET6-U1, CET6-U2, ... 或 U1, U2, ...
+        const numA = parseInt(a.match(/(\d+)/)?.[1] || '0');
+        const numB = parseInt(b.match(/(\d+)/)?.[1] || '0');
+        const preA = a.replace(/\d+.*/, '');
+        const preB = b.replace(/\d+.*/, '');
+        if (preA === preB) return numA - numB;
+        return preA.localeCompare(preB) || numA - numB;
+    });
     unitHTML += units.map(u => {
         const cnt = vocabs.filter(v => v.book === vocabBook && v.unit === u && !v.mastered).length;
         const cls = u === vocabUnit ? ' vocab-unit-btn--active' : '';
@@ -584,7 +595,11 @@ function renderVocabView() {
         $('#vocabPartRow').style.display = 'none';
     } else {
         $('#vocabPartRow').style.display = '';
-        $('#vocabPartRow').innerHTML = ['P1','P2'].map(p => {
+        // 动态获取当前 unit 的所有 part
+        const partSet = new Set();
+        vocabs.filter(v => v.book === vocabBook && v.unit === vocabUnit).forEach(v => { if (v.part) partSet.add(v.part); });
+        const parts = partSet.size > 0 ? [...partSet].sort() : ['P1'];
+        $('#vocabPartRow').innerHTML = parts.map(p => {
             const cls = p === vocabPart ? ' vocab-part-btn--active' : '';
             return `<button class="vocab-part-btn${cls}" data-part="${p}">${p}</button>`;
         }).join('');
@@ -615,6 +630,7 @@ function renderVocabView() {
         } else if (isMastered) {
             listEl.innerHTML = '<p class="empty-text">📭 还没有已背单词，去检测模式里通关吧 💪</p>';
         } else if (bookTotal === 0) {
+            const isCET6 = vocabBook === '六级';
             listEl.innerHTML = `<div class="vocab-empty-book">
                 <div class="vocab-empty-book__icon">${VOCAB_BOOKS.find(b => b.key === vocabBook)?.emoji || '📖'}</div>
                 <h3>${vocabBook}词书还是空的</h3>
@@ -622,10 +638,14 @@ function renderVocabView() {
                 <div style="display:flex;gap:8px;margin-top:4px">
                     <button class="btn btn--primary btn--sm" id="vocabEmptyAddBtn">➕ 添加单词</button>
                     <button class="btn btn--outline btn--sm" id="vocabEmptyImportBtn">📥 批量导入</button>
+                    ${isCET6 ? '<button class="btn btn--primary btn--sm" id="vocabEmptyCET6Btn" style="background:#f59e0b">🎯 导入六级词库 (2,345词)</button>' : ''}
                 </div>
             </div>`;
             $('#vocabEmptyAddBtn')?.addEventListener('click', () => { vocabEditId = null; openVocabEditModal(null); });
             $('#vocabEmptyImportBtn')?.addEventListener('click', () => { $('#vocabImportBtn').click(); });
+            if (isCET6) {
+                $('#vocabEmptyCET6Btn')?.addEventListener('click', () => { $('#vocabCET6ImportBtn').click(); });
+            }
         } else {
             listEl.innerHTML = '<p class="empty-text">本单元还没有单词，点击上方添加或导入 📖</p>';
         }
@@ -1135,6 +1155,80 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
     } finally {
         btn.disabled = false;
         btn.textContent = '🤖 翻译并导入';
+    }
+});
+
+// 一键导入六级词库
+$('#vocabCET6ImportBtn')?.addEventListener('click', async () => {
+    if (!confirm('即将导入新东方六级大纲词汇（2,345 词，随机分配到 30 个单元）。\n\n已存在的单词将自动跳过。确定继续？')) return;
+
+    const btn = $('#vocabCET6ImportBtn');
+    const origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ 加载词库数据...';
+
+    try {
+        // 1. 从服务器获取词库数据
+        const resp = await fetch('/api/cet6-import-data');
+        const data = await resp.json();
+        if (!data.ok || !data.words) throw new Error(data.error || '获取词库数据失败');
+
+        const words = data.words;
+        btn.textContent = `⏳ 正在导入 ${words.length} 词...`;
+
+        // 2. 获取已有单词去重
+        const existingSet = new Set();
+        for (const v of vocabs) {
+            if (v.book === 'CET6') {
+                existingSet.add(`${v.unit}|${v.part}|${v.word.toLowerCase().trim()}`);
+            }
+        }
+
+        // 3. 分批导入
+        let imported = 0, skipped = 0, failed = 0;
+        const BATCH_SIZE = 20;
+
+        for (let i = 0; i < words.length; i += BATCH_SIZE) {
+            const batch = words.slice(i, i + BATCH_SIZE);
+
+            for (const w of batch) {
+                const key = `${w.unit}|${w.part}|${w.word.toLowerCase().trim()}`;
+                if (existingSet.has(key)) {
+                    skipped++;
+                    continue;
+                }
+
+                try {
+                    await DS.create('vocabulary', {
+                        book: w.book,
+                        unit: w.unit,
+                        part: w.part,
+                        word: w.word,
+                        meaning: w.meaning
+                    });
+                    existingSet.add(key);
+                    imported++;
+                } catch (e) {
+                    failed++;
+                    console.warn('导入失败:', w.word, e);
+                }
+            }
+
+            // 更新进度
+            const pct = Math.round((i + batch.length) / words.length * 100);
+            btn.textContent = `⏳ ${pct}% (${imported} 导入 / ${skipped} 跳过 / ${failed} 失败)`;
+        }
+
+        // 4. 刷新
+        await refreshAll();
+        btn.disabled = false;
+        btn.textContent = origText;
+        showToast(`六级词库导入完成 ✨ ${imported} 新词导入，${skipped} 已跳过${failed ? `，${failed} 失败` : ''}`, 'success');
+
+    } catch (e) {
+        showToast('导入六级词库失败: ' + e.message, 'error');
+        btn.disabled = false;
+        btn.textContent = origText;
     }
 });
 

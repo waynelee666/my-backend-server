@@ -336,6 +336,19 @@ class RequestHandler(BaseHTTPRequestHandler):
             })
             return
 
+        if path == "/api/cet6-import-data":
+            # 返回六级词汇导入数据（由前端认证后导入 Supabase）
+            try:
+                import_file = os.path.join(SERVER_DIR, "cet6_import.json")
+                with open(import_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                self.send_json({"ok": True, "count": len(data), "words": data})
+            except FileNotFoundError:
+                self.send_json({"ok": False, "error": "cet6_import.json 未生成，请先运行 generate_cet6.py"}, 500)
+            except Exception as e:
+                self.send_json({"ok": False, "error": str(e)}, 500)
+            return
+
         if path == "/":
             path = "/index.html"
 

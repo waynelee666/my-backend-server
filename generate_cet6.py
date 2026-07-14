@@ -10,7 +10,8 @@ import random
 import os
 
 # ── 配置 ──
-WORDS_PER_PART = 80
+WORDS_PER_UNIT = 80   # 每个 Unit 总词数
+PARTS_PER_UNIT = 2    # 每个 Unit 分成几个 Part
 BOOK_NAME = "六级"
 DESKTOP = os.path.join(os.environ['USERPROFILE'], 'Desktop')
 INPUT_FILE = "CET6_3.json"
@@ -57,26 +58,35 @@ random.seed(42)  # 固定种子，可复现
 random.shuffle(words)
 print("🎲 随机打乱完成")
 
-# ── 3. 分配到 units ──
+# ── 3. 分配到 units（每个 unit 含多个 part）──
 total = len(words)
-num_units = (total + WORDS_PER_PART - 1) // WORDS_PER_PART  # 向上取整
+words_per_part = WORDS_PER_UNIT // PARTS_PER_UNIT  # 每 part 词数
+num_units = (total + WORDS_PER_UNIT - 1) // WORDS_PER_UNIT  # 向上取整
 
 units = []
+word_idx = 0
 for i in range(num_units):
-    start = i * WORDS_PER_PART
-    end = min((i + 1) * WORDS_PER_PART, total)
-    chunk = words[start:end]
-
     unit_name = f"CET6-U{i+1}"
-    part_name = "P1"
-    units.append({
-        'unit': unit_name,
-        'part': part_name,
-        'count': len(chunk),
-        'words': chunk
-    })
+    unit_words = []
+    for p in range(PARTS_PER_UNIT):
+        part_name = f"P{p+1}"
+        start = word_idx
+        end = min(word_idx + words_per_part, total)
+        chunk = words[start:end]
+        word_idx = end
+        if chunk:
+            units.append({
+                'unit': unit_name,
+                'part': part_name,
+                'count': len(chunk),
+                'words': chunk
+            })
+        if word_idx >= total:
+            break
+    if word_idx >= total:
+        break
 
-print(f"📦 分配完成: {num_units} 个 Unit")
+print(f"📦 分配完成: {num_units} 个 Unit, 每 Unit {PARTS_PER_UNIT} 个 Part, 每 Part ~{words_per_part} 词")
 for u in units:
     print(f"   {u['unit']}-{u['part']}: {u['count']} 词")
 
@@ -125,57 +135,65 @@ run.font.color.rgb = RGBColor(0x1a, 0x56, 0xdb)
 
 subtitle = doc.add_paragraph()
 subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
-run = subtitle.add_run(f'共 {total} 词 | {num_units} 个单元 | 每单元约 {WORDS_PER_PART} 词 | 随机排列')
+run = subtitle.add_run(f'共 {total} 词 | {num_units} 个单元 × {PARTS_PER_UNIT} Part | 每 Part ~{words_per_part} 词 | 随机排列')
 run.font.size = Pt(10)
 run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
 
 doc.add_paragraph()  # 空行
 
-# 逐 Unit 输出
-for u in units:
-    # Unit 标题
-    h = doc.add_heading(f'{u["unit"]}  ({u["count"]} 词)', level=2)
+# 逐 Unit 输出（每个 Unit 下按 Part 分组）
+from itertools import groupby
+for unit_name, group in groupby(units, key=lambda u: u['unit']):
+    group_list = list(group)
+    unit_total = sum(g['count'] for g in group_list)
+    h = doc.add_heading(f'{unit_name}  ({unit_total} 词)', level=2)
 
-    # 用表格排列单词（两列：英文 | 中文）
-    table = doc.add_table(rows=1, cols=3)
-    table.style = 'Table Grid'
+    for g in group_list:
+        # Part 子标题
+        ph = doc.add_paragraph()
+        run = ph.add_run(f'{g["part"]}  ({g["count"]} 词)')
+        run.font.size = Pt(11)
+        run.font.bold = True
+        run.font.color.rgb = RGBColor(0x1a, 0x56, 0xdb)
 
-    # 表头
-    hdr = table.rows[0].cells
-    hdr[0].text = '#'
-    hdr[1].text = 'English'
-    hdr[2].text = '中文释义'
-    for cell in hdr:
-        for p in cell.paragraphs:
-            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            for r in p.runs:
-                r.font.bold = True
-                r.font.size = Pt(9)
+        # 表格
+        table = doc.add_table(rows=1, cols=3)
+        table.style = 'Table Grid'
 
-    # 数据行
-    for idx, w in enumerate(u['words'], 1):
-        row = table.add_row()
-        cells = row.cells
-        cells[0].text = str(idx)
-        cells[1].text = w['word']
-        cells[2].text = w['meaning']
-
-        for i, cell in enumerate(cells):
+        hdr = table.rows[0].cells
+        hdr[0].text = '#'
+        hdr[1].text = 'English'
+        hdr[2].text = '中文释义'
+        for cell in hdr:
             for p in cell.paragraphs:
-                if i == 0:
-                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 for r in p.runs:
+                    r.font.bold = True
                     r.font.size = Pt(9)
-                    if i == 1:
-                        r.font.bold = True
 
-    # 设置列宽
-    for row in table.rows:
-        row.cells[0].width = Cm(0.8)
-        row.cells[1].width = Cm(4.5)
-        row.cells[2].width = Cm(10)
+        for idx, w in enumerate(g['words'], 1):
+            row = table.add_row()
+            cells = row.cells
+            cells[0].text = str(idx)
+            cells[1].text = w['word']
+            cells[2].text = w['meaning']
+            for i, cell in enumerate(cells):
+                for p in cell.paragraphs:
+                    if i == 0:
+                        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    for r in p.runs:
+                        r.font.size = Pt(9)
+                        if i == 1:
+                            r.font.bold = True
 
-    doc.add_paragraph()  # 间隔
+        for row in table.rows:
+            row.cells[0].width = Cm(0.8)
+            row.cells[1].width = Cm(4.5)
+            row.cells[2].width = Cm(10)
+
+        doc.add_paragraph()  # Part 间隔
+
+    doc.add_paragraph()  # Unit 间隔
 
 doc.save(OUTPUT_DOCX)
 print(f"✅ DOCX 已保存: {OUTPUT_DOCX}")

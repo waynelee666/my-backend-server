@@ -10,8 +10,9 @@ import random
 import os
 
 # ── 配置 ──
-WORDS_PER_UNIT = 80   # 每个 Unit 总词数
+WORDS_PER_PART = 70   # 每个 Part 词数
 PARTS_PER_UNIT = 2    # 每个 Unit 分成几个 Part
+WORDS_PER_UNIT = WORDS_PER_PART * PARTS_PER_UNIT
 BOOK_NAME = "六级"
 DESKTOP = os.path.join(os.environ['USERPROFILE'], 'Desktop')
 INPUT_FILE = "CET6_3.json"

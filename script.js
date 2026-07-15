@@ -11,11 +11,12 @@ let currentTab = 'home';
 let todoDate = new Date().toISOString().slice(0, 10);
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 let selectedCalDate = null;
-let vocabBook = '六级', vocabUnit = 'U1', vocabPart = 'P1', vocabEditId = null;
+let vocabBook = '基础', vocabUnit = 'U1', vocabPart = 'P1', vocabEditId = null;
 let vocabEditMode = false;  // 编辑模式：显示复选框和编辑/删除按钮
 const VOCAB_BOOKS = [
-    { key: '六级', label: '六级', emoji: '📘' },
+    { key: '基础', label: '基础', emoji: '🟢' },
     { key: '四级', label: '四级', emoji: '📙' },
+    { key: '六级', label: '六级', emoji: '📘' },
     { key: '大英四', label: '大英四', emoji: '📗' },
 ];
 /** 查找相似科目名（"微积分" ≈ "微积分（甲）Ⅱ"） */
@@ -631,7 +632,9 @@ function renderVocabView() {
         } else if (isMastered) {
             listEl.innerHTML = '<p class="empty-text">📭 还没有已背单词，去检测模式里通关吧 💪</p>';
         } else if (bookTotal === 0) {
-            const isCET6 = vocabBook === '六级';
+            const quickImport = VOCAB_BOOKS.filter(b => ['基础','四级','六级'].includes(b.key));
+            const hasQuickImport = quickImport.some(b => b.key === vocabBook);
+            const qb = quickImport.find(b => b.key === vocabBook);
             listEl.innerHTML = `<div class="vocab-empty-book">
                 <div class="vocab-empty-book__icon">${VOCAB_BOOKS.find(b => b.key === vocabBook)?.emoji || '📖'}</div>
                 <h3>${vocabBook}词书还是空的</h3>
@@ -639,13 +642,16 @@ function renderVocabView() {
                 <div style="display:flex;gap:8px;margin-top:4px">
                     <button class="btn btn--primary btn--sm" id="vocabEmptyAddBtn">➕ 添加单词</button>
                     <button class="btn btn--outline btn--sm" id="vocabEmptyImportBtn">📥 批量导入</button>
-                    ${isCET6 ? '<button class="btn btn--primary btn--sm" id="vocabEmptyCET6Btn" style="background:#f59e0b">🎯 导入六级词库 (2,345词)</button>' : ''}
+                    ${hasQuickImport ? `<button class="btn btn--primary btn--sm" id="vocabEmptyQuickBtn" style="background:#f59e0b">🎯 导入${vocabBook}词库 (${qb.label})</button>` : ''}
                 </div>
             </div>`;
             $('#vocabEmptyAddBtn')?.addEventListener('click', () => { vocabEditId = null; openVocabEditModal(null); });
             $('#vocabEmptyImportBtn')?.addEventListener('click', () => { $('#vocabImportBtn').click(); });
-            if (isCET6) {
-                $('#vocabEmptyCET6Btn')?.addEventListener('click', () => { $('#vocabCET6ImportBtn').click(); });
+            if (hasQuickImport) {
+                $('#vocabEmptyQuickBtn')?.addEventListener('click', () => {
+                    const btnId = vocabBook === '基础' ? 'vocabBasicImportBtn' : vocabBook === '四级' ? 'vocabCET4ImportBtn' : 'vocabCET6ImportBtn';
+                    $(`#${btnId}`)?.click();
+                });
             }
         } else {
             listEl.innerHTML = '<p class="empty-text">本单元还没有单词，点击上方添加或导入 📖</p>';
@@ -980,6 +986,29 @@ $('#vocabDeleteSelectedBtn').addEventListener('click', async () => {
     }
 });
 
+// 清空当前词书
+$('#vocabClearBookBtn').addEventListener('click', async () => {
+    const wordsToDelete = vocabs.filter(v => v.book === vocabBook);
+    if (!wordsToDelete.length) { showToast('当前词书已是空的', 'info'); return; }
+    if (!confirm(`⚠️ 确认删除「${vocabBook}」词书的全部 ${wordsToDelete.length} 个单词？\n\n此操作不可撤销！`)) return;
+    const btn = $('#vocabClearBookBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ 删除中...';
+    try {
+        for (const v of wordsToDelete) {
+            await DS.remove('vocabulary', v.id);
+        }
+        vocabs = vocabs.filter(v => v.book !== vocabBook);
+        renderVocabView();
+        showToast(`「${vocabBook}」词书已清空，共删除 ${wordsToDelete.length} 词`, 'success');
+    } catch (e) {
+        showToast('清空失败: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '⚠️ 清空词书';
+    }
+});
+
 // 添加/编辑保存
 $('#vocabEditSave').addEventListener('click', async () => {
     const word = $('#vocabEditWord').value.trim();
@@ -1159,79 +1188,66 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
     }
 });
 
-// 一键导入六级词库
-$('#vocabCET6ImportBtn')?.addEventListener('click', async () => {
-    if (!confirm('即将导入新东方六级大纲词汇（2,345 词，随机分配到 30 个单元）。\n\n已存在的单词将自动跳过。确定继续？')) return;
+// 一键导入词库（基础/四级/六级）
+async function quickImportVocab(book) {
+    const cfg = { '基础': { label: '基础词汇', file: 'basic_import.json' }, '四级': { label: '四级词汇', file: 'cet4_import.json' }, '六级': { label: '六级词汇', file: 'cet6_import.json' } };
+    const c = cfg[book];
+    if (!c) return;
 
-    const btn = $('#vocabCET6ImportBtn');
+    const btn = $(`#vocab${book === '基础' ? 'Basic' : book === '四级' ? 'CET4' : 'CET6'}ImportBtn`);
+    if (!confirm(`即将导入${c.label}词库。\n\n已存在的单词将自动跳过。确定继续？`)) return;
+
     const origText = btn.textContent;
     btn.disabled = true;
     btn.textContent = '⏳ 加载词库数据...';
 
     try {
-        // 1. 从服务器获取词库数据
-        const resp = await fetch('/api/cet6-import-data');
+        const resp = await fetch(`/api/vocab-import-data?book=${encodeURIComponent(book)}`);
         const data = await resp.json();
         if (!data.ok || !data.words) throw new Error(data.error || '获取词库数据失败');
 
         const words = data.words;
         btn.textContent = `⏳ 正在导入 ${words.length} 词...`;
 
-        // 2. 获取已有单词去重
         const existingSet = new Set();
         for (const v of vocabs) {
-            if (v.book === 'CET6') {
+            if (v.book === book) {
                 existingSet.add(`${v.unit}|${v.part}|${v.word.toLowerCase().trim()}`);
             }
         }
 
-        // 3. 分批导入
         let imported = 0, skipped = 0, failed = 0;
         const BATCH_SIZE = 20;
 
         for (let i = 0; i < words.length; i += BATCH_SIZE) {
             const batch = words.slice(i, i + BATCH_SIZE);
-
             for (const w of batch) {
                 const key = `${w.unit}|${w.part}|${w.word.toLowerCase().trim()}`;
-                if (existingSet.has(key)) {
-                    skipped++;
-                    continue;
-                }
-
+                if (existingSet.has(key)) { skipped++; continue; }
                 try {
-                    await DS.create('vocabulary', {
-                        book: w.book,
-                        unit: w.unit,
-                        part: w.part,
-                        word: w.word,
-                        meaning: w.meaning
-                    });
+                    await DS.create('vocabulary', { book: w.book, unit: w.unit, part: w.part, word: w.word, meaning: w.meaning });
                     existingSet.add(key);
                     imported++;
-                } catch (e) {
-                    failed++;
-                    console.warn('导入失败:', w.word, e);
-                }
+                } catch (e) { failed++; console.warn('导入失败:', w.word, e); }
             }
-
-            // 更新进度
             const pct = Math.round((i + batch.length) / words.length * 100);
             btn.textContent = `⏳ ${pct}% (${imported} 导入 / ${skipped} 跳过 / ${failed} 失败)`;
         }
 
-        // 4. 刷新
         await refreshAll();
         btn.disabled = false;
         btn.textContent = origText;
-        showToast(`六级词库导入完成 ✨ ${imported} 新词导入，${skipped} 已跳过${failed ? `，${failed} 失败` : ''}`, 'success');
-
+        showToast(`${c.label}导入完成 ✨ ${imported} 新词导入，${skipped} 已跳过${failed ? `，${failed} 失败` : ''}`, 'success');
     } catch (e) {
-        showToast('导入六级词库失败: ' + e.message, 'error');
+        showToast(`导入${c.label}失败: ` + e.message, 'error');
         btn.disabled = false;
         btn.textContent = origText;
     }
-});
+}
+
+$('#vocabBasicImportBtn')?.addEventListener('click', () => quickImportVocab('基础'));
+$('#vocabCET4ImportBtn')?.addEventListener('click', () => quickImportVocab('四级'));
+$('#vocabCET6ImportBtn')?.addEventListener('click', () => quickImportVocab('六级'));
 
 // 事件绑定
 document.addEventListener('DOMContentLoaded', () => {

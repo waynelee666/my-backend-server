@@ -336,15 +336,25 @@ class RequestHandler(BaseHTTPRequestHandler):
             })
             return
 
-        if path == "/api/cet6-import-data":
-            # 返回六级词汇导入数据（由前端认证后导入 Supabase）
+        if path == "/api/vocab-import-data":
+            # 返回词库导入数据 ?book=基础|四级|六级
+            qs = parse_qs(parsed.query)
+            book = qs.get("book", [""])[0]
+            file_map = {
+                "基础": "basic_import.json",
+                "四级": "cet4_import.json",
+                "六级": "cet6_import.json",
+            }
+            if book not in file_map:
+                self.send_json({"ok": False, "error": f"未知词书: {book}"}, 400)
+                return
             try:
-                import_file = os.path.join(SERVER_DIR, "cet6_import.json")
+                import_file = os.path.join(SERVER_DIR, file_map[book])
                 with open(import_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 self.send_json({"ok": True, "count": len(data), "words": data})
             except FileNotFoundError:
-                self.send_json({"ok": False, "error": "cet6_import.json 未生成，请先运行 generate_cet6.py"}, 500)
+                self.send_json({"ok": False, "error": f"{file_map[book]} 未生成，请先运行 generate_imports.py"}, 500)
             except Exception as e:
                 self.send_json({"ok": False, "error": str(e)}, 500)
             return

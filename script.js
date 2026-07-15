@@ -1234,6 +1234,9 @@ async function quickImportVocab(book) {
             btn.textContent = `⏳ ${pct}% (${imported} 导入 / ${skipped} 跳过 / ${failed} 失败)`;
         }
 
+        vocabBook = book;  // 自动切换到刚导入的词书
+        vocabUnit = vocabs.find(v => v.book === book)?.unit || 'U1';
+        vocabPart = 'P1';
         await refreshAll();
         btn.disabled = false;
         btn.textContent = origText;

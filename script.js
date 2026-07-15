@@ -1235,9 +1235,10 @@ async function quickImportVocab(book) {
         }
 
         vocabBook = book;  // 自动切换到刚导入的词书
+        await refreshAll();
+        // refreshAll 后再取第一个 unit，避免取到 fallback
         vocabUnit = vocabs.find(v => v.book === book)?.unit || 'U1';
         vocabPart = 'P1';
-        await refreshAll();
         btn.disabled = false;
         btn.textContent = origText;
         showToast(`${c.label}导入完成 ✨ ${imported} 新词导入，${skipped} 已跳过${failed ? `，${failed} 失败` : ''}`, 'success');

@@ -15,6 +15,7 @@ let vocabBook = '六级', vocabUnit = 'U1', vocabPart = 'P1', vocabEditId = null
 let vocabEditMode = false;  // 编辑模式：显示复选框和编辑/删除按钮
 const VOCAB_BOOKS = [
     { key: '六级', label: '六级', emoji: '📘' },
+    { key: '四级', label: '四级', emoji: '📙' },
     { key: '大英四', label: '大英四', emoji: '📗' },
 ];
 /** 查找相似科目名（"微积分" ≈ "微积分（甲）Ⅱ"） */

@@ -472,6 +472,7 @@ textarea.form-input { resize:vertical; }
 .vocab-book-card--hero { padding:36px 24px 28px; }
 .vocab-book-card--hero .vocab-book-card__icon { font-size:3.5rem; }
 .vocab-book-card--hero .vocab-book-card__label { font-size:1.2rem; }
+.vocab-book-card--hero .vocab-book-card__progress { width:80px; height:80px; }
 .vocab-book-card--hero .vocab-book-card__ring { width:80px; height:80px; }
 .vocab-book-card--hero .vocab-book-card__ring::after { width:60px; height:60px; }
 .vocab-book-card--hero .vocab-book-card__pct { font-size:.85rem; }
@@ -486,11 +487,11 @@ textarea.form-input { resize:vertical; }
 .vocab-book-card--active .vocab-book-card__icon { transform:scale(1.15); }
 .vocab-book-card__label { font-size:.9rem; font-weight:700; color:var(--color-text); }
 .vocab-book-card--active .vocab-book-card__label { color:var(--color-primary); }
-.vocab-book-card__progress { position:relative; width:52px; height:52px; flex-shrink:0; }
+.vocab-book-card__progress { position:relative; width:52px; height:52px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
 .vocab-book-card__ring { width:52px; height:52px; border-radius:50%; background:conic-gradient(var(--color-primary) var(--pct,0%), #e5e7eb var(--pct,0%)); display:flex; align-items:center; justify-content:center; position:relative; }
-.vocab-book-card__ring::after { content:''; width:38px; height:38px; border-radius:50%; background:#fff; position:absolute; }
+.vocab-book-card__ring::after { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:38px; height:38px; border-radius:50%; background:#fff; }
 .vocab-book-card--active .vocab-book-card__ring::after { background:#faf5ff; }
-.vocab-book-card__pct { position:relative; z-index:1; font-size:.68rem; font-weight:700; color:var(--color-primary); }
+.vocab-book-card__pct { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:1; font-size:.68rem; font-weight:700; color:var(--color-primary); pointer-events:none; }
 .vocab-book-card__meta { font-size:.7rem; color:var(--color-text-light); }
 .vocab-book-card__glow { position:absolute; inset:0; border-radius:20px; opacity:0; transition:opacity .3s ease; pointer-events:none; }
 .vocab-book-card--active .vocab-book-card__glow { opacity:1; box-shadow:inset 0 0 30px rgba(79,70,229,.06); }
@@ -665,6 +666,7 @@ textarea.form-input { resize:vertical; }
     .vocab-book-card--hero { padding:24px 14px 20px; }
     .vocab-book-card--hero .vocab-book-card__icon { font-size:2.6rem; }
     .vocab-book-card--hero .vocab-book-card__label { font-size:1rem; }
+    .vocab-book-card--hero .vocab-book-card__progress { width:60px; height:60px; }
     .vocab-book-card--hero .vocab-book-card__ring { width:60px; height:60px; }
     .vocab-book-card--hero .vocab-book-card__ring::after { width:44px; height:44px; }
     .vocab-book-card--hero .vocab-book-card__pct { font-size:.78rem; }
@@ -683,6 +685,7 @@ textarea.form-input { resize:vertical; }
     .vocab-book-card--hero { padding:18px 8px 14px; }
     .vocab-book-card--hero .vocab-book-card__icon { font-size:2rem; }
     .vocab-book-card--hero .vocab-book-card__label { font-size:.85rem; }
+    .vocab-book-card--hero .vocab-book-card__progress { width:48px; height:48px; }
     .vocab-book-card--hero .vocab-book-card__ring { width:48px; height:48px; }
     .vocab-book-card--hero .vocab-book-card__ring::after { width:34px; height:34px; }
     .vocab-unit-tag { padding:5px 12px; font-size:.75rem; }

@@ -55,7 +55,7 @@ const DS = {
     async loadEvents() { const { data, error } = await sb.from('events').select('*').order('date').order('start_time'); if (error) console.warn('[DS.loadEvents]', error); return data||[]; },
     async loadTodos() { const { data, error } = await sb.from('todos').select('*').order('created_at',{ascending:false}); if (error) console.warn('[DS.loadTodos]', error); return data||[]; },
     async loadThoughts() { const { data, error } = await sb.from('thoughts').select('*').order('created_at',{ascending:false}); if (error) console.warn('[DS.loadThoughts]', error); return data||[]; },
-    async loadVocab() { const { data, error } = await sb.from('vocabulary').select('*').order('unit').order('part').order('created_at'); if (error) console.warn('[DS.loadVocab]', error); return data||[]; },
+async loadVocab() { const PAGE = 1000; let all = [], start = 0; while (true) { const { data, error } = await sb.from('vocabulary').select('*').order('unit').order('part').order('created_at').range(start, start + PAGE - 1); if (error) { console.warn('[DS.loadVocab]', error); break; } if (!data || !data.length) break; all = all.concat(data); if (data.length < PAGE) break; start += PAGE; } console.log(`[DS.loadVocab] 分页加载完成: ${all.length} 条`); return all; },
     async create(table, row) { row.user_id = await this.getUserId();
         const { data, error } = await sb.from(table).insert(row).select().single(); if (error) throw error; return data; },
     async createMany(table, rows) {

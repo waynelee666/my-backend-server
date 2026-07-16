@@ -505,28 +505,27 @@ async function saveEditThought(id) { await saveScriptEditor(); }
 
 // ==================== 单词视图 ====================
 async function autoDedupVocab(unit, part) {
-    // 仅在非复习模式下自动去重
     if (unit === '__review__' || unit === '__mastered__') return false;
     const target = vocabs.filter(v => v.book === vocabBook && v.unit === unit && v.part === part);
     if (target.length < 2) return false;
     const seen = new Map();
-    const toDelete = [];
+    const toDeleteIds = [];
     for (const v of target) {
         const key = v.word.toLowerCase();
-        if (seen.has(key)) {
-            toDelete.push(v);
-        } else {
-            seen.set(key, v);
-        }
+        if (seen.has(key)) { toDeleteIds.push(v.id); }
+        else { seen.set(key, v); }
     }
-    if (!toDelete.length) return false;
+    if (!toDeleteIds.length) return false;
     try {
-        for (const v of toDelete) {
-            await DS.remove('vocabulary', v.id);
+        // 批量删除
+        const BATCH = 100;
+        for (let i = 0; i < toDeleteIds.length; i += BATCH) {
+            const { error } = await sb.from('vocabulary').delete().in('id', toDeleteIds.slice(i, i + BATCH));
+            if (error) throw error;
         }
-        vocabs = vocabs.filter(v => !toDelete.some(d => d.id === v.id));
-        console.log(`[去重] ${unit} ${part}: 自动删除 ${toDelete.length} 个重复条目`);
-        return true; // 有变更，需要重新渲染
+        vocabs = vocabs.filter(v => !toDeleteIds.includes(v.id));
+        console.log(`[去重] ${unit} ${part}: 自动删除 ${toDeleteIds.length} 个重复条目`);
+        return true;
     } catch (e) {
         console.warn('[去重] 自动去重失败:', e);
         return false;
@@ -864,27 +863,85 @@ $('#vocabDedupBtn').addEventListener('click', async () => {
     if (isReview) { showToast('特殊列表不支持去重', 'info'); return; }
     const target = vocabs.filter(v => v.book === vocabBook && v.unit === vocabUnit && v.part === vocabPart);
     if (target.length < 2) { showToast(`${vocabUnit} ${vocabPart} 条目不足，无需去重`, 'info'); return; }
-    const seen = new Map(); // word.lower() -> vocab item
+    const seen = new Map();
     const toDelete = [];
     for (const v of target) {
         const key = v.word.toLowerCase();
-        if (seen.has(key)) {
-            toDelete.push(v); // 重复的，删除
-        } else {
-            seen.set(key, v); // 第一个，保留
-        }
+        if (seen.has(key)) { toDelete.push(v.id); }
+        else { seen.set(key, v); }
     }
     if (!toDelete.length) { showToast(`${vocabUnit} ${vocabPart} 没有重复条目 ✅`, 'success'); return; }
-    if (!confirm(`${vocabUnit} ${vocabPart} 发现 ${toDelete.length} 个重复条目，确认删除？\n${toDelete.map(v => v.word).join('、')}`)) return;
+    if (!confirm(`${vocabUnit} ${vocabPart} 发现 ${toDelete.length} 个重复条目，确认删除？`)) return;
+    const btn = $('#vocabDedupBtn');
+    btn.disabled = true; btn.textContent = '⏳ 去重中...';
     try {
-        for (const v of toDelete) {
-            await DS.remove('vocabulary', v.id);
+        // 批量删除
+        const BATCH = 100;
+        for (let i = 0; i < toDelete.length; i += BATCH) {
+            const batch = toDelete.slice(i, i + BATCH);
+            const { error } = await sb.from('vocabulary').delete().in('id', batch);
+            if (error) throw error;
         }
-        vocabs = vocabs.filter(v => !toDelete.some(d => d.id === v.id));
+        vocabs = vocabs.filter(v => !toDelete.includes(v.id));
         renderVocabView();
         showToast(`已删除 ${toDelete.length} 个重复条目 ✅`, 'success');
     } catch (e) {
         showToast('去重失败: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = '🔄 去重';
+    }
+});
+
+// 全书去重：扫描当前词书所有单元，删除重复单词（保留最早创建的）
+$('#vocabDedupBookBtn').addEventListener('click', async () => {
+    const isSpecial = vocabUnit === '__review__' || vocabUnit === '__mastered__';
+    if (isSpecial) { showToast('特殊列表不支持去重', 'info'); return; }
+    const total = vocabs.filter(v => v.book === vocabBook).length;
+    if (total < 2) { showToast('当前词书条目不足，无需去重', 'info'); return; }
+
+    // 按 (word, unit, part) 分组，word 用 toLowerCase 比较
+    const seen = new Map(); // key: "word|unit|part", value: keep this one
+    const toDelete = [];    // ids to delete
+    for (const v of vocabs) {
+        if (v.book !== vocabBook) continue;
+        const key = `${v.word.toLowerCase()}|${v.unit}|${v.part}`;
+        if (seen.has(key)) {
+            // 保留 id 更小（更早创建）的
+            const existing = seen.get(key);
+            if (v.id < existing.id) {
+                toDelete.push(existing.id);
+                seen.set(key, v);
+            } else {
+                toDelete.push(v.id);
+            }
+        } else {
+            seen.set(key, v);
+        }
+    }
+    if (!toDelete.length) { showToast(`「${vocabBook}」词书没有重复条目 ✅`, 'success'); return; }
+    if (!confirm(`「${vocabBook}」词书发现 ${toDelete.length} 个重复条目，确认删除？\n（保留最早创建的版本）`)) return;
+
+    const btn = $('#vocabDedupBookBtn');
+    btn.disabled = true;
+    const origText = btn.textContent;
+    try {
+        // 批量删除
+        const BATCH = 100;
+        let deleted = 0;
+        for (let i = 0; i < toDelete.length; i += BATCH) {
+            const batch = toDelete.slice(i, i + BATCH);
+            const { error } = await sb.from('vocabulary').delete().in('id', batch);
+            if (error) throw error;
+            deleted += batch.length;
+            btn.textContent = `⏳ ${Math.round(deleted / toDelete.length * 100)}%`;
+        }
+        vocabs = vocabs.filter(v => !toDelete.includes(v.id));
+        renderVocabView();
+        showToast(`全书去重完成 ✅ 删除 ${deleted} 个重复条目，保留 ${total - deleted} 个`, 'success');
+    } catch (e) {
+        showToast('全书去重失败: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = origText;
     }
 });
 
@@ -1201,21 +1258,13 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
         console.log(`[vocab-import] createMany 返回 ${inserted.length} 条，期望 ${validRows.length} 条`);
 
         await refreshAll();
-        // 诊断：检查本地 vocabs 数量
-        const localCount = vocabs.filter(v => v.book === vocabBook).length;
-        console.log(`[vocab-import] refreshAll 后本地 ${vocabBook} 词书共 ${localCount} 条, vocabs 总数: ${vocabs.length}`);
+        console.log(`[vocab-import] refreshAll 后 vocabs 总数: ${vocabs.length}`);
 
         $('#vocabImportModal').style.display = 'none';
-
-        if (localCount === 0 && validRows.length > 0) {
-            // 插入未报错但 refreshAll 后本地仍为 0 — 大概率 RLS SELECT 被拒
-            showToast(`⚠️ 写入异常：${validRows.length} 词已提交但刷新后查询不到，请 F12→Console 查看 [DS.loadVocab] 错误`, 'error');
-        } else {
-            let msg = `成功导入 ${inserted.length} 个条目 ✨`;
-            if (dupCount) msg += `，${dupCount} 个已存在跳过`;
-            if (skipped.length) msg += `，${skipped.length} 个未翻译`;
-            showToast(msg, 'success');
-        }
+        let msg = `成功导入 ${inserted.length} 个条目 ✨`;
+        if (dupCount) msg += `，${dupCount} 个已存在跳过`;
+        if (skipped.length) msg += `，${skipped.length} 个未翻译`;
+        showToast(msg, 'success');
     } catch (e) {
         console.error('[vocab-import] 导入失败:', e);
         showToast('导入失败: ' + e.message, 'error');

@@ -19,6 +19,10 @@ const VOCAB_BOOKS = [
     { key: '四级', label: '四级', emoji: '📙' },
     { key: '六级', label: '六级', emoji: '📘' },
 ];
+function displayUnit(unit) {
+    // 去掉词书前缀，如 "基础-U1" → "U1", "四级-U2" → "U2"
+    return unit.replace(/^(基础|四级|六级)[—\-]/, '');
+}
 /** 查找相似科目名（"微积分" ≈ "微积分（甲）Ⅱ"） */
 function findSimilarSubject(name) {
     if (!name) return null;
@@ -635,7 +639,7 @@ function renderVocabView() {
     let label;
     if (isReview) label = '🔄 复习';
     else if (isMastered) label = '✅ 已背';
-    else label = `${vocabUnit} ${vocabPart}`;
+    else label = `${displayUnit(vocabUnit)} ${vocabPart}`;
     if (countEl) countEl.textContent = filtered.length ? `${label} · ${filtered.length}词` : label;
 
     // === Unit 选择器（标签式 + 完成标记）===
@@ -662,7 +666,7 @@ function renderVocabView() {
         const cls = u === vocabUnit ? ' vocab-unit-tag--active' : '';
         const doneCls = done ? ' vocab-unit-tag--done' : '';
         const check = done ? '<span class="vocab-unit-tag__check">✅</span>' : '';
-        return `<button class="vocab-unit-tag${cls}${doneCls}" data-unit="${u}">${check}${u}<span class="vocab-unit-count">${totalInUnit}</span></button>`;
+        return `<button class="vocab-unit-tag${cls}${doneCls}" data-unit="${u}">${check}${displayUnit(u)}<span class="vocab-unit-count">${totalInUnit}</span></button>`;
     }).join('');
     $('#vocabUnitRow').innerHTML = unitHTML;
 
@@ -755,7 +759,7 @@ function renderVocabView() {
                 <span class="vocab-word-card__word vocab-word-card__word--en">${esc(v.word)}</span>
                 <span class="vocab-word-card__meaning">${esc(v.meaning)}</span>
                 ${badgeHTML}
-                <span class="vocab-word-card__unit-label">${v.unit} ${v.part}</span>
+                <span class="vocab-word-card__unit-label">${displayUnit(v.unit)} ${v.part}</span>
                 ${showCheck ? `
                 <div class="vocab-word-card__actions" style="opacity:1">
                     <button data-action="edit-vocab" data-id="${v.id}" title="编辑">✏️</button>

@@ -719,7 +719,7 @@ function renderPracticeConfig() {
             const cnt = vocabs.filter(v => `${v.unit}-${v.part}` === u).length;
             return `<label class="practice-unit-check">
                 <input type="checkbox" value="${u}" ${checked} class="practice-unit-cb">
-                <span>${u} <small>(${cnt}词)</small></span>
+                <span>${displayUnit(u)} <small>(${cnt}词)</small></span>
             </label>`;
         }).join('');
         $('#practiceStartBtn').disabled = selectedUnits.size === 0;

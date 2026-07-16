@@ -465,7 +465,7 @@ textarea.form-input { resize:vertical; }
 .vocab-book-row { display:flex; gap:8px; margin-bottom:14px; align-items:center; flex-wrap:wrap; }
 
 /* 选书页 — 英雄区 */
-.vocab-books-hero { text-align:center; padding:32px 0; }
+.vocab-books-hero { text-align:center; padding:32px 0; width:100%; }
 .vocab-books-hero__title { font-size:1.6rem; font-weight:700; color:var(--color-text); margin:0 0 4px; }
 .vocab-books-hero__sub { font-size:.95rem; color:var(--color-text-light); margin:0 0 32px; }
 .vocab-books-hero__grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:24px; max-width:720px; margin:0 auto; }
@@ -487,7 +487,7 @@ textarea.form-input { resize:vertical; }
 .vocab-book-card__label { font-size:.9rem; font-weight:700; color:var(--color-text); }
 .vocab-book-card--active .vocab-book-card__label { color:var(--color-primary); }
 .vocab-book-card__progress { position:relative; width:52px; height:52px; flex-shrink:0; }
-.vocab-book-card__ring { width:52px; height:52px; border-radius:50%; background:conic-gradient(var(--color-primary) var(--pct,0%), #e5e7eb var(--pct,0%)); display:flex; align-items:center; justify-content:center; }
+.vocab-book-card__ring { width:52px; height:52px; border-radius:50%; background:conic-gradient(var(--color-primary) var(--pct,0%), #e5e7eb var(--pct,0%)); display:flex; align-items:center; justify-content:center; position:relative; }
 .vocab-book-card__ring::after { content:''; width:38px; height:38px; border-radius:50%; background:#fff; position:absolute; }
 .vocab-book-card--active .vocab-book-card__ring::after { background:#faf5ff; }
 .vocab-book-card__pct { position:relative; z-index:1; font-size:.68rem; font-weight:700; color:var(--color-primary); }

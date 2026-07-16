@@ -66,7 +66,7 @@ async function startVocabStudy() {
 
     // 进入加载状态
     $('#vocabBookRow').style.display = 'none';
-    $('#vocabStatsRow').style.display = 'none';
+    $('#vocabStatsBar').style.display = 'none';
     $('#vocabList').style.display = 'none';
     $('#vocabUnitRow').style.display = 'none';
     $('#vocabPartRow').style.display = 'none';
@@ -273,7 +273,7 @@ function renderStudyEnd() {
 async function exitStudyMode() {
     checkActive = false;
     $('#vocabBookRow').style.display = '';
-    $('#vocabStatsRow').style.display = '';
+    $('#vocabStatsBar').style.display = '';
     $('#vocabList').style.display = '';
     $('#vocabUnitRow').style.display = '';
     $('#vocabPartRow').style.display = '';
@@ -545,7 +545,7 @@ function getAvailableUnits() {
 function enterPracticeMode() {
     if (vocabUnit === '__mastered__') { showToast('已背列表无法练习', 'info'); return; }
     $('#vocabBookRow').style.display = 'none';
-    $('#vocabStatsRow').style.display = 'none';
+    $('#vocabStatsBar').style.display = 'none';
     $('#vocabList').style.display = 'none';
     $('#vocabUnitRow').style.display = 'none';
     $('#vocabPartRow').style.display = 'none';
@@ -1093,7 +1093,7 @@ function exitPracticeMode() {
     selectedUnits.clear();
     $('#vocabPractice').style.display = 'none';
     $('#vocabBookRow').style.display = '';
-    $('#vocabStatsRow').style.display = '';
+    $('#vocabStatsBar').style.display = '';
     $('#vocabList').style.display = '';
     $('#vocabUnitRow').style.display = '';
     $('#vocabPartRow').style.display = '';

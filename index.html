@@ -258,16 +258,24 @@
         <div class="vocab-rules collapsed" id="vocabRules">
             <div class="vocab-rules__body">
                 <div class="vocab-rules__col">
-                    <h4>🎯 闪卡复习</h4>
-                    <p>点击卡片 <b>翻转</b> 看释义</p>
-                    <p>再点一次查看 <b>牛津详解</b></p>
-                    <p><span class="vocab-rules__kbd">←</span> 认识 / <span class="vocab-rules__kbd">→</span> 不认识</p>
-                    <p>认识的直接过，不认识的进 <b>复习表</b></p>
+                    <h4>🎯 复习</h4>
+                    <p>从当前单元随机抽词，<b>闪卡模式</b></p>
+                    <p>点击卡片翻转看释义，再点看牛津详解</p>
+                    <p><span class="vocab-rules__kbd">←</span> 认识（移出复习表）</p>
+                    <p><span class="vocab-rules__kbd">→</span> 不认识（留在复习表）</p>
+                    <p>可选复习表模式，专攻薄弱词</p>
                 </div>
                 <div class="vocab-rules__col">
-                    <h4>🔍 检测模式（双轮）</h4>
-                    <p>第一轮：看英文 → 想意思</p>
-                    <p>第二轮：看中文 → 拼英文</p>
+                    <h4>📝 练习</h4>
+                    <p>AI 根据所选单词生成<b>短文填空</b></p>
+                    <p>在文章中填入正确单词，首字母提示</p>
+                    <p>交卷后 AI 逐题批改 + 给出反馈</p>
+                    <p>可自定义难度、单词范围、出题数量</p>
+                </div>
+                <div class="vocab-rules__col">
+                    <h4>🔍 检测</h4>
+                    <p><b>双轮制</b>：第一轮看英文想意思</p>
+                    <p>第二轮看中文拼英文</p>
                     <p>两轮都通过 → <b>✅ 已背</b></p>
                     <p>任一未通过 → 加入 <b>复习表</b></p>
                 </div>
@@ -278,7 +286,7 @@
         <!-- 常用操作 -->
         <div class="vocab-actions">
             <button class="btn btn--outline btn--sm" id="vocabStudyBtn">🎯 复习</button>
-            <button class="btn btn--primary btn--sm" id="vocabPracticeBtn">📝 练习模式</button>
+            <button class="btn btn--primary btn--sm" id="vocabPracticeBtn">📝 练习</button>
             <button class="btn btn--primary btn--sm" id="vocabCheckBtn">🔍 检测</button>
             <select class="vocab-count-select" id="vocabStudyCount">
                 <option value="0">全部</option>

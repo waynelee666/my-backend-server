@@ -550,7 +550,7 @@ textarea.form-input { resize:vertical; }
 /* ——— 规则说明面板 ——— */
 .vocab-rules { margin-bottom:16px; border:1px solid var(--color-border); border-radius:14px; background:#fafcff; overflow:hidden; transition:max-height .35s ease, opacity .25s ease, margin .25s ease; max-height:300px; opacity:1; }
 .vocab-rules.collapsed { max-height:0; opacity:0; border-width:0; margin-bottom:0; padding:0; }
-.vocab-rules__body { padding:12px 16px; font-size:.82rem; color:var(--color-text-light); line-height:1.7; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.vocab-rules__body { padding:12px 16px; font-size:.82rem; color:var(--color-text-light); line-height:1.7; display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
 .vocab-rules__col h4 { font-size:.82rem; color:var(--color-text); margin:0 0 6px; }
 .vocab-rules__col p { margin:2px 0; font-size:.78rem; }
 .vocab-rules__kbd { display:inline-block; padding:1px 6px; background:#e2e8f0; border-radius:4px; font-family:monospace; font-size:.75rem; font-weight:600; }
@@ -686,6 +686,7 @@ textarea.form-input { resize:vertical; }
     .vocab-book-card--mini .vocab-book-card__label { font-size:.7rem; }
     .vocab-unit-tag { padding:5px 12px; font-size:.75rem; }
     .vocab-rules__body { grid-template-columns:1fr; }
+    .vocab-books-hero__grid { gap:10px; }
     .vocab-stats-bar__sub { flex-wrap:wrap; gap:8px; }
     .vocab-flashcard__card { min-height:180px; }
     .vocab-flashcard__word { font-size:1.3rem; }

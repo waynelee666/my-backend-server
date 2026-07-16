@@ -11,13 +11,13 @@ let currentTab = 'home';
 let todoDate = new Date().toISOString().slice(0, 10);
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 let selectedCalDate = null;
-let vocabBook = '基础', vocabUnit = 'U1', vocabPart = 'P1', vocabEditId = null;
-let vocabEditMode = false;  // 编辑模式：显示复选框和编辑/删除按钮
+let vocabBook = null, vocabUnit = 'U1', vocabPart = 'P1', vocabEditId = null;
+let vocabEditMode = false;
+let vocabViewMode = 'books';  // 'books' = 选书页 | 'detail' = 单词详情页
 const VOCAB_BOOKS = [
     { key: '基础', label: '基础', emoji: '🟢' },
     { key: '四级', label: '四级', emoji: '📙' },
     { key: '六级', label: '六级', emoji: '📘' },
-    { key: '大英四', label: '大英四', emoji: '📗' },
 ];
 /** 查找相似科目名（"微积分" ≈ "微积分（甲）Ⅱ"） */
 function findSimilarSubject(name) {
@@ -71,6 +71,14 @@ async loadVocab() { const PAGE = 1000; let all = [], start = 0; while (true) { c
         const { data, error } = await sb.from(table).update(fields).eq('id', id).select().single(); if (error) throw error; return data; },
     async remove(table, id) { await sb.from(table).delete().eq('id', id); },
 };
+
+// 一次性清理：删除已移除的「大英四」词书全部单词
+(async function cleanupLegacyBook() {
+    try {
+        const { error } = await sb.from('vocabulary').delete().eq('book', '大英四');
+        if (!error) console.log('[cleanup] 大英四词书已清理');
+    } catch(e) { /* 静默 */ }
+})();
 
 async function refreshAll() {
     const [s, e, t, th, v] = await Promise.all([
@@ -533,6 +541,70 @@ async function autoDedupVocab(unit, part) {
 }
 
 function renderVocabView() {
+    // === 选书模式：只显示三张大卡片 ===
+    if (vocabViewMode === 'books') {
+        // 隐藏非书卡的一切
+        $('#vocabStatsBar').style.display = 'none';
+        $('#vocabRules').style.display = 'none';
+        $('#vocabUnitRow').style.display = 'none';
+        $('#vocabPartRow').style.display = 'none';
+        document.querySelector('.vocab-actions').style.display = 'none';
+        $('#vocabToolsPanel').style.display = 'none';
+        $('#vocabToggleTools').style.display = 'none';
+        $('#vocabEditTools').style.display = 'none';
+        $('#vocabList').style.display = 'none';
+        $('#vocabCount').textContent = '';
+
+        const bookCards = VOCAB_BOOKS.map(b => {
+            const cnt = vocabs.filter(v => v.book === b.key).length;
+            const mastered = vocabs.filter(v => v.book === b.key && v.mastered === true).length;
+            const pct = cnt > 0 ? Math.round(mastered / cnt * 100) : 0;
+            return `<div class="vocab-book-card vocab-book-card--hero" data-book="${b.key}">
+                <div class="vocab-book-card__glow"></div>
+                <span class="vocab-book-card__icon">${b.emoji}</span>
+                <span class="vocab-book-card__label">${b.label}</span>
+                <div class="vocab-book-card__progress">
+                    <div class="vocab-book-card__ring" style="--pct:${pct}%"></div>
+                    <span class="vocab-book-card__pct">${pct}%</span>
+                </div>
+                <span class="vocab-book-card__meta">${cnt} 词 · 已背 ${mastered}</span>
+            </div>`;
+        }).join('');
+
+        $('#vocabBookRow').innerHTML = `
+            <div class="vocab-books-hero">
+                <h2 class="vocab-books-hero__title">📖 选择词书</h2>
+                <p class="vocab-books-hero__sub">选一本词书，开始背单词</p>
+                <div class="vocab-books-hero__grid">${bookCards}</div>
+            </div>`;
+        return;
+    }
+
+    // === 详情模式 ===
+    $('#vocabStatsBar').style.display = '';
+    $('#vocabRules').style.display = '';
+    $('#vocabUnitRow').style.display = '';
+    document.querySelector('.vocab-actions').style.display = '';
+    $('#vocabToolsPanel').style.display = '';
+    $('#vocabToggleTools').style.display = '';
+    $('#vocabList').style.display = '';
+    if (!vocabBook) vocabBook = '基础';
+
+    // 返回选书页的小导航
+    $('#vocabBookRow').innerHTML = `
+        <button class="vocab-back-btn" id="vocabBackToBooks">← 返回词书</button>
+        ${VOCAB_BOOKS.map(b => {
+            const cnt = vocabs.filter(v => v.book === b.key).length;
+            const mastered = vocabs.filter(v => v.book === b.key && v.mastered === true).length;
+            const pct = cnt > 0 ? Math.round(mastered / cnt * 100) : 0;
+            const cls = b.key === vocabBook ? ' vocab-book-card--active vocab-book-card--mini' : ' vocab-book-card--mini';
+            return `<div class="vocab-book-card${cls}" data-book="${b.key}">
+                <span class="vocab-book-card__icon">${b.emoji}</span>
+                <span class="vocab-book-card__label">${b.label}</span>
+                <span class="vocab-book-card__meta">${cnt}词 · ${pct}%</span>
+            </div>`;
+        }).join('')}`;
+
     const isReview = vocabUnit === '__review__';
     const isMastered = vocabUnit === '__mastered__';
     const isSpecial = isReview || isMastered;
@@ -543,25 +615,6 @@ function renderVocabView() {
             if (changed) renderVocabView();
         }).catch(e => console.warn('[去重] 后台去重失败:', e));
     }
-
-    // === 词书选择器（卡片式 + 进度环）===
-    const bookHTML = VOCAB_BOOKS.map(b => {
-        const cnt = vocabs.filter(v => v.book === b.key).length;
-        const mastered = vocabs.filter(v => v.book === b.key && v.mastered === true).length;
-        const pct = cnt > 0 ? Math.round(mastered / cnt * 100) : 0;
-        const cls = b.key === vocabBook ? ' vocab-book-card--active' : '';
-        return `<div class="vocab-book-card${cls}" data-book="${b.key}">
-            <div class="vocab-book-card__glow"></div>
-            <span class="vocab-book-card__icon">${b.emoji}</span>
-            <span class="vocab-book-card__label">${b.label}</span>
-            <div class="vocab-book-card__progress">
-                <div class="vocab-book-card__ring" style="--pct:${pct}%"></div>
-                <span class="vocab-book-card__pct">${pct}%</span>
-            </div>
-            <span class="vocab-book-card__meta">${cnt} 词 · 已背 ${mastered}</span>
-        </div>`;
-    }).join('');
-    $('#vocabBookRow').innerHTML = bookHTML;
 
     // === 统计栏（可视化进度条）===
     const bookTotal = vocabs.filter(v => v.book === vocabBook).length;
@@ -830,6 +883,14 @@ $('#vocabDetailModal').addEventListener('click', e => {
 
 // ==================== 单词事件绑定 ====================
 $('#vocabBookRow').addEventListener('click', e => {
+    // 返回选书页
+    if (e.target.closest('#vocabBackToBooks')) {
+        vocabViewMode = 'books';
+        vocabBook = null;
+        renderVocabView();
+        return;
+    }
+    // 点击词书卡片
     const btn = e.target.closest('.vocab-book-card');
     if (btn) {
         const book = btn.dataset.book;
@@ -839,6 +900,13 @@ $('#vocabBookRow').addEventListener('click', e => {
             vocabPart = 'P1';
             vocabEditMode = false;
             vocabSelected.clear();
+            vocabViewMode = 'detail';
+            renderVocabView();
+        } else if (book && vocabViewMode === 'books') {
+            vocabBook = book;
+            vocabUnit = 'U1';
+            vocabPart = 'P1';
+            vocabViewMode = 'detail';
             renderVocabView();
         }
     }

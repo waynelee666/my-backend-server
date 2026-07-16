@@ -462,7 +462,29 @@ textarea.form-input { resize:vertical; }
 /* ==================== 单词 v2 ==================== */
 
 /* ——— 词书选择器：卡片式 ——— */
-.vocab-book-row { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; margin-bottom:20px; }
+.vocab-book-row { display:flex; gap:8px; margin-bottom:14px; align-items:center; flex-wrap:wrap; }
+
+/* 选书页 — 英雄区 */
+.vocab-books-hero { text-align:center; padding:20px 0; }
+.vocab-books-hero__title { font-size:1.4rem; font-weight:700; color:var(--color-text); margin:0 0 4px; }
+.vocab-books-hero__sub { font-size:.88rem; color:var(--color-text-light); margin:0 0 28px; }
+.vocab-books-hero__grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; max-width:600px; margin:0 auto; }
+.vocab-book-card--hero { padding:28px 18px 22px; }
+.vocab-book-card--hero .vocab-book-card__icon { font-size:2.8rem; }
+.vocab-book-card--hero .vocab-book-card__label { font-size:1.05rem; }
+.vocab-book-card--hero .vocab-book-card__ring { width:64px; height:64px; }
+.vocab-book-card--hero .vocab-book-card__ring::after { width:48px; height:48px; }
+.vocab-book-card--hero .vocab-book-card__pct { font-size:.78rem; }
+
+/* 详情页 — 迷你词书卡片 + 返回按钮 */
+.vocab-back-btn { padding:5px 14px; border:2px solid var(--color-border); border-radius:20px; background:#fff; font-family:inherit; font-size:.82rem; font-weight:500; cursor:pointer; color:var(--color-text-light); transition:all var(--transition); white-space:nowrap; flex-shrink:0; }
+.vocab-back-btn:hover { border-color:var(--color-primary); color:var(--color-primary); background:#f8faff; }
+.vocab-book-card--mini { flex-direction:row; padding:8px 14px; gap:6px; border-radius:14px; min-width:0; flex:1; }
+.vocab-book-card--mini .vocab-book-card__icon { font-size:1.2rem; }
+.vocab-book-card--mini .vocab-book-card__label { font-size:.78rem; }
+.vocab-book-card--mini .vocab-book-card__meta { font-size:.68rem; }
+.vocab-book-card--mini .vocab-book-card__progress { display:none; }
+.vocab-book-card--mini.vocab-book-card--active { transform:none; box-shadow:0 0 0 2px rgba(79,70,229,.12); }
 .vocab-book-card { display:flex; flex-direction:column; align-items:center; gap:8px; padding:20px 14px 16px; border:2px solid var(--color-border); border-radius:20px; background:#fff; font-family:inherit; cursor:pointer; transition:all .25s ease; position:relative; overflow:hidden; }
 .vocab-book-card:hover { border-color:var(--color-primary); box-shadow:0 4px 20px rgba(79,70,229,.10); transform:translateY(-3px); }
 .vocab-book-card--active { border-color:var(--color-primary); background:linear-gradient(135deg,#eef2ff,#faf5ff); box-shadow:0 0 0 4px rgba(79,70,229,.10), 0 4px 20px rgba(79,70,229,.15); transform:translateY(-3px); }
@@ -657,14 +679,15 @@ textarea.form-input { resize:vertical; }
 }
 
 @media (max-width:480px) {
-    .vocab-book-row { grid-template-columns:repeat(3, 1fr); gap:8px; }
-    .vocab-book-card { padding:12px 8px; gap:4px; }
-    .vocab-book-card__icon { font-size:1.4rem; }
-    .vocab-book-card__label { font-size:.72rem; }
-    .vocab-book-card__ring { width:40px; height:40px; }
-    .vocab-book-card__ring::after { width:28px; height:28px; }
-    .vocab-book-card__pct { font-size:.62rem; }
-    .vocab-book-card__meta { font-size:.65rem; }
+    .vocab-books-hero__grid { grid-template-columns:repeat(3, 1fr); gap:10px; }
+    .vocab-book-card--hero { padding:18px 8px 14px; }
+    .vocab-book-card--hero .vocab-book-card__icon { font-size:2rem; }
+    .vocab-book-card--hero .vocab-book-card__label { font-size:.85rem; }
+    .vocab-book-card--hero .vocab-book-card__ring { width:48px; height:48px; }
+    .vocab-book-card--hero .vocab-book-card__ring::after { width:34px; height:34px; }
+    .vocab-book-card--mini { padding:6px 10px; gap:4px; }
+    .vocab-book-card--mini .vocab-book-card__icon { font-size:1rem; }
+    .vocab-book-card--mini .vocab-book-card__label { font-size:.7rem; }
     .vocab-unit-tag { padding:5px 12px; font-size:.75rem; }
     .vocab-rules__body { grid-template-columns:1fr; }
     .vocab-stats-bar__sub { flex-wrap:wrap; gap:8px; }

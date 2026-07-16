@@ -51,20 +51,21 @@ const DS = {
         this._userId = u.data.user.id;
         return this._userId;
     },
-    async loadSubjects() { try { const { data } = await sb.from('subjects').select('*').order('position',{ascending:true}).order('created_at'); return data||[]; } catch(e) { console.warn('subjects:',e); const { data } = await sb.from('subjects').select('*').order('created_at'); return data||[]; } },
-    async loadEvents() { const { data } = await sb.from('events').select('*').order('date').order('start_time'); return data||[]; },
-    async loadTodos() { const { data } = await sb.from('todos').select('*').order('created_at',{ascending:false}); return data||[]; },
-    async loadThoughts() { const { data } = await sb.from('thoughts').select('*').order('created_at',{ascending:false}); return data||[]; },
-    async loadVocab() { const { data } = await sb.from('vocabulary').select('*').order('unit').order('part').order('created_at'); return data||[]; },
+    async loadSubjects() { try { const { data, error } = await sb.from('subjects').select('*').order('position',{ascending:true}).order('created_at'); if (error) console.warn('[DS.loadSubjects]', error); return data||[]; } catch(e) { console.warn('subjects:',e); const { data } = await sb.from('subjects').select('*').order('created_at'); return data||[]; } },
+    async loadEvents() { const { data, error } = await sb.from('events').select('*').order('date').order('start_time'); if (error) console.warn('[DS.loadEvents]', error); return data||[]; },
+    async loadTodos() { const { data, error } = await sb.from('todos').select('*').order('created_at',{ascending:false}); if (error) console.warn('[DS.loadTodos]', error); return data||[]; },
+    async loadThoughts() { const { data, error } = await sb.from('thoughts').select('*').order('created_at',{ascending:false}); if (error) console.warn('[DS.loadThoughts]', error); return data||[]; },
+    async loadVocab() { const { data, error } = await sb.from('vocabulary').select('*').order('unit').order('part').order('created_at'); if (error) console.warn('[DS.loadVocab]', error); return data||[]; },
     async create(table, row) { row.user_id = await this.getUserId();
         const { data, error } = await sb.from(table).insert(row).select().single(); if (error) throw error; return data; },
     async createMany(table, rows) {
         if (!rows.length) return [];
         const uid = await this.getUserId();
         const enriched = rows.map(r => ({ ...r, user_id: uid }));
-        const { data, error } = await sb.from(table).insert(enriched).select();
+        const { error } = await sb.from(table).insert(enriched);
         if (error) throw error;
-        return data || [];
+        console.log(`[DS.createMany] ${table}: 写入 ${enriched.length} 条成功`);
+        return enriched;  // insert 无 error 即视为成功，refreshAll 会自然验证
     },
     async update(table, id, fields) {
         const { data, error } = await sb.from(table).update(fields).eq('id', id).select().single(); if (error) throw error; return data; },
@@ -1197,14 +1198,24 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
         // 批量插入（一次 API 调用，避免逐条 auth/getUser）
         btn.textContent = `⏳ 正在导入 ${validRows.length} 词...`;
         const inserted = await DS.createMany('vocabulary', validRows);
-        console.log(`[vocab-import] 批量插入完成: ${inserted.length} 条`);
+        console.log(`[vocab-import] createMany 返回 ${inserted.length} 条，期望 ${validRows.length} 条`);
 
         await refreshAll();
+        // 诊断：检查本地 vocabs 数量
+        const localCount = vocabs.filter(v => v.book === vocabBook).length;
+        console.log(`[vocab-import] refreshAll 后本地 ${vocabBook} 词书共 ${localCount} 条, vocabs 总数: ${vocabs.length}`);
+
         $('#vocabImportModal').style.display = 'none';
-        let msg = `成功导入 ${inserted.length} 个条目 ✨`;
-        if (dupCount) msg += `，${dupCount} 个已存在跳过`;
-        if (skipped.length) msg += `，${skipped.length} 个未翻译`;
-        showToast(msg, 'success');
+
+        if (localCount === 0 && validRows.length > 0) {
+            // 插入未报错但 refreshAll 后本地仍为 0 — 大概率 RLS SELECT 被拒
+            showToast(`⚠️ 写入异常：${validRows.length} 词已提交但刷新后查询不到，请 F12→Console 查看 [DS.loadVocab] 错误`, 'error');
+        } else {
+            let msg = `成功导入 ${inserted.length} 个条目 ✨`;
+            if (dupCount) msg += `，${dupCount} 个已存在跳过`;
+            if (skipped.length) msg += `，${skipped.length} 个未翻译`;
+            showToast(msg, 'success');
+        }
     } catch (e) {
         console.error('[vocab-import] 导入失败:', e);
         showToast('导入失败: ' + e.message, 'error');

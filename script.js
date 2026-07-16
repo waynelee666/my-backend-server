@@ -587,6 +587,7 @@ function renderVocabView() {
     // === 详情模式 ===
     $('#vocabBookRow').style.display = 'none';
     $('#vocabStatsBar').style.display = '';
+    $('#vocabRules').style.display = '';
     $('#vocabUnitRow').style.display = '';
     document.querySelector('.vocab-actions').style.display = '';
     $('#vocabToolsPanel').style.display = '';

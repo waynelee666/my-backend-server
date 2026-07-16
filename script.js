@@ -1291,12 +1291,19 @@ async function quickImportVocab(book) {
 
         vocabBook = book;  // 自动切换到刚导入的词书
         await refreshAll();
+        // 诊断
+        const localCount = vocabs.filter(v => v.book === book).length;
+        console.log(`[quick-import] refreshAll 后 ${book} 词书共 ${localCount} 条, vocabs 总数: ${vocabs.length}`);
         // refreshAll 后再取第一个 unit，避免取到 fallback
         vocabUnit = vocabs.find(v => v.book === book)?.unit || 'U1';
         vocabPart = 'P1';
         btn.disabled = false;
         btn.textContent = origText;
-        showToast(`${c.label}导入完成 ✨ ${imported} 新词导入，${skipped} 已跳过${failed ? `，${failed} 失败` : ''}`, 'success');
+        if (localCount === 0 && imported > 0) {
+            showToast(`⚠️ ${c.label}：${imported} 词已提交但刷新后查询不到，请 F12→Console 查看 [DS.loadVocab] 错误`, 'error');
+        } else {
+            showToast(`${c.label}导入完成 ✨ ${imported} 新词导入，${skipped} 已跳过${failed ? `，${failed} 失败` : ''}`, 'success');
+        }
     } catch (e) {
         showToast(`导入${c.label}失败: ` + e.message, 'error');
         btn.disabled = false;

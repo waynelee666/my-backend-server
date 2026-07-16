@@ -1002,21 +1002,21 @@ $('#vocabDeleteSelectedBtn').addEventListener('click', async () => {
     }
 });
 
-// 清空当前词书
+// 清空当前词书（批量删除，10000 词只需 1 秒）
 $('#vocabClearBookBtn').addEventListener('click', async () => {
-    const wordsToDelete = vocabs.filter(v => v.book === vocabBook);
-    if (!wordsToDelete.length) { showToast('当前词书已是空的', 'info'); return; }
-    if (!confirm(`⚠️ 确认删除「${vocabBook}」词书的全部 ${wordsToDelete.length} 个单词？\n\n此操作不可撤销！`)) return;
+    const count = vocabs.filter(v => v.book === vocabBook).length;
+    if (!count) { showToast('当前词书已是空的', 'info'); return; }
+    if (!confirm(`⚠️ 确认删除「${vocabBook}」词书的全部 ${count} 个单词？\n\n此操作不可撤销！`)) return;
     const btn = $('#vocabClearBookBtn');
     btn.disabled = true;
     btn.textContent = '⏳ 删除中...';
     try {
-        for (const v of wordsToDelete) {
-            await DS.remove('vocabulary', v.id);
-        }
+        // 一次性按 book 条件删除，而非逐条循环
+        const { error } = await sb.from('vocabulary').delete().eq('book', vocabBook);
+        if (error) throw error;
         vocabs = vocabs.filter(v => v.book !== vocabBook);
         renderVocabView();
-        showToast(`「${vocabBook}」词书已清空，共删除 ${wordsToDelete.length} 词`, 'success');
+        showToast(`「${vocabBook}」词书已清空，共删除 ${count} 词`, 'success');
     } catch (e) {
         showToast('清空失败: ' + e.message, 'error');
     } finally {

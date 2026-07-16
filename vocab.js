@@ -67,6 +67,9 @@ async function startVocabStudy() {
     // 进入加载状态
     $('#vocabBookRow').style.display = 'none';
     $('#vocabStatsBar').style.display = 'none';
+    $('#vocabRules').style.display = 'none';
+    $('#vocabToolsPanel').style.display = 'none';
+    $('#vocabToggleTools').style.display = 'none';
     $('#vocabList').style.display = 'none';
     $('#vocabUnitRow').style.display = 'none';
     $('#vocabPartRow').style.display = 'none';
@@ -274,10 +277,12 @@ async function exitStudyMode() {
     checkActive = false;
     $('#vocabBookRow').style.display = '';
     $('#vocabStatsBar').style.display = '';
+    $('#vocabRules').style.display = '';
     $('#vocabList').style.display = '';
     $('#vocabUnitRow').style.display = '';
     $('#vocabPartRow').style.display = '';
     document.querySelector('.vocab-actions').style.display = '';
+    $('#vocabToggleTools').style.display = '';
     $('#vocabStudy').style.display = 'none';
     await refreshAll();
     renderVocabView();
@@ -546,6 +551,9 @@ function enterPracticeMode() {
     if (vocabUnit === '__mastered__') { showToast('已背列表无法练习', 'info'); return; }
     $('#vocabBookRow').style.display = 'none';
     $('#vocabStatsBar').style.display = 'none';
+    $('#vocabRules').style.display = 'none';
+    $('#vocabToolsPanel').style.display = 'none';
+    $('#vocabToggleTools').style.display = 'none';
     $('#vocabList').style.display = 'none';
     $('#vocabUnitRow').style.display = 'none';
     $('#vocabPartRow').style.display = 'none';
@@ -1094,10 +1102,12 @@ function exitPracticeMode() {
     $('#vocabPractice').style.display = 'none';
     $('#vocabBookRow').style.display = '';
     $('#vocabStatsBar').style.display = '';
+    $('#vocabRules').style.display = '';
     $('#vocabList').style.display = '';
     $('#vocabUnitRow').style.display = '';
     $('#vocabPartRow').style.display = '';
     document.querySelector('.vocab-actions').style.display = '';
+    $('#vocabToggleTools').style.display = '';
     // 重置 loading 文字
     const loadingText = document.querySelector('.practice-loading__text');
     const loadingSub = document.querySelector('.practice-loading__sub');

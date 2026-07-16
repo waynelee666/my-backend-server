@@ -548,6 +548,7 @@ function renderVocabView() {
     // === 选书模式：只显示三张大卡片 ===
     if (vocabViewMode === 'books') {
         // 隐藏非书卡的一切
+        $('#vocabBookRow').style.display = '';
         $('#vocabStatsBar').style.display = 'none';
         $('#vocabRules').style.display = 'none';
         $('#vocabUnitRow').style.display = 'none';

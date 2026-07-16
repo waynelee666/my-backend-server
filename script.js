@@ -44,13 +44,28 @@ function findSimilarSubject(name) {
 
 // ==================== 数据层 ====================
 const DS = {
+    _userId: null,
+    async getUserId() {
+        if (this._userId) return this._userId;
+        const u = await sb.auth.getUser();
+        this._userId = u.data.user.id;
+        return this._userId;
+    },
     async loadSubjects() { try { const { data } = await sb.from('subjects').select('*').order('position',{ascending:true}).order('created_at'); return data||[]; } catch(e) { console.warn('subjects:',e); const { data } = await sb.from('subjects').select('*').order('created_at'); return data||[]; } },
     async loadEvents() { const { data } = await sb.from('events').select('*').order('date').order('start_time'); return data||[]; },
     async loadTodos() { const { data } = await sb.from('todos').select('*').order('created_at',{ascending:false}); return data||[]; },
     async loadThoughts() { const { data } = await sb.from('thoughts').select('*').order('created_at',{ascending:false}); return data||[]; },
     async loadVocab() { const { data } = await sb.from('vocabulary').select('*').order('unit').order('part').order('created_at'); return data||[]; },
-    async create(table, row) { const u = await sb.auth.getUser(); row.user_id = u.data.user.id;
+    async create(table, row) { row.user_id = await this.getUserId();
         const { data, error } = await sb.from(table).insert(row).select().single(); if (error) throw error; return data; },
+    async createMany(table, rows) {
+        if (!rows.length) return [];
+        const uid = await this.getUserId();
+        const enriched = rows.map(r => ({ ...r, user_id: uid }));
+        const { data, error } = await sb.from(table).insert(enriched).select();
+        if (error) throw error;
+        return data || [];
+    },
     async update(table, id, fields) {
         const { data, error } = await sb.from(table).update(fields).eq('id', id).select().single(); if (error) throw error; return data; },
     async remove(table, id) { await sb.from(table).delete().eq('id', id); },
@@ -1136,9 +1151,9 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
         return;
     }
 
-    // 去重：与已有数据比对
+    // 去重：与已有数据比对（同书+同单元+同部分）
     const existingKeys = new Set(
-        vocabs.filter(v => v.unit === unit && v.part === part)
+        vocabs.filter(v => v.book === vocabBook && v.unit === unit && v.part === part)
             .map(v => v.word.toLowerCase())
     );
     const newEntries = entries.filter(entry => !existingKeys.has(entry.toLowerCase()));
@@ -1153,6 +1168,7 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
     btn.textContent = '⏳ AI 翻译中...';
 
     try {
+        btn.textContent = '⏳ AI 翻译中...';
         const resp = await fetch('/api/translate-words', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1163,24 +1179,34 @@ $('#vocabImportConfirm').addEventListener('click', async () => {
         const translations = data.translations;
         if (!translations || !translations.length) throw new Error('AI 未返回翻译结果');
 
-        let count = 0;
+        // 分离有效翻译和跳过项
+        const validRows = [];
         const skipped = [];
         for (const t of translations) {
             if (t.word && t.meaning) {
-                await DS.create('vocabulary', { book: vocabBook, unit, part, word: t.word, meaning: t.meaning });
-                count++;
+                validRows.push({ book: vocabBook, unit, part, word: t.word, meaning: t.meaning });
             } else {
                 skipped.push(t.word || '?');
             }
         }
 
+        if (!validRows.length) {
+            throw new Error(`AI 翻译结果全部无释义（${skipped.length} 个），请检查输入或重试`);
+        }
+
+        // 批量插入（一次 API 调用，避免逐条 auth/getUser）
+        btn.textContent = `⏳ 正在导入 ${validRows.length} 词...`;
+        const inserted = await DS.createMany('vocabulary', validRows);
+        console.log(`[vocab-import] 批量插入完成: ${inserted.length} 条`);
+
         await refreshAll();
         $('#vocabImportModal').style.display = 'none';
-        let msg = `成功导入 ${count} 个条目 ✨`;
+        let msg = `成功导入 ${inserted.length} 个条目 ✨`;
         if (dupCount) msg += `，${dupCount} 个已存在跳过`;
         if (skipped.length) msg += `，${skipped.length} 个未翻译`;
         showToast(msg, 'success');
     } catch (e) {
+        console.error('[vocab-import] 导入失败:', e);
         showToast('导入失败: ' + e.message, 'error');
     } finally {
         btn.disabled = false;
@@ -1216,21 +1242,39 @@ async function quickImportVocab(book) {
             }
         }
 
-        let imported = 0, skipped = 0, failed = 0;
-        const BATCH_SIZE = 20;
+        // 去重并收集新行
+        let skipped = 0;
+        const newRows = [];
+        for (const w of words) {
+            const key = `${w.unit}|${w.part}|${w.word.toLowerCase().trim()}`;
+            if (existingSet.has(key)) { skipped++; continue; }
+            newRows.push({ book: w.book, unit: w.unit, part: w.part, word: w.word, meaning: w.meaning });
+            existingSet.add(key);
+        }
 
-        for (let i = 0; i < words.length; i += BATCH_SIZE) {
-            const batch = words.slice(i, i + BATCH_SIZE);
-            for (const w of batch) {
-                const key = `${w.unit}|${w.part}|${w.word.toLowerCase().trim()}`;
-                if (existingSet.has(key)) { skipped++; continue; }
-                try {
-                    await DS.create('vocabulary', { book: w.book, unit: w.unit, part: w.part, word: w.word, meaning: w.meaning });
-                    existingSet.add(key);
-                    imported++;
-                } catch (e) { failed++; console.warn('导入失败:', w.word, e); }
+        if (!newRows.length) {
+            btn.disabled = false; btn.textContent = origText;
+            showToast(`${c.label}已全部导入，无需重复操作 ✅`, 'info');
+            return;
+        }
+
+        // 批量插入（每批最多 100 条，避免 Supabase 请求过大）
+        let imported = 0, failed = 0;
+        const BATCH_SIZE = 100;
+        for (let i = 0; i < newRows.length; i += BATCH_SIZE) {
+            const batch = newRows.slice(i, i + BATCH_SIZE);
+            try {
+                const result = await DS.createMany('vocabulary', batch);
+                imported += result.length;
+            } catch (e) {
+                console.error(`[quick-import] 批次 ${Math.floor(i/BATCH_SIZE)+1} 失败:`, e);
+                // 降级：逐条重试
+                for (const row of batch) {
+                    try { await DS.create('vocabulary', row); imported++; }
+                    catch (e2) { failed++; console.warn('导入失败:', row.word, e2); }
+                }
             }
-            const pct = Math.round((i + batch.length) / words.length * 100);
+            const pct = Math.round(Math.min(i + BATCH_SIZE, newRows.length) / newRows.length * 100);
             btn.textContent = `⏳ ${pct}% (${imported} 导入 / ${skipped} 跳过 / ${failed} 失败)`;
         }
 

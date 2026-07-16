@@ -581,6 +581,7 @@ function renderVocabView() {
     }
 
     // === 详情模式 ===
+    $('#vocabBookRow').style.display = 'none';
     $('#vocabStatsBar').style.display = '';
     $('#vocabUnitRow').style.display = '';
     document.querySelector('.vocab-actions').style.display = '';
@@ -588,21 +589,6 @@ function renderVocabView() {
     $('#vocabToggleTools').style.display = '';
     $('#vocabList').style.display = '';
     if (!vocabBook) vocabBook = '基础';
-
-    // 返回选书页的小导航
-    $('#vocabBookRow').innerHTML = `
-        <button class="vocab-back-btn" id="vocabBackToBooks">← 返回词书</button>
-        ${VOCAB_BOOKS.map(b => {
-            const cnt = vocabs.filter(v => v.book === b.key).length;
-            const mastered = vocabs.filter(v => v.book === b.key && v.mastered === true).length;
-            const pct = cnt > 0 ? Math.round(mastered / cnt * 100) : 0;
-            const cls = b.key === vocabBook ? ' vocab-book-card--active vocab-book-card--mini' : ' vocab-book-card--mini';
-            return `<div class="vocab-book-card${cls}" data-book="${b.key}">
-                <span class="vocab-book-card__icon">${b.emoji}</span>
-                <span class="vocab-book-card__label">${b.label}</span>
-                <span class="vocab-book-card__meta">${cnt}词 · ${pct}%</span>
-            </div>`;
-        }).join('')}`;
 
     const isReview = vocabUnit === '__review__';
     const isMastered = vocabUnit === '__mastered__';
@@ -627,9 +613,10 @@ function renderVocabView() {
             <div class="vocab-stats-bar__track">
                 <div class="vocab-stats-bar__fill" style="width:${barPct}%"></div>
             </div>
-            <span class="vocab-stats-bar__nums"><strong>${bookMastered}</strong> / ${bookTotal} 已掌握</span>
+            <span class="vocab-stats-bar__nums"><strong>${bookMastered}</strong> / ${bookTotal}</span>
         </div>
         <div class="vocab-stats-bar__sub">
+            <button class="vocab-back-link" id="vocabBackToBooks">← 返回词书</button>
             <span><span class="vocab-stats-bar__dot vocab-stats-bar__dot--mastered"></span> 已背 ${bookMastered}</span>
             <span><span class="vocab-stats-bar__dot vocab-stats-bar__dot--review"></span> 复习中 ${bookReview}</span>
             <span><span class="vocab-stats-bar__dot vocab-stats-bar__dot--learning"></span> 学习中 ${bookLearning}</span>
@@ -881,14 +868,16 @@ $('#vocabDetailModal').addEventListener('click', e => {
 });
 
 // ==================== 单词事件绑定 ====================
-$('#vocabBookRow').addEventListener('click', e => {
-    // 返回选书页
+// 返回选书页
+$('#vocabStatsBar').addEventListener('click', e => {
     if (e.target.closest('#vocabBackToBooks')) {
         vocabViewMode = 'books';
         vocabBook = null;
         renderVocabView();
-        return;
     }
+});
+
+$('#vocabBookRow').addEventListener('click', e => {
     // 点击词书卡片
     const btn = e.target.closest('.vocab-book-card');
     if (btn) {

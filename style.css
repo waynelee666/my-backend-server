@@ -476,15 +476,9 @@ textarea.form-input { resize:vertical; }
 .vocab-book-card--hero .vocab-book-card__ring::after { width:48px; height:48px; }
 .vocab-book-card--hero .vocab-book-card__pct { font-size:.78rem; }
 
-/* 详情页 — 迷你词书卡片 + 返回按钮 */
-.vocab-back-btn { padding:5px 14px; border:2px solid var(--color-border); border-radius:20px; background:#fff; font-family:inherit; font-size:.82rem; font-weight:500; cursor:pointer; color:var(--color-text-light); transition:all var(--transition); white-space:nowrap; flex-shrink:0; }
-.vocab-back-btn:hover { border-color:var(--color-primary); color:var(--color-primary); background:#f8faff; }
-.vocab-book-card--mini { flex-direction:row; padding:8px 14px; gap:6px; border-radius:14px; min-width:0; flex:1; }
-.vocab-book-card--mini .vocab-book-card__icon { font-size:1.2rem; }
-.vocab-book-card--mini .vocab-book-card__label { font-size:.78rem; }
-.vocab-book-card--mini .vocab-book-card__meta { font-size:.68rem; }
-.vocab-book-card--mini .vocab-book-card__progress { display:none; }
-.vocab-book-card--mini.vocab-book-card--active { transform:none; box-shadow:0 0 0 2px rgba(79,70,229,.12); }
+/* 返回选书链接 */
+.vocab-back-link { padding:0; border:none; background:none; font-family:inherit; font-size:.75rem; color:var(--color-primary); cursor:pointer; text-decoration:none; white-space:nowrap; }
+.vocab-back-link:hover { text-decoration:underline; }
 .vocab-book-card { display:flex; flex-direction:column; align-items:center; gap:8px; padding:20px 14px 16px; border:2px solid var(--color-border); border-radius:20px; background:#fff; font-family:inherit; cursor:pointer; transition:all .25s ease; position:relative; overflow:hidden; }
 .vocab-book-card:hover { border-color:var(--color-primary); box-shadow:0 4px 20px rgba(79,70,229,.10); transform:translateY(-3px); }
 .vocab-book-card--active { border-color:var(--color-primary); background:linear-gradient(135deg,#eef2ff,#faf5ff); box-shadow:0 0 0 4px rgba(79,70,229,.10), 0 4px 20px rgba(79,70,229,.15); transform:translateY(-3px); }
@@ -681,9 +675,6 @@ textarea.form-input { resize:vertical; }
     .vocab-book-card--hero .vocab-book-card__label { font-size:.85rem; }
     .vocab-book-card--hero .vocab-book-card__ring { width:48px; height:48px; }
     .vocab-book-card--hero .vocab-book-card__ring::after { width:34px; height:34px; }
-    .vocab-book-card--mini { padding:6px 10px; gap:4px; }
-    .vocab-book-card--mini .vocab-book-card__icon { font-size:1rem; }
-    .vocab-book-card--mini .vocab-book-card__label { font-size:.7rem; }
     .vocab-unit-tag { padding:5px 12px; font-size:.75rem; }
     .vocab-rules__body { grid-template-columns:1fr; }
     .vocab-books-hero__grid { gap:10px; }

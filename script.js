@@ -544,26 +544,44 @@ function renderVocabView() {
         }).catch(e => console.warn('[去重] 后台去重失败:', e));
     }
 
-    // === 词书选择器 ===
+    // === 词书选择器（卡片式 + 进度环）===
     const bookHTML = VOCAB_BOOKS.map(b => {
         const cnt = vocabs.filter(v => v.book === b.key).length;
         const mastered = vocabs.filter(v => v.book === b.key && v.mastered === true).length;
-        const cls = b.key === vocabBook ? ' vocab-book-btn--active' : '';
-        return `<button class="vocab-book-btn${cls}" data-book="${b.key}">
-            <span class="vocab-book-btn__icon">${b.emoji}</span>
-            <span class="vocab-book-btn__label">${b.label}</span>
-            <span class="vocab-book-btn__count">${cnt} 词 · 已背 ${mastered}</span>
-        </button>`;
+        const pct = cnt > 0 ? Math.round(mastered / cnt * 100) : 0;
+        const cls = b.key === vocabBook ? ' vocab-book-card--active' : '';
+        return `<div class="vocab-book-card${cls}" data-book="${b.key}">
+            <div class="vocab-book-card__glow"></div>
+            <span class="vocab-book-card__icon">${b.emoji}</span>
+            <span class="vocab-book-card__label">${b.label}</span>
+            <div class="vocab-book-card__progress">
+                <div class="vocab-book-card__ring" style="--pct:${pct}%"></div>
+                <span class="vocab-book-card__pct">${pct}%</span>
+            </div>
+            <span class="vocab-book-card__meta">${cnt} 词 · 已背 ${mastered}</span>
+        </div>`;
     }).join('');
     $('#vocabBookRow').innerHTML = bookHTML;
 
-    // === 统计栏 ===
+    // === 统计栏（可视化进度条）===
     const bookTotal = vocabs.filter(v => v.book === vocabBook).length;
     const bookMastered = vocabs.filter(v => v.book === vocabBook && v.mastered === true).length;
-    $('#vocabStatsRow').innerHTML = `
-        <span class="vocab-stat">📚 总词数 <strong>${bookTotal}</strong></span>
-        <span class="vocab-stat">✅ 已背 <strong>${bookMastered}</strong></span>
-    `;
+    const bookReview = vocabs.filter(v => v.book === vocabBook && v.review === true).length;
+    const bookLearning = bookTotal - bookMastered - bookReview;
+    const barPct = bookTotal > 0 ? Math.round(bookMastered / bookTotal * 100) : 0;
+    $('#vocabStatsBar').innerHTML = `
+        <div class="vocab-stats-bar__row">
+            <span class="vocab-stats-bar__label">📚 ${vocabBook}</span>
+            <div class="vocab-stats-bar__track">
+                <div class="vocab-stats-bar__fill" style="width:${barPct}%"></div>
+            </div>
+            <span class="vocab-stats-bar__nums"><strong>${bookMastered}</strong> / ${bookTotal} 已掌握</span>
+        </div>
+        <div class="vocab-stats-bar__sub">
+            <span><span class="vocab-stats-bar__dot vocab-stats-bar__dot--mastered"></span> 已背 ${bookMastered}</span>
+            <span><span class="vocab-stats-bar__dot vocab-stats-bar__dot--review"></span> 复习中 ${bookReview}</span>
+            <span><span class="vocab-stats-bar__dot vocab-stats-bar__dot--learning"></span> 学习中 ${bookLearning}</span>
+        </div>`;
 
     // === 过滤 ===
     let filtered;
@@ -581,18 +599,16 @@ function renderVocabView() {
     else label = `${vocabUnit} ${vocabPart}`;
     if (countEl) countEl.textContent = filtered.length ? `${label} · ${filtered.length}词` : label;
 
-    // === Unit 选择器 ===
+    // === Unit 选择器（标签式 + 完成标记）===
     const reviewCount = vocabs.filter(v => v.book === vocabBook && v.review === true).length;
     const masteredCount = vocabs.filter(v => v.book === vocabBook && v.mastered === true).length;
-    const reviewCls = isReview ? ' vocab-unit-btn--review vocab-unit-btn--active' : ' vocab-unit-btn--review';
-    const masteredCls = isMastered ? ' vocab-unit-btn--mastered vocab-unit-btn--active' : ' vocab-unit-btn--mastered';
-    let unitHTML = `<button class="vocab-unit-btn${reviewCls}" data-unit="__review__">🔄 复习<span class="vocab-unit-count">${reviewCount}</span></button>`;
-    unitHTML += `<button class="vocab-unit-btn${masteredCls}" data-unit="__mastered__">✅ 已背<span class="vocab-unit-count">${masteredCount}</span></button>`;
-    // 动态获取所有 unit（从 vocabs 数据中提取）
+    const reviewCls = isReview ? ' vocab-unit-tag--review vocab-unit-tag--active' : ' vocab-unit-tag--review';
+    const masteredCls = isMastered ? ' vocab-unit-tag--mastered vocab-unit-tag--active' : ' vocab-unit-tag--mastered';
+    let unitHTML = `<button class="vocab-unit-tag${reviewCls}" data-unit="__review__">🔄 复习<span class="vocab-unit-count">${reviewCount}</span></button>`;
+    unitHTML += `<button class="vocab-unit-tag${masteredCls}" data-unit="__mastered__">✅ 已背<span class="vocab-unit-count">${masteredCount}</span></button>`;
     const unitSet = new Set();
     vocabs.filter(v => v.book === vocabBook).forEach(v => { if (v.unit) unitSet.add(v.unit); });
     const units = [...unitSet].sort((a, b) => {
-        // 智能排序：CET6-U1, CET6-U2, ... 或 U1, U2, ...
         const numA = parseInt(a.match(/(\d+)/)?.[1] || '0');
         const numB = parseInt(b.match(/(\d+)/)?.[1] || '0');
         const preA = a.replace(/\d+.*/, '');
@@ -601,9 +617,13 @@ function renderVocabView() {
         return preA.localeCompare(preB) || numA - numB;
     });
     unitHTML += units.map(u => {
-        const cnt = vocabs.filter(v => v.book === vocabBook && v.unit === u && !v.mastered).length;
-        const cls = u === vocabUnit ? ' vocab-unit-btn--active' : '';
-        return `<button class="vocab-unit-btn${cls}" data-unit="${u}">${u}<span class="vocab-unit-count">${cnt}</span></button>`;
+        const totalInUnit = vocabs.filter(v => v.book === vocabBook && v.unit === u).length;
+        const masteredInUnit = vocabs.filter(v => v.book === vocabBook && v.unit === u && v.mastered === true).length;
+        const done = totalInUnit > 0 && masteredInUnit === totalInUnit;
+        const cls = u === vocabUnit ? ' vocab-unit-tag--active' : '';
+        const doneCls = done ? ' vocab-unit-tag--done' : '';
+        const check = done ? '<span class="vocab-unit-tag__check">✅</span>' : '';
+        return `<button class="vocab-unit-tag${cls}${doneCls}" data-unit="${u}">${check}${u}<span class="vocab-unit-count">${totalInUnit}</span></button>`;
     }).join('');
     $('#vocabUnitRow').innerHTML = unitHTML;
 
@@ -612,7 +632,6 @@ function renderVocabView() {
         $('#vocabPartRow').style.display = 'none';
     } else {
         $('#vocabPartRow').style.display = '';
-        // 动态获取当前 unit 的所有 part
         const partSet = new Set();
         vocabs.filter(v => v.book === vocabBook && v.unit === vocabUnit).forEach(v => { if (v.part) partSet.add(v.part); });
         const parts = partSet.size > 0 ? [...partSet].sort() : ['P1'];
@@ -639,7 +658,20 @@ function renderVocabView() {
     const checkBtn = $('#vocabCheckBtn');
     if (checkBtn) checkBtn.style.display = isSpecial ? 'none' : '';
 
-    // === 列表 ===
+    // === 管理工具面板状态 ===
+    const toolsPanel = $('#vocabToolsPanel');
+    const toolsToggle = $('#vocabToggleTools');
+    if (toolsPanel && toolsToggle) {
+        if (toolsPanel.classList.contains('open')) {
+            toolsToggle.classList.add('open');
+            toolsToggle.textContent = '🔧 收起';
+        } else {
+            toolsToggle.classList.remove('open');
+            toolsToggle.textContent = '🔧 管理';
+        }
+    }
+
+    // === 列表（卡片式 + 状态徽标）===
     const listEl = $('#vocabList');
     if (!filtered.length) {
         if (isReview) {
@@ -673,19 +705,25 @@ function renderVocabView() {
         }
     } else {
         const showCheck = !isSpecial && vocabEditMode;
-        listEl.innerHTML = filtered.map(v => `
-            <div class="vocab-word-card" data-id="${v.id}">
+        listEl.innerHTML = filtered.map(v => {
+            const masteredCls = v.mastered ? ' vocab-word-card--mastered' : '';
+            const reviewCls = (!v.mastered && v.review) ? ' vocab-word-card--review' : '';
+            const badgeHTML = v.mastered
+                ? '<span class="vocab-word-card__badge vocab-word-card__badge--mastered">✅ 已背</span>'
+                : (v.review ? '<span class="vocab-word-card__badge vocab-word-card__badge--review">🔄 复习中</span>' : '');
+            return `<div class="vocab-word-card${masteredCls}${reviewCls}" data-id="${v.id}">
                 ${showCheck ? `<input type="checkbox" class="vocab-word-card__check" data-id="${v.id}" title="选中">` : ''}
-                <div class="vocab-word-card__word">${esc(v.word)}</div>
-                <div class="vocab-word-card__meaning">${esc(v.meaning)}</div>
-                <div class="vocab-word-card__unit-label">${v.unit} ${v.part}</div>
+                <span class="vocab-word-card__word vocab-word-card__word--en">${esc(v.word)}</span>
+                <span class="vocab-word-card__meaning">${esc(v.meaning)}</span>
+                ${badgeHTML}
+                <span class="vocab-word-card__unit-label">${v.unit} ${v.part}</span>
                 ${showCheck ? `
                 <div class="vocab-word-card__actions" style="opacity:1">
                     <button data-action="edit-vocab" data-id="${v.id}" title="编辑">✏️</button>
                     <button class="btn-del" data-action="delete-vocab" data-id="${v.id}" title="删除">🗑️</button>
                 </div>` : ''}
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     }
 }
 
@@ -792,7 +830,7 @@ $('#vocabDetailModal').addEventListener('click', e => {
 
 // ==================== 单词事件绑定 ====================
 $('#vocabBookRow').addEventListener('click', e => {
-    const btn = e.target.closest('.vocab-book-btn');
+    const btn = e.target.closest('.vocab-book-card');
     if (btn) {
         const book = btn.dataset.book;
         if (book && book !== vocabBook) {
@@ -806,12 +844,26 @@ $('#vocabBookRow').addEventListener('click', e => {
     }
 });
 $('#vocabUnitRow').addEventListener('click', e => {
-    const btn = e.target.closest('.vocab-unit-btn');
+    const btn = e.target.closest('.vocab-unit-tag');
     if (btn) { vocabUnit = btn.dataset.unit; vocabEditMode = false; vocabSelected.clear(); renderVocabView(); }
 });
 $('#vocabPartRow').addEventListener('click', e => {
     const btn = e.target.closest('.vocab-part-btn');
     if (btn) { vocabPart = btn.dataset.part; vocabEditMode = false; vocabSelected.clear(); renderVocabView(); }
+});
+
+// 规则说明折叠
+$('#vocabRulesToggle')?.addEventListener('click', () => {
+    $('#vocabRules').classList.toggle('collapsed');
+});
+
+// 管理工具面板折叠
+$('#vocabToggleTools')?.addEventListener('click', () => {
+    const panel = $('#vocabToolsPanel');
+    const btn = $('#vocabToggleTools');
+    const isOpen = panel.classList.toggle('open');
+    btn.classList.toggle('open', isOpen);
+    btn.textContent = isOpen ? '🔧 收起' : '🔧 管理';
 });
 
 // 编辑模式切换

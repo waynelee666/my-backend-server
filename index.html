@@ -22,13 +22,13 @@
         <a href="#" class="nav__logo" data-tab="todos">📋 TaskFlow</a>
         <div class="nav__tabs">
             <button class="nav__tab active" data-tab="home">🏠 首页</button>
+            <button class="nav__tab" data-tab="vocab">📖 单词</button>
             <button class="nav__tab" data-tab="todos">✅ 待办</button>
             <button class="nav__tab" data-tab="calendar">📅 日历</button>
             <button class="nav__tab" data-tab="subjects">📚 科目</button>
             <button class="nav__tab" data-tab="chat">💬 小马</button>
             <button class="nav__tab" data-tab="thoughts">🎬 脚本</button>
             <button class="nav__tab" data-tab="goals">🎯 目标</button>
-            <button class="nav__tab" data-tab="vocab">📖 单词</button>
         </div>
         <ul class="nav__list">
             <li><span class="nav__datetime" id="navDatetime"></span></li>
@@ -64,6 +64,10 @@
         </div>
         <div class="home-countdowns" id="homeCountdowns"></div>
         <div class="home-nav">
+            <button class="home-nav-card" data-tab="vocab">
+                <span class="home-nav-card__icon">📖</span>
+                <span class="home-nav-card__label">单词</span>
+            </button>
             <button class="home-nav-card" data-tab="todos">
                 <span class="home-nav-card__icon">✅</span>
                 <span class="home-nav-card__label">待办</span>
@@ -88,10 +92,6 @@
             <button class="home-nav-card" data-tab="goals">
                 <span class="home-nav-card__icon">🎯</span>
                 <span class="home-nav-card__label">目标</span>
-            </button>
-            <button class="home-nav-card" data-tab="vocab">
-                <span class="home-nav-card__icon">📖</span>
-                <span class="home-nav-card__label">单词</span>
             </button>
         </div>
     </section>

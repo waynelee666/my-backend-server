@@ -582,7 +582,6 @@ function renderVocabView() {
 
     // === 详情模式 ===
     $('#vocabStatsBar').style.display = '';
-    $('#vocabRules').style.display = '';
     $('#vocabUnitRow').style.display = '';
     document.querySelector('.vocab-actions').style.display = '';
     $('#vocabToolsPanel').style.display = '';
@@ -920,9 +919,11 @@ $('#vocabPartRow').addEventListener('click', e => {
     if (btn) { vocabPart = btn.dataset.part; vocabEditMode = false; vocabSelected.clear(); renderVocabView(); }
 });
 
-// 规则说明折叠
-$('#vocabRulesToggle')?.addEventListener('click', () => {
-    $('#vocabRules').classList.toggle('collapsed');
+// 规则说明：由管理面板中的“规则”按钮触发
+$('#vocabRulesBtn')?.addEventListener('click', () => {
+    const rules = $('#vocabRules');
+    const isOpen = rules.classList.toggle('collapsed'); // collapsed = 隐藏
+    $('#vocabRulesBtn').textContent = isOpen ? '📖 规则' : '📖 规则 ▲';
 });
 
 // 管理工具面板折叠

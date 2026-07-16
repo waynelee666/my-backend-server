@@ -254,11 +254,8 @@
         </div>
         <div class="vocab-book-row" id="vocabBookRow"></div>
         <div class="vocab-stats-bar" id="vocabStatsBar"></div>
-        <!-- 规则说明（可折叠） -->
-        <div class="vocab-rules" id="vocabRules">
-            <div class="vocab-rules__header" id="vocabRulesToggle">
-                <span class="vocab-rules__arrow">▼</span> 📖 背单词规则说明
-            </div>
+        <!-- 规则说明（默认隐藏，点“规则”按钮展开） -->
+        <div class="vocab-rules collapsed" id="vocabRules">
             <div class="vocab-rules__body">
                 <div class="vocab-rules__col">
                     <h4>🎯 闪卡复习</h4>
@@ -280,8 +277,6 @@
         <div class="vocab-part-row" id="vocabPartRow"></div>
         <!-- 常用操作 -->
         <div class="vocab-actions">
-            <button class="btn btn--primary btn--sm" id="vocabAddBtn">➕ 添加</button>
-            <button class="btn btn--outline btn--sm" id="vocabEditBtn">✏️ 编辑</button>
             <button class="btn btn--outline btn--sm" id="vocabStudyBtn">🎯 复习</button>
             <button class="btn btn--primary btn--sm" id="vocabPracticeBtn">📝 练习模式</button>
             <button class="btn btn--primary btn--sm" id="vocabCheckBtn">🔍 检测</button>
@@ -300,13 +295,16 @@
         </div>
         <!-- 管理工具（可折叠） -->
         <div class="vocab-actions vocab-actions--tools" id="vocabToolsPanel">
+            <button class="btn btn--outline btn--sm" id="vocabAddBtn">➕ 添加</button>
+            <button class="btn btn--outline btn--sm" id="vocabEditBtn">✏️ 编辑</button>
+            <button class="btn btn--outline btn--sm" id="vocabImportBtn">📥 批量导入</button>
             <button class="btn btn--primary btn--sm" id="vocabBasicImportBtn">🟢 基础词库</button>
             <button class="btn btn--primary btn--sm" id="vocabCET4ImportBtn">📙 四级词库</button>
             <button class="btn btn--primary btn--sm" id="vocabCET6ImportBtn">📘 六级词库</button>
-            <button class="btn btn--outline btn--sm" id="vocabImportBtn">📥 批量导入</button>
             <button class="btn btn--outline btn--sm" id="vocabDedupBtn">🔧 去重</button>
             <button class="btn btn--outline btn--sm" id="vocabDedupBookBtn">📚 全书去重</button>
             <button class="btn btn--outline btn--sm" id="vocabRetranslateBtn">🤖 重译</button>
+            <button class="btn btn--text btn--sm" id="vocabRulesBtn">📖 规则</button>
             <button class="btn btn--danger btn--sm" id="vocabClearBookBtn">⚠️ 清空词书</button>
         </div>
         <!-- 编辑模式工具栏 -->
@@ -560,7 +558,7 @@
 
 <script src="supabase.min.js"></script>
 <script src="auth.js?v=3.2"></script>
-<script src="script.js?v=5.1"></script>
+<script src="script.js?v=5.2"></script>
 
 <script src="chat.js?v=1.3"></script>
 <script src="vocab.js?v=2.0"></script>

@@ -548,13 +548,9 @@ textarea.form-input { resize:vertical; }
 .vocab-toggle-tools.open { border-style:solid; border-color:var(--color-primary); color:var(--color-primary); background:#eef2ff; }
 
 /* ——— 规则说明面板 ——— */
-.vocab-rules { margin-bottom:16px; border:1px solid var(--color-border); border-radius:14px; background:#fafcff; overflow:hidden; transition:max-height .35s ease, opacity .25s ease; }
-.vocab-rules.collapsed { max-height:0; opacity:0; border-width:0; margin-bottom:0; }
-.vocab-rules__header { display:flex; align-items:center; gap:8px; padding:12px 16px; cursor:pointer; user-select:none; font-size:.85rem; font-weight:600; color:var(--color-primary); }
-.vocab-rules__header:hover { background:#f0f4ff; }
-.vocab-rules__arrow { transition:transform .25s ease; font-size:.7rem; }
-.vocab-rules.collapsed .vocab-rules__arrow { transform:rotate(-90deg); }
-.vocab-rules__body { padding:0 16px 16px; font-size:.82rem; color:var(--color-text-light); line-height:1.7; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.vocab-rules { margin-bottom:16px; border:1px solid var(--color-border); border-radius:14px; background:#fafcff; overflow:hidden; transition:max-height .35s ease, opacity .25s ease, margin .25s ease; max-height:300px; opacity:1; }
+.vocab-rules.collapsed { max-height:0; opacity:0; border-width:0; margin-bottom:0; padding:0; }
+.vocab-rules__body { padding:12px 16px; font-size:.82rem; color:var(--color-text-light); line-height:1.7; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .vocab-rules__col h4 { font-size:.82rem; color:var(--color-text); margin:0 0 6px; }
 .vocab-rules__col p { margin:2px 0; font-size:.78rem; }
 .vocab-rules__kbd { display:inline-block; padding:1px 6px; background:#e2e8f0; border-radius:4px; font-family:monospace; font-size:.75rem; font-weight:600; }

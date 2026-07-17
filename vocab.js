@@ -172,7 +172,6 @@ function renderStudyCard() {
 }
 
 async function flipCard() {
-    if (checkActive) return;  // 检测模式下不触发牛津查词
     if (!studyFlipped) {
         // 第一次点击：翻到背面（中文意思）
         studyFlipped = true;
@@ -357,24 +356,54 @@ function renderCheckCard() {
     const isCn2en = checkRound === 2;
     const frontText = isCn2en ? esc(word.meaning) : esc(word.word);
     const backText = isCn2en ? esc(word.word) : esc(word.meaning);
-    const frontHint = isCn2en ? '回想英文拼写 ✏️' : '点击翻转 👆';
+    const showAiHint = checkFlipped === true;
+    const frontHint = isCn2en ? '回想英文拼写 ✏️' : (showAiHint ? '再次点击查看牛津释义 📖' : '点击翻转 👆');
 
+    // AI 牛津详情
+    const detail = word._aiDetail || null;
+    const aiLoading = checkFlipped === 'loading';
+    const aiReady = checkFlipped === 'ai' && detail;
+    const showAiSection = aiLoading || aiReady;
+    let aiHTML = '';
+    if (aiLoading) {
+        aiHTML = `<div class="vocab-flashcard__ai vocab-flashcard__ai--loading">
+            <div class="vocab-flashcard__ai-spinner"></div>
+            <span>AI 正在查询牛津词典...</span>
+        </div>`;
+    } else if (aiReady) {
+        const examplesHTML = (detail.examples || []).map(e => `<li>${esc(e)}</li>`).join('');
+        const collocHTML = (detail.collocations || []).length
+            ? `<div class="vocab-flashcard__ai-colloc"><strong>搭配:</strong> ${detail.collocations.map(c => esc(c)).join(' · ')}</div>`
+            : '';
+        aiHTML = `<div class="vocab-flashcard__ai">
+            <div class="vocab-flashcard__ai-pos">${esc(detail.pos || '')}</div>
+            <div class="vocab-flashcard__ai-def">${esc(detail.definition || '')}</div>
+            ${collocHTML}
+            <div class="vocab-flashcard__ai-examples">
+                <strong>例句:</strong>
+                <ul>${examplesHTML}</ul>
+            </div>
+        </div>`;
+    }
+
+    const isFlipped = !!checkFlipped;
     container.innerHTML = `
         <div class="vocab-flashcard">
             <div class="vocab-flashcard__progress" style="color:var(--color-primary);font-weight:600">${progress}</div>
             <div class="vocab-flashcard__bar">
                 <div class="vocab-flashcard__fill" style="width:${pct}%"></div>
             </div>
-            <div class="vocab-flashcard__card ${checkFlipped ? 'vocab-flashcard__card--flipped' : ''}" id="vocabFlashCard">
+            <div class="vocab-flashcard__card ${isFlipped ? 'vocab-flashcard__card--flipped' : ''}" id="vocabFlashCard">
                 <div class="vocab-flashcard__front">
                     <div class="${isCn2en ? 'vocab-flashcard__meaning' : 'vocab-flashcard__word'}">${frontText}</div>
                     <div class="vocab-flashcard__hint">${frontHint}</div>
                 </div>
-                <div class="vocab-flashcard__back" style="${checkFlipped ? '' : 'display:none'}">
+                <div class="vocab-flashcard__back" style="${isFlipped ? '' : 'display:none'}">
                     <div class="${isCn2en ? 'vocab-flashcard__word' : 'vocab-flashcard__meaning'}">${backText}</div>
                 </div>
             </div>
-            <div class="vocab-flashcard__buttons" id="vocabFlashBtns" style="${checkFlipped ? '' : 'display:none'}">
+            ${showAiSection ? aiHTML : ''}
+            <div class="vocab-flashcard__buttons" id="vocabFlashBtns" style="${checkFlipped === true ? '' : 'display:none'}">
                 <button class="vocab-flashcard__btn vocab-flashcard__btn--no" id="vocabBtnNo">不太熟 ❌</button>
                 <button class="vocab-flashcard__btn vocab-flashcard__btn--yes" id="vocabBtnYes">已掌握 ✅</button>
             </div>
@@ -386,7 +415,7 @@ function renderCheckCard() {
 
     const card = document.getElementById('vocabFlashCard');
     if (card) card.addEventListener('click', () => flipCheckCard());
-    if (checkFlipped) {
+    if (checkFlipped === true) {
         const btnYes = document.getElementById('vocabBtnYes');
         const btnNo = document.getElementById('vocabBtnNo');
         if (btnYes) btnYes.addEventListener('click', () => checkAnswer(true));
@@ -396,9 +425,35 @@ function renderCheckCard() {
     if (exitBtn) exitBtn.addEventListener('click', () => { checkActive = false; exitStudyMode(); });
 }
 
-function flipCheckCard() {
+async function flipCheckCard() {
     if (!checkActive) return;
-    if (!checkFlipped) { checkFlipped = true; renderCheckCard(); }
+    if (!checkFlipped) {
+        // 第一次点击：翻到背面看答案
+        checkFlipped = true;
+        renderCheckCard();
+        return;
+    }
+    if (checkFlipped === true) {
+        // 第二次点击：查牛津词典
+        const word = checkWords[checkIndex];
+        if (!word._aiDetail) {
+            checkFlipped = 'loading';
+            renderCheckCard();
+            const detail = await lookupWordDetail(word.word, word);
+            if (detail) {
+                word._aiDetail = detail;
+                checkFlipped = 'ai';
+            } else {
+                checkFlipped = true;
+                showToast('查询失败，请稍后重试', 'error');
+            }
+        } else {
+            checkFlipped = 'ai';
+        }
+        renderCheckCard();
+        return;
+    }
+    // loading 或 ai 状态：不做任何事
 }
 
 async function checkAnswer(passed) {
@@ -490,6 +545,8 @@ document.addEventListener('keydown', e => {
         if (checkIndex >= checkWords.length) return;
         if (!checkFlipped && e.key === 'Enter') {
             e.preventDefault(); flipCheckCard();
+        } else if (checkFlipped === true && e.key === 'Enter') {
+            e.preventDefault(); flipCheckCard();  // 翻到背面后再按 Enter → 查牛津
         } else if (checkFlipped) {
             if (e.key === 'ArrowLeft') { e.preventDefault(); checkAnswer(true); }
             else if (e.key === 'ArrowRight') { e.preventDefault(); checkAnswer(false); }

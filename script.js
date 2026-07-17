@@ -580,6 +580,14 @@ function renderVocabView() {
             <div class="vocab-books-hero">
                 <h2 class="vocab-books-hero__title">📖 选择词书</h2>
                 <p class="vocab-books-hero__sub">选一本词书，开始背单词</p>
+                <div class="vocab-hero-search" id="vocabHeroSearch">
+                    <span class="vocab-hero-search__icon">🔍</span>
+                    <input type="text" class="vocab-hero-search__input" id="vocabHeroSearchInput"
+                           placeholder="搜索单词，看看在哪本词书..." autocomplete="off">
+                    <button class="vocab-hero-search__clear" id="vocabHeroSearchClear"
+                            style="display:none" title="清除">✕</button>
+                </div>
+                <div class="vocab-hero-search__results" id="vocabHeroSearchResults" style="display:none"></div>
                 <div class="vocab-books-hero__grid">${bookCards}</div>
             </div>`;
         return;
@@ -904,6 +912,68 @@ $('#vocabBookRow').addEventListener('click', e => {
             renderVocabView();
         }
     }
+    // 点击搜索结果 → 跳转到该单词所在词书和单元
+    const result = e.target.closest('.vocab-hero-search__result');
+    if (result) {
+        const { book, unit, part } = result.dataset;
+        vocabBook = book;
+        vocabUnit = unit;
+        vocabPart = part;
+        vocabEditMode = false;
+        vocabSelected.clear();
+        vocabViewMode = 'detail';
+        renderVocabView();
+    }
+});
+
+// 选书页搜索框
+$('#vocabBookRow').addEventListener('input', e => {
+    if (e.target.id !== 'vocabHeroSearchInput') return;
+    const q = e.target.value.trim().toLowerCase();
+    const clearBtn = $('#vocabHeroSearchClear');
+    const resultsEl = $('#vocabHeroSearchResults');
+    if (clearBtn) clearBtn.style.display = q ? '' : 'none';
+
+    if (!q) {
+        if (resultsEl) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; }
+        return;
+    }
+
+    // 全库搜索（英文 + 中文）
+    const hits = vocabs.filter(v => {
+        const w = (v.word || '').toLowerCase();
+        const m = (v.meaning || '').toLowerCase();
+        return w.includes(q) || m.includes(q);
+    }).slice(0, 20); // 最多显示 20 条
+
+    if (!resultsEl) return;
+    if (!hits.length) {
+        resultsEl.style.display = '';
+        resultsEl.innerHTML = '<div class="vocab-hero-search__empty">😕 没有找到匹配的单词</div>';
+        return;
+    }
+
+    resultsEl.style.display = '';
+    resultsEl.innerHTML = hits.map(v => {
+        const bookLabel = v.book || '基础';
+        const bookEmoji = VOCAB_BOOKS.find(b => b.key === bookLabel)?.emoji || '📖';
+        return `<div class="vocab-hero-search__result" data-book="${esc(bookLabel)}" data-unit="${esc(v.unit||'U1')}" data-part="${esc(v.part||'P1')}">
+            <span class="vocab-hero-search__result-word">${highlightMatch(esc(v.word), q)}</span>
+            <span class="vocab-hero-search__result-meaning">${highlightMatch(esc(v.meaning), q)}</span>
+            <span class="vocab-hero-search__result-book">${bookEmoji} ${esc(bookLabel)} · ${esc(v.unit||'U1')}${esc(v.part||'P1')}</span>
+        </div>`;
+    }).join('');
+});
+
+// 清除搜索
+$('#vocabBookRow').addEventListener('click', e => {
+    if (e.target.id !== 'vocabHeroSearchClear') return;
+    const input = $('#vocabHeroSearchInput');
+    const resultsEl = $('#vocabHeroSearchResults');
+    const clearBtn = $('#vocabHeroSearchClear');
+    if (input) { input.value = ''; input.focus(); }
+    if (resultsEl) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; }
+    if (clearBtn) clearBtn.style.display = 'none';
 });
 $('#vocabUnitRow').addEventListener('click', e => {
     const btn = e.target.closest('.vocab-unit-tag');
@@ -1763,6 +1833,11 @@ async function saveModal() {
 }
 
 function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function highlightMatch(escaped, q) {
+    if (!q) return escaped;
+    const escaped_q = esc(q);
+    return escaped.replace(new RegExp(escaped_q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), m => `<mark>${m}</mark>`);
+}
 
 // ==================== 文件导入 ====================
 $('#importBtn').addEventListener('click', () => $('#importFile').click());

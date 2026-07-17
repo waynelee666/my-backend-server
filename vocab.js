@@ -172,6 +172,7 @@ function renderStudyCard() {
 }
 
 async function flipCard() {
+    if (checkActive) return;  // 检测模式下不触发牛津查词
     if (!studyFlipped) {
         // 第一次点击：翻到背面（中文意思）
         studyFlipped = true;

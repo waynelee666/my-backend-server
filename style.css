@@ -477,6 +477,50 @@ textarea.form-input { resize:vertical; }
 .vocab-book-card--hero .vocab-book-card__ring::after { width:60px; height:60px; }
 .vocab-book-card--hero .vocab-book-card__pct { font-size:.85rem; }
 
+/* ——— 选书页搜索框 ——— */
+.vocab-hero-search {
+    display:flex; align-items:center; gap:8px; max-width:480px; margin:0 auto 24px;
+    padding:10px 16px; border:2px solid var(--color-border); border-radius:14px;
+    background:#fff; transition:all .25s ease;
+}
+.vocab-hero-search:focus-within {
+    border-color:var(--color-primary); box-shadow:0 0 0 4px rgba(79,70,229,.08);
+}
+.vocab-hero-search__icon { font-size:1rem; flex-shrink:0; }
+.vocab-hero-search__input {
+    flex:1; border:none; outline:none; font-family:inherit; font-size:.92rem;
+    color:var(--color-text); background:transparent;
+}
+.vocab-hero-search__input::placeholder { color:#9ca3af; }
+.vocab-hero-search__clear {
+    padding:0 4px; border:none; background:none; font-size:1rem; cursor:pointer;
+    color:var(--color-text-light); line-height:1;
+}
+.vocab-hero-search__clear:hover { color:var(--color-danger); }
+
+.vocab-hero-search__results {
+    max-width:480px; margin:0 auto 16px; text-align:left;
+    max-height:280px; overflow-y:auto;
+}
+.vocab-hero-search__result {
+    display:flex; align-items:center; gap:12px; padding:10px 14px;
+    border:1px solid var(--color-border); border-radius:10px; margin-bottom:6px;
+    cursor:pointer; transition:all .2s ease; background:#fff;
+}
+.vocab-hero-search__result:hover { border-color:var(--color-primary); background:#f8faff; }
+.vocab-hero-search__result-word { font-weight:700; color:var(--color-text); font-size:.95rem; min-width:80px; }
+.vocab-hero-search__result-meaning { flex:1; font-size:.85rem; color:var(--color-text-light); }
+.vocab-hero-search__result-book {
+    font-size:.72rem; padding:2px 10px; border-radius:12px;
+    background:var(--color-bg-alt); color:var(--color-text-light); white-space:nowrap;
+}
+.vocab-hero-search__empty {
+    text-align:center; padding:20px; color:var(--color-text-light); font-size:.85rem;
+}
+.vocab-hero-search__result mark {
+    background:#fef08a; color:inherit; border-radius:2px; padding:0 1px;
+}
+
 /* 返回选书链接 */
 .vocab-back-link { padding:0; border:none; background:none; font-family:inherit; font-size:.75rem; color:var(--color-primary); cursor:pointer; text-decoration:none; white-space:nowrap; }
 .vocab-back-link:hover { text-decoration:underline; }
@@ -670,6 +714,8 @@ textarea.form-input { resize:vertical; }
     .vocab-book-card--hero .vocab-book-card__ring { width:60px; height:60px; }
     .vocab-book-card--hero .vocab-book-card__ring::after { width:44px; height:44px; }
     .vocab-book-card--hero .vocab-book-card__pct { font-size:.78rem; }
+    .vocab-hero-search { max-width:100%; }
+    .vocab-hero-search__results { max-width:100%; }
     .vocab-flashcard__card { min-height:200px; padding:24px 16px; }
     .vocab-flashcard__word { font-size:1.5rem; }
     .vocab-flashcard__meaning { font-size:1.3rem; }

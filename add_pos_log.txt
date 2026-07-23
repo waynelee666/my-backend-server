@@ -25,3 +25,42 @@
   ✅ 本批 50/50 | 累计 350/783 | 总进度 45%
 
 📤 批次 8/16 (50词) [进度 45% | 已耗时 206s | 预计剩余 255s]
+  ✅ 本批 50/50 | 累计 400/783 | 总进度 51%
+
+📤 批次 9/16 (50词) [进度 51% | 已耗时 243s | 预计剩余 232s]
+  ✅ 本批 50/50 | 累计 450/783 | 总进度 57%
+
+📤 批次 10/16 (50词) [进度 57% | 已耗时 289s | 预计剩余 214s]
+  ✅ 本批 50/50 | 累计 500/783 | 总进度 64%
+
+📤 批次 11/16 (50词) [进度 64% | 已耗时 343s | 预计剩余 194s]
+  ✅ 本批 50/50 | 累计 550/783 | 总进度 70%
+
+📤 批次 12/16 (50词) [进度 70% | 已耗时 388s | 预计剩余 164s]
+  ⚠️ 更新 thrive 失败: <urlopen error [WinError 10054] 远程主机强迫关闭了一个现有的连接。>
+  ⚠️ 更新 maintain 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 liable 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 gross 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 misery 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 sphere 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 reluctance 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 bulletin 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 haven 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 pledge 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 overflow 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 celebrity 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 ceremony 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 ethnic 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 dental 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 evaluate 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 association 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ⚠️ 更新 startle 失败: <urlopen error [WinError 10053] 你的主机中的软件中止了一个已建立的连接。>
+  ✅ 本批 32/50 | 累计 582/783 | 总进度 77%
+
+📤 批次 13/16 (50词) [进度 77% | 已耗时 414s | 预计剩余 126s]
+  ✅ 本批 50/50 | 累计 632/783 | 总进度 83%
+
+📤 批次 14/16 (50词) [进度 83% | 已耗时 441s | 预计剩余 90s]
+  ✅ 本批 50/50 | 累计 682/783 | 总进度 89%
+
+📤 批次 15/16 (50词) [进度 89% | 已耗时 467s | 预计剩余 55s]

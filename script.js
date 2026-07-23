@@ -672,11 +672,12 @@ function renderVocabView() {
     unitHTML += units.map(u => {
         const totalInUnit = vocabs.filter(v => v.book === vocabBook && v.unit === u).length;
         const masteredInUnit = vocabs.filter(v => v.book === vocabBook && v.unit === u && v.mastered === true).length;
+        const remaining = totalInUnit - masteredInUnit;
         const done = totalInUnit > 0 && masteredInUnit === totalInUnit;
         const cls = u === vocabUnit ? ' vocab-unit-tag--active' : '';
         const doneCls = done ? ' vocab-unit-tag--done' : '';
         const check = done ? '<span class="vocab-unit-tag__check">✅</span>' : '';
-        return `<button class="vocab-unit-tag${cls}${doneCls}" data-unit="${u}">${check}${displayUnit(u)}<span class="vocab-unit-count">${totalInUnit}</span></button>`;
+        return `<button class="vocab-unit-tag${cls}${doneCls}" data-unit="${u}">${check}${displayUnit(u)}<span class="vocab-unit-count">${remaining}</span></button>`;
     }).join('');
     $('#vocabUnitRow').innerHTML = unitHTML;
 

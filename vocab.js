@@ -34,6 +34,14 @@ async function lookupWordDetail(word, vocabObj) {
         const data = await resp.json();
         if (data.ok) {
             wordDetailCache[key] = data;
+            // 持久化保存到 Supabase，下次无需重新查询
+            if (vocabObj && vocabObj.id) {
+                const oxford = { word: data.word, pos: data.pos, definition: data.definition, examples: data.examples, collocations: data.collocations };
+                vocabObj.oxford_detail = oxford;
+                const v = (typeof vocabs !== 'undefined' ? vocabs : []).find(x => x.id === vocabObj.id);
+                if (v) v.oxford_detail = oxford;
+                DS.update('vocabulary', vocabObj.id, { oxford_detail: oxford }).catch(e => console.warn('保存牛津释义失败:', e));
+            }
             return data;
         }
         console.warn('Word lookup failed:', data.error);

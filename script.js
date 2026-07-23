@@ -768,7 +768,7 @@ function renderVocabView() {
             return `<div class="vocab-word-card${masteredCls}${reviewCls}" data-id="${v.id}">
                 ${showCheck ? `<input type="checkbox" class="vocab-word-card__check" data-id="${v.id}" title="选中">` : ''}
                 <span class="vocab-word-card__word vocab-word-card__word--en">${esc(v.word)}</span>
-                <span class="vocab-word-card__meaning">${esc(v.meaning)}</span>
+                <span class="vocab-word-card__meaning">${esc(typeof fmtMeaning === 'function' ? fmtMeaning(v) : v.meaning)}</span>
                 ${badgeHTML}
                 <span class="vocab-word-card__unit-label">${displayUnit(v.unit)} ${v.part}</span>
                 ${showCheck ? `
@@ -960,7 +960,7 @@ $('#vocabBookRow').addEventListener('input', e => {
         const bookEmoji = VOCAB_BOOKS.find(b => b.key === bookLabel)?.emoji || '📖';
         return `<div class="vocab-hero-search__result" data-book="${esc(bookLabel)}" data-unit="${esc(v.unit||'U1')}" data-part="${esc(v.part||'P1')}">
             <span class="vocab-hero-search__result-word">${highlightMatch(esc(v.word), q)}</span>
-            <span class="vocab-hero-search__result-meaning">${highlightMatch(esc(v.meaning), q)}</span>
+            <span class="vocab-hero-search__result-meaning">${highlightMatch(esc(typeof fmtMeaning === 'function' ? fmtMeaning(v) : v.meaning), q)}</span>
             <span class="vocab-hero-search__result-book">${bookEmoji} ${esc(bookLabel)} · ${esc(v.unit||'U1')}${esc(v.part||'P1')}</span>
         </div>`;
     }).join('');

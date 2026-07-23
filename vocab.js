@@ -3,6 +3,20 @@
    ============================================================ */
 console.log('📖 Vocab module loaded');
 
+// 格式化中文释义：优先用已有词性，否则从 oxford_detail 补充
+function fmtMeaning(word) {
+    const raw = (word && word.meaning) ? word.meaning.trim() : '';
+    if (!raw) return '';
+    // 已含词性缩写（如 "n. 苹果"）→ 直接返回
+    if (/^(n\.|v\.|adj\.|adv\.|prep\.|conj\.|pron\.|int\.|det\.|num\.|art\.|aux\.|vi\.|vt\.)\s/.test(raw)) return raw;
+    // 尝试从牛津详情补充词性
+    const pos = (word.oxford_detail && word.oxford_detail.pos) ? word.oxford_detail.pos.trim() : '';
+    if (pos && !/^(n\.|v\.|adj\.|adv\.|prep\.|conj\.|pron\.|int\.|det\.|num\.|art\.|aux\.|vi\.|vt\.)\s/.test(raw)) {
+        return pos + ' ' + raw;
+    }
+    return raw;
+}
+
 let studyWords = [];
 let studyIndex = 0;
 let studyFlipped = false;    // false=正面 | true=背面(中文) | 'loading'=AI查询中 | 'ai'=AI详情
@@ -107,8 +121,8 @@ function renderStudyCard() {
     const progress = `${studyIndex + 1} / ${studyWords.length}`;
     const pct = studyWords.length > 0 ? Math.round(studyIndex / studyWords.length * 100) : 0;
     const isCn2en = studyModeDir === 'cn2en';
-    const frontText = isCn2en ? esc(word.meaning) : esc(word.word);
-    const backText = isCn2en ? esc(word.word) : esc(word.meaning);
+    const frontText = isCn2en ? esc(fmtMeaning(word)) : esc(word.word);
+    const backText = isCn2en ? esc(word.word) : esc(fmtMeaning(word));
     const showAiHint = studyFlipped === true; // 翻到背面后，提示可以再点击看 AI 详情
     const frontHint = isCn2en ? '拼写英文 ✏️' : (showAiHint ? '再次点击查看牛津释义 📖' : '点击翻转 👆');
     const frontClass = isCn2en ? 'vocab-flashcard__meaning' : 'vocab-flashcard__word';
@@ -362,8 +376,8 @@ function renderCheckCard() {
     const progress = `🔍 第${checkRound}轮 · ${checkIndex + 1}/${checkWords.length}`;
     const pct = checkWords.length > 0 ? Math.round(checkIndex / checkWords.length * 100) : 0;
     const isCn2en = checkRound === 2;
-    const frontText = isCn2en ? esc(word.meaning) : esc(word.word);
-    const backText = isCn2en ? esc(word.word) : esc(word.meaning);
+    const frontText = isCn2en ? esc(fmtMeaning(word)) : esc(word.word);
+    const backText = isCn2en ? esc(word.word) : esc(fmtMeaning(word));
     const showAiHint = checkFlipped === true;
     const frontHint = isCn2en ? '回想英文拼写 ✏️' : (showAiHint ? '再次点击查看牛津释义 📖' : '点击翻转 👆');
 

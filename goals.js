@@ -216,11 +216,17 @@ function getPresetGoals() {
 // 数据迁移：处理旧版本数据
 function migrateGoals(goals) {
   let changed = false;
+  const preset = getPresetGoals();
   for (let i = 0; i < goals.length; i++) {
     // v1: 篮球 → 足球
     if (goals[i].id === 'basketball') {
-      const fbPreset = getPresetGoals().find(g => g.id === 'football');
-      if (fbPreset) { goals[i] = fbPreset; changed = true; }
+      const fb = preset.find(g => g.id === 'football');
+      if (fb) { goals[i] = fb; changed = true; }
+    }
+    // v2: 钢琴补上「当前曲目」
+    if (goals[i].id === 'piano' && goals[i].subgoals.length < 4) {
+      const pp = preset.find(g => g.id === 'piano');
+      if (pp) { goals[i] = pp; changed = true; }
     }
   }
   return changed;

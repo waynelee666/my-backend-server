@@ -403,7 +403,7 @@ function renderCheckCard() {
                 </div>
             </div>
             ${showAiSection ? aiHTML : ''}
-            <div class="vocab-flashcard__buttons" id="vocabFlashBtns" style="${checkFlipped === true ? '' : 'display:none'}">
+            <div class="vocab-flashcard__buttons" id="vocabFlashBtns" style="${checkFlipped ? '' : 'display:none'}">
                 <button class="vocab-flashcard__btn vocab-flashcard__btn--no" id="vocabBtnNo">不太熟 ❌</button>
                 <button class="vocab-flashcard__btn vocab-flashcard__btn--yes" id="vocabBtnYes">已掌握 ✅</button>
             </div>
@@ -415,7 +415,7 @@ function renderCheckCard() {
 
     const card = document.getElementById('vocabFlashCard');
     if (card) card.addEventListener('click', () => flipCheckCard());
-    if (checkFlipped === true) {
+    if (checkFlipped) {
         const btnYes = document.getElementById('vocabBtnYes');
         const btnNo = document.getElementById('vocabBtnNo');
         if (btnYes) btnYes.addEventListener('click', () => checkAnswer(true));

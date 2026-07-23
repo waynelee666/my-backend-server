@@ -134,7 +134,7 @@ function getPresetGoals() {
           actions: [
             { id:'p10', text:'菊次郎的夏天 (Summer)', done:false },
             { id:'p11', text:'一步之遥 (Por una Cabeza)', done:false },
-            { id:'p12', text:'爱乐之城 (Mia & Sebastian's Theme)', done:false },
+            { id:'p12', text:'爱乐之城 (Mia & Sebastian\'s Theme)', done:false },
             { id:'p13', text:'人类一败涂地 (Labor)', done:false }
           ]}
       ]
@@ -508,6 +508,3 @@ function updateGoalDetailProgress(container, goal) {
 
 // 暴露入口函数（由 script.js 调用）
 window.renderGoalsView = renderGoalsView;
-
-// 预加载目标数据，确保小马始终能访问
-loadGoals().then(data => { goalsData = data; }).catch(e => console.warn('预加载目标失败:', e));

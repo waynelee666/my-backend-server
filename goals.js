@@ -129,6 +129,13 @@ function getPresetGoals() {
             { id:'p7', text:'音程听辨 10组', done:false },
             { id:'p8', text:'和弦进行练习 10分钟', done:false },
             { id:'p9', text:'节奏训练 5分钟', done:false }
+          ]},
+        { id: 'piano-4', name: '当前曲目',
+          actions: [
+            { id:'p10', text:'菊次郎的夏天 (Summer)', done:false },
+            { id:'p11', text:'一步之遥 (Por una Cabeza)', done:false },
+            { id:'p12', text:'爱乐之城 (Mia & Sebastian's Theme)', done:false },
+            { id:'p13', text:'人类一败涂地 (Labor)', done:false }
           ]}
       ]
     },

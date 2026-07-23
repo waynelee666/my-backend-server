@@ -480,13 +480,19 @@ async function checkAnswer(passed) {
     if (checkRound === 2) {
         const r1 = checkResults[key].round1;
         const r2 = checkResults[key].round2;
-        const mastered = r1 === true && r2 === true;
-        if (mastered) {
+        if (r1 === true && r2 === true) {
             try {
-                await DS.update('vocabulary', word.id, { mastered: true });
                 const v = vocabs.find(x => x.id === word.id);
-                if (v) v.mastered = true;
-            } catch (e) { console.warn('更新已背状态失败:', e); }
+                const practicePassed = v ? v.practice_passed : false;
+                const nowMastered = practicePassed === true;
+                const updateFields = { check_passed: true };
+                if (nowMastered) updateFields.mastered = true;
+                await DS.update('vocabulary', word.id, updateFields);
+                if (v) {
+                    v.check_passed = true;
+                    if (nowMastered) v.mastered = true;
+                }
+            } catch (e) { console.warn('更新检测状态失败:', e); }
         }
     }
 
@@ -597,6 +603,7 @@ let practiceShowMeaning = false; // 是否在空格后显示中文释义
 let practiceDifficulty = 'medium';  // 'easy' | 'medium' | 'hard' — 控制文章难度
 let practiceWordRange = 'all';   // 'all' | 'cet4' | 'cet6' — 控制单词范围
 let practiceFullPool = [];       // 保存全量词池供"换主题"使用
+let practiceVocabMap = {};      // word_lower → vocabObj，练习答对后标记已背用
 
 // 初始化：收集所有可用的 Unit/Part 组合
 function getAvailableUnits() {
@@ -636,6 +643,7 @@ function enterPracticeMode() {
     practiceTitle = '';
     practiceResult = null;
     practiceFullPool = [];
+    practiceVocabMap = {};
     practiceWordRange = 'all';
     practiceDifficulty = 'medium';
     renderPracticeConfig();
@@ -736,6 +744,8 @@ async function changePracticeTheme() {
 
     try {
         const selected = await pickWordsForPractice(practiceFullPool, practiceWordRange, practiceDifficulty, count);
+        practiceVocabMap = {};
+        selected.forEach(v => { practiceVocabMap[v.word.toLowerCase().trim()] = v; });
         const words = selected.map(v => ({ word: v.word, meaning: v.meaning }));
         const resp = await fetch('/api/generate-practice', {
             method: 'POST',
@@ -902,6 +912,8 @@ $('#practiceStartBtn')?.addEventListener('click', async () => {
     try {
         // 智能抽词：AI 分类 → 单词范围筛选 → 80/20 拆分
         const selected = await pickWordsForPractice(pool, practiceWordRange, practiceDifficulty, count);
+        practiceVocabMap = {};
+        selected.forEach(v => { practiceVocabMap[v.word.toLowerCase().trim()] = v; });
         const words = selected.map(v => ({ word: v.word, meaning: v.meaning }));
         const resp = await fetch('/api/generate-practice', {
             method: 'POST',
@@ -1071,6 +1083,31 @@ function renderPracticeResult() {
     $('#practiceResult').style.display = '';
 
     const r = practiceResult;
+
+    // 答对的词 → 标记 practice_passed；若 check_passed 也已达成 → mastered
+    for (const item of (r.results || [])) {
+        if (!item.correct) continue;
+        const blank = practiceBlanks.find(b => b.number === item.number);
+        if (!blank) continue;
+        const key = (blank.word || '').toLowerCase().trim();
+        const v = practiceVocabMap[key];
+        if (!v || !v.id) continue;
+        try {
+            const localV = vocabs.find(x => x.id === v.id);
+            const checkPassed = (localV && localV.check_passed) || (v.check_passed);
+            const nowMastered = checkPassed === true;
+            const updateFields = { practice_passed: true };
+            if (nowMastered) updateFields.mastered = true;
+            DS.update('vocabulary', v.id, updateFields).catch(e => console.warn('练习标记已背失败:', e));
+            v.practice_passed = true;
+            if (localV) {
+                localV.practice_passed = true;
+                if (nowMastered) localV.mastered = true;
+            }
+            if (nowMastered) v.mastered = true;
+        } catch (e) { /* 静默 */ }
+    }
+
     const pct = r.total > 0 ? Math.round(r.score / r.total * 100) : 0;
     let emoji = '🎉', grade = 'A+';
     if (pct < 60) { emoji = '💪'; grade = 'C'; }
@@ -1162,6 +1199,7 @@ function exitPracticeMode() {
     practiceTitle = '';
     practiceResult = null;
     practiceFullPool = [];
+    practiceVocabMap = {};
     practiceDifficulty = 'medium';
     practiceWordRange = 'all';
     selectedUnits.clear();

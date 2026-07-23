@@ -23,17 +23,28 @@ import re
 POS_RE = re.compile(r'^(n\.|v\.|adj\.|adv\.|prep\.|conj\.|pron\.|int\.|det\.|num\.|art\.|aux\.|vi\.|vt\.)\s')
 
 def supabase_fetch(table, select="*", filters=None):
-    """GET /rest/v1/{table} — 使用 service_role 绕过 RLS"""
-    url = f"{SUPABASE_URL}/rest/v1/{table}?select={select}"
-    if filters:
-        url += "&" + "&".join(filters)
-    headers = {
-        "apikey": SUPABASE_SERVICE_KEY,
-        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-    }
-    req = Request(url, headers=headers)
-    with urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    """GET /rest/v1/{table} — 分页获取全部数据"""
+    all_rows = []
+    offset = 0
+    limit = 1000
+    while True:
+        url = f"{SUPABASE_URL}/rest/v1/{table}?select={select}&limit={limit}&offset={offset}"
+        if filters:
+            url += "&" + "&".join(filters)
+        headers = {
+            "apikey": SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        }
+        req = Request(url, headers=headers)
+        with urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            if not data:
+                break
+            all_rows.extend(data)
+            if len(data) < limit:
+                break
+            offset += limit
+    return all_rows
 
 def supabase_patch(table, row_id, fields):
     """PATCH /rest/v1/{table}?id=eq.{id} — 使用 service_role 绕过 RLS"""

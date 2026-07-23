@@ -58,25 +58,25 @@ function getPresetGoals() {
       ]
     },
     {
-      id: 'basketball', name: '练球', icon: '🏀', color: '#f97316',
+      id: 'football', name: '练球', icon: '⚽', color: '#22c55e',
       subgoals: [
-        { id: 'bb-1', name: '运球',
+        { id: 'fb-1', name: '控球',
           actions: [
-            { id:'b1', text:'原地高低运球 各5分钟', done:false },
-            { id:'b2', text:'行进间变向运球 10分钟', done:false },
-            { id:'b3', text:'背后+胯下组合运球 10分钟', done:false }
+            { id:'f1', text:'脚内侧颠球 各5分钟', done:false },
+            { id:'f2', text:'绕桩带球 10分钟', done:false },
+            { id:'f3', text:'长传停球练习 10分钟', done:false }
           ]},
-        { id: 'bb-2', name: '投篮',
+        { id: 'fb-2', name: '射门',
           actions: [
-            { id:'b4', text:'罚球线投篮 命中30个', done:false },
-            { id:'b5', text:'三分球投篮 命中15个', done:false },
-            { id:'b6', text:'急停跳投练习 20次', done:false }
+            { id:'f4', text:'禁区外远射 命中20个', done:false },
+            { id:'f5', text:'点球练习 10次', done:false },
+            { id:'f6', text:'任意球练习 15次', done:false }
           ]},
-        { id: 'bb-3', name: '体能',
+        { id: 'fb-3', name: '体能',
           actions: [
-            { id:'b7', text:'折返跑 5组', done:false },
-            { id:'b8', text:'深蹲 50个', done:false },
-            { id:'b9', text:'拉伸放松 10分钟', done:false }
+            { id:'f7', text:'折返跑 5组', done:false },
+            { id:'f8', text:'深蹲 50个', done:false },
+            { id:'f9', text:'拉伸放松 10分钟', done:false }
           ]}
       ]
     },
@@ -501,3 +501,6 @@ function updateGoalDetailProgress(container, goal) {
 
 // 暴露入口函数（由 script.js 调用）
 window.renderGoalsView = renderGoalsView;
+
+// 预加载目标数据，确保小马始终能访问
+loadGoals().then(data => { goalsData = data; }).catch(e => console.warn('预加载目标失败:', e));

@@ -235,8 +235,43 @@ function buildUserContext() {
         }
     }
 
+    // 背单词
+    if (typeof vocabs !== 'undefined' && vocabs.length) {
+        const byBook = {};
+        vocabs.forEach(v => {
+            if (!byBook[v.book]) byBook[v.book] = { total: 0, mastered: 0, review: 0 };
+            byBook[v.book].total++;
+            if (v.mastered) byBook[v.book].mastered++;
+            if (v.review) byBook[v.book].review++;
+        });
+        const bookLines = Object.entries(byBook).map(([book, s]) =>
+            `${book}: ${s.total}词, 已掌握${s.mastered}, 复习中${s.review}`
+        );
+        parts.push(`背单词统计：${bookLines.join('；')}`);
+        if (typeof vocabBook !== 'undefined' && vocabBook && typeof vocabUnit !== 'undefined') {
+            const curInfo = [];
+            if (vocabUnit === '__review__') curInfo.push('正在复习错词表');
+            else if (vocabUnit === '__mastered__') curInfo.push('正在查看已掌握词');
+            else curInfo.push(`正在学习 ${vocabBook} ${vocabUnit}${vocabPart ? ' ' + vocabPart : ''}`);
+            const curWords = vocabs.filter(v => v.book === vocabBook && v.unit === vocabUnit && (vocabPart ? v.part === vocabPart : true));
+            if (curWords.length) {
+                const curMastered = curWords.filter(v => v.mastered).length;
+                curInfo.push(`当前单元${curWords.length}词, 已掌握${curMastered}`);
+            }
+            parts.push(curInfo.join('，'));
+        }
+    }
 
-
+    // 目标
+    if (typeof goalsData !== 'undefined' && goalsData.length) {
+        const goalLines = goalsData.map(g => {
+            const total = g.subgoals.reduce((s, sg) => s + sg.actions.length, 0);
+            const done = g.subgoals.reduce((s, sg) => s + sg.actions.filter(a => a.done).length, 0);
+            const pct = total ? Math.round(done / total * 100) : 0;
+            return `${g.icon || ''}${g.name}: ${done}/${total} (${pct}%)`;
+        });
+        parts.push(`目标进度：${goalLines.join('；')}`);
+    }
 
     // 查重
     const dupTodos = findDuplicates(todos, t => `${t.title}|${t.date}`);
@@ -525,6 +560,85 @@ async function executeActions(actions) {
                     const match = (thoughts || []).find(t => t.content.includes(data.content) || data.content.includes(t.content));
                     if (match) await DS.remove('thoughts', match.id);
                 }
+            }
+        } else if (entity === 'goal') {
+            // 确保目标数据已加载
+            if (typeof goalsData === 'undefined' || !goalsData.length) {
+                if (typeof loadGoals === 'function') {
+                    goalsData = await loadGoals();
+                }
+            }
+
+            if (action === 'toggle_action') {
+                const goalName = (data.goal_name || '').toLowerCase();
+                const subName = (data.subgoal_name || '').toLowerCase();
+                const actionText = (data.action_text || '').toLowerCase();
+                const goal = goalsData.find(g => g.name.toLowerCase().includes(goalName) || goalName.includes(g.name.toLowerCase()));
+                if (!goal) throw new Error(`未找到目标"${data.goal_name}"`);
+                const sub = goal.subgoals.find(s => s.name.toLowerCase().includes(subName) || subName.includes(s.name.toLowerCase()));
+                if (!sub) throw new Error(`未找到子目标"${data.subgoal_name}"`);
+                const act = sub.actions.find(a => a.text.toLowerCase().includes(actionText) || actionText.includes(a.text.toLowerCase()));
+                if (!act) throw new Error(`未找到行动"${data.action_text}"`);
+                act.done = !act.done;
+                await saveGoalsRaw(goalsData);
+
+            } else if (action === 'add') {
+                const newGoal = {
+                    id: 'goal_' + Date.now(),
+                    name: data.name,
+                    icon: data.icon || '🎯',
+                    color: data.color || '#3b82f6',
+                    subgoals: [],
+                };
+                goalsData.push(newGoal);
+                await saveGoalsRaw(goalsData);
+
+            } else if (action === 'delete') {
+                const goalName = (data.goal_name || '').toLowerCase();
+                const idx = goalsData.findIndex(g => g.name.toLowerCase().includes(goalName) || goalName.includes(g.name.toLowerCase()));
+                if (idx < 0) throw new Error(`未找到目标"${data.goal_name}"`);
+                goalsData.splice(idx, 1);
+                await saveGoalsRaw(goalsData);
+
+            } else if (action === 'add_subgoal') {
+                const goalName = (data.goal_name || '').toLowerCase();
+                const goal = goalsData.find(g => g.name.toLowerCase().includes(goalName) || goalName.includes(g.name.toLowerCase()));
+                if (!goal) throw new Error(`未找到目标"${data.goal_name}"`);
+                const newSub = {
+                    id: goal.id + '-' + Date.now(),
+                    name: data.subgoal_name,
+                    actions: [],
+                };
+                goal.subgoals.push(newSub);
+                await saveGoalsRaw(goalsData);
+
+            } else if (action === 'add_action') {
+                const goalName = (data.goal_name || '').toLowerCase();
+                const subName = (data.subgoal_name || '').toLowerCase();
+                const goal = goalsData.find(g => g.name.toLowerCase().includes(goalName) || goalName.includes(g.name.toLowerCase()));
+                if (!goal) throw new Error(`未找到目标"${data.goal_name}"`);
+                const sub = goal.subgoals.find(s => s.name.toLowerCase().includes(subName) || subName.includes(s.name.toLowerCase()));
+                if (!sub) throw new Error(`未找到子目标"${data.subgoal_name}"`);
+                const newAct = {
+                    id: 'a' + Date.now(),
+                    text: data.action_text,
+                    done: false,
+                };
+                sub.actions.push(newAct);
+                await saveGoalsRaw(goalsData);
+
+            } else if (action === 'delete_action') {
+                const goalName = (data.goal_name || '').toLowerCase();
+                const subName = (data.subgoal_name || '').toLowerCase();
+                const actionText = (data.action_text || '').toLowerCase();
+                const goal = goalsData.find(g => g.name.toLowerCase().includes(goalName) || goalName.includes(g.name.toLowerCase()));
+                if (!goal) throw new Error(`未找到目标"${data.goal_name}"`);
+                const sub = goal.subgoals.find(s => s.name.toLowerCase().includes(subName) || subName.includes(s.name.toLowerCase()));
+                if (!sub) throw new Error(`未找到子目标"${data.subgoal_name}"`);
+                const idx = sub.actions.findIndex(a => a.text.toLowerCase().includes(actionText) || actionText.includes(a.text.toLowerCase()));
+                if (idx < 0) throw new Error(`未找到行动"${data.action_text}"`);
+                sub.actions.splice(idx, 1);
+                await saveGoalsRaw(goalsData);
             }
         }
     }

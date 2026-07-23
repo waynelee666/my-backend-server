@@ -67,7 +67,14 @@ CHAT_PROMPT_MODIFY = CHAT_PROMPT + (
     '- 删除脚本: {"entity":"thought","action":"delete","data":{"id":123}} 或 {"entity":"thought","action":"delete","data":{"content":"匹配内容"}}\n'
     '状态说明：draft=草稿，filming=拍摄中，done=已完成\n'
     '注意：用户说「修改绩点分布」或「改成...」时，必须用 set_components 整体替换，不要用 add 累加！\n'
-    '背景信息中会标注重复项（⚠️），同学说「清理重复」或「去重」时，直接执行 dedup！'
+    '背景信息中会标注重复项（⚠️），同学说「清理重复」或「去重」时，直接执行 dedup！\n'
+    '- ⭐切换行动完成状态（最常用！同学说「完成了XX」或「XX做完了」时用这个）: {"entity":"goal","action":"toggle_action","data":{"goal_name":"目标名","subgoal_name":"子目标名","action_text":"行动描述"}}\n'
+    '- 添加目标: {"entity":"goal","action":"add","data":{"name":"目标名","icon":"🎯","color":"#ef4444"}}\n'
+    '- 删除目标: {"entity":"goal","action":"delete","data":{"goal_name":"目标名"}}\n'
+    '- 添加子目标: {"entity":"goal","action":"add_subgoal","data":{"goal_name":"目标名","subgoal_name":"子目标名"}}\n'
+    '- 添加行动: {"entity":"goal","action":"add_action","data":{"goal_name":"目标名","subgoal_name":"子目标名","action_text":"行动描述"}}\n'
+    '- 删除行动: {"entity":"goal","action":"delete_action","data":{"goal_name":"目标名","subgoal_name":"子目标名","action_text":"行动描述"}}\n'
+    '注意：toggle_action 翻转完成状态（true↔false），不需要指定 done 值。目标/子目标/行动通过名称模糊匹配。'
 )
 
 # ========== 📐 微积小马 — 学习模式（苏格拉底导师） ==========

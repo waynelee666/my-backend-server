@@ -118,26 +118,44 @@ run 跑；运行
         return json.loads(content)
 
 def main():
-    print("📖 从 Supabase 加载所有单词...")
+    import sys
+    import time
+
+    def log(msg):
+        print(msg, flush=True)
+
+    log("📖 从 Supabase 加载所有单词...")
     all_words = supabase_fetch("vocabulary", select="id,word,meaning")
+    log(f"   ✓ 已加载 {len(all_words)} 个单词")
 
     # 筛选缺词性的词
     need_pos = [w for w in all_words if w.get("meaning") and not POS_RE.match(w["meaning"].strip())]
     total = len(need_pos)
-    print(f"🔍 {len(all_words)} 个单词中，{total} 个缺词性")
+    total_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE if total > 0 else 0
+    log(f"🔍 {len(all_words)} 个单词中，{total} 个缺词性，分 {total_batches} 批处理")
+    log("=" * 50)
 
     if total == 0:
-        print("✅ 所有单词都已有词性，无需处理！")
+        log("✅ 所有单词都已有词性，无需处理！")
         return
 
     updated = 0
+    failed = 0
+    start_time = time.time()
+
     for i in range(0, total, BATCH_SIZE):
+        batch_no = i // BATCH_SIZE + 1
         batch = need_pos[i:i + BATCH_SIZE]
-        print(f"\n📤 批次 {i // BATCH_SIZE + 1}: {len(batch)} 个词 → DeepSeek...")
+        progress = i / total * 100
+        elapsed = time.time() - start_time
+        eta = (elapsed / i * total - elapsed) if i > 0 else 0
+
+        log(f"\n📤 批次 {batch_no}/{total_batches} ({len(batch)}词) [进度 {progress:.0f}% | 已耗时 {elapsed:.0f}s | 预计剩余 {eta:.0f}s]")
         try:
             result = deepseek_add_pos(batch)
         except Exception as e:
-            print(f"  ❌ DeepSeek 调用失败: {e}")
+            failed += len(batch)
+            log(f"  ❌ DeepSeek 调用失败: {e}")
             continue
 
         # 构建 word→meaning 映射
@@ -153,12 +171,17 @@ def main():
                 supabase_patch("vocabulary", w["id"], {"meaning": new_meaning})
                 batch_done += 1
             except Exception as e:
-                print(f"  ⚠️ 更新 {w['word']} 失败: {e}")
+                log(f"  ⚠️ 更新 {w['word']} 失败: {e}")
 
         updated += batch_done
-        print(f"  ✅ 本批更新 {batch_done}/{len(batch)} 个")
+        batch_progress = (i + len(batch)) / total * 100
+        log(f"  ✅ 本批 {batch_done}/{len(batch)} | 累计 {updated}/{total} | 总进度 {batch_progress:.0f}%")
 
-    print(f"\n🎉 完成！共更新 {updated}/{total} 个单词")
+    total_time = time.time() - start_time
+    log("\n" + "=" * 50)
+    log(f"🎉 完成！共更新 {updated}/{total} 个单词 | 耗时 {total_time:.0f}s")
+    if failed > 0:
+        log(f"⚠️ 失败 {failed} 个单词")
 
 if __name__ == "__main__":
     main()

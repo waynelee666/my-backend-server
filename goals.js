@@ -213,6 +213,19 @@ function getPresetGoals() {
 
 // ==================== 数据读写 ====================
 
+// 数据迁移：处理旧版本数据
+function migrateGoals(goals) {
+  let changed = false;
+  for (let i = 0; i < goals.length; i++) {
+    // v1: 篮球 → 足球
+    if (goals[i].id === 'basketball') {
+      const fbPreset = getPresetGoals().find(g => g.id === 'football');
+      if (fbPreset) { goals[i] = fbPreset; changed = true; }
+    }
+  }
+  return changed;
+}
+
 async function loadGoals() {
   try {
     const sb = Auth.getClient();
@@ -227,13 +240,18 @@ async function loadGoals() {
     if (error) {
       // 表可能还不存在，降级到 localStorage
       console.warn('goal_data 表可能不存在，使用本地缓存:', error.message);
-      return loadFromLocal();
+      const local = loadFromLocal();
+      if (migrateGoals(local)) { saveToLocal(local); await saveGoalsRaw(local).catch(() => {}); }
+      return local;
     }
 
     if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
-      // 同步到 local 作为快速缓存
-      saveToLocal(data.data);
-      return data.data;
+      const goals = data.data;
+      if (migrateGoals(goals)) {
+        await saveGoalsRaw(goals).catch(() => {});
+      }
+      saveToLocal(goals);
+      return goals;
     }
     // 首次使用：写入预置数据
     const preset = getPresetGoals();
@@ -242,7 +260,9 @@ async function loadGoals() {
     return preset;
   } catch (e) {
     console.error('loadGoals 异常，降级本地:', e);
-    return loadFromLocal();
+    const local = loadFromLocal();
+    if (migrateGoals(local)) { saveToLocal(local); }
+    return local;
   }
 }
 

@@ -618,6 +618,7 @@ let practiceDifficulty = 'medium';  // 'easy' | 'medium' | 'hard' — 控制文�
 let practiceWordRange = 'all';   // 'all' | 'cet4' | 'cet6' — 控制单词范围
 let practiceFullPool = [];       // 保存全量词池供"换主题"使用
 let practiceVocabMap = {};      // word_lower → vocabObj，练习答对后标记已背用
+let practiceVocabList = [];     // 备用：选中单词的 flat 列表，map 查找失败时回退
 
 // 初始化：收集所有可用的 Unit/Part 组合
 function getAvailableUnits() {
@@ -658,6 +659,7 @@ function enterPracticeMode() {
     practiceResult = null;
     practiceFullPool = [];
     practiceVocabMap = {};
+    practiceVocabList = [];
     practiceWordRange = 'all';
     practiceDifficulty = 'medium';
     renderPracticeConfig();
@@ -759,6 +761,7 @@ async function changePracticeTheme() {
     try {
         const selected = await pickWordsForPractice(practiceFullPool, practiceWordRange, practiceDifficulty, count);
         practiceVocabMap = {};
+        practiceVocabList = selected;
         selected.forEach(v => { practiceVocabMap[v.word.toLowerCase().trim()] = v; });
         const words = selected.map(v => ({ word: v.word, meaning: v.meaning }));
         const resp = await fetch('/api/generate-practice', {
@@ -927,6 +930,7 @@ $('#practiceStartBtn')?.addEventListener('click', async () => {
         // 智能抽词：AI 分类 → 单词范围筛选 → 80/20 拆分
         const selected = await pickWordsForPractice(pool, practiceWordRange, practiceDifficulty, count);
         practiceVocabMap = {};
+        practiceVocabList = selected;
         selected.forEach(v => { practiceVocabMap[v.word.toLowerCase().trim()] = v; });
         const words = selected.map(v => ({ word: v.word, meaning: v.meaning }));
         const resp = await fetch('/api/generate-practice', {
@@ -1103,9 +1107,16 @@ function renderPracticeResult() {
         if (!item.correct) continue;
         const blank = practiceBlanks.find(b => b.number === item.number);
         if (!blank) continue;
-        const key = (blank.word || '').toLowerCase().trim();
-        const v = practiceVocabMap[key];
-        if (!v || !v.id) continue;
+        let v = practiceVocabMap[(blank.word || '').toLowerCase().trim()];
+        if (!v || !v.id) {
+            // 回退：map 匹配失败时，在选中列表中按单词文本查找
+            const key = (blank.word || '').toLowerCase().trim();
+            v = practiceVocabList.find(x => (x.word || '').toLowerCase().trim() === key);
+        }
+        if (!v || !v.id) {
+            console.warn('练习标记失败：找不到匹配单词', blank.word);
+            continue;
+        }
         try {
             const localV = vocabs.find(x => x.id === v.id);
             const checkPassed = (localV && localV.check_passed) || (v.check_passed);

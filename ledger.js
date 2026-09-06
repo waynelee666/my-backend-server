@@ -1,10 +1,11 @@
 /* ============================================================
    TaskFlow - 记账模块  v1.0 — 每日40额度 + 购物 + 储蓄
    规则（每月生活费 2000）：
-     · 日常：每天 40 元，本月「应发 = 40 × 今天几号」
+     · 账单周期：每月 6 号 → 下月 5 号
+     · 日常：每天 40 元，本期「应发 = 40 × 本期第几天」
      · 今天可用 = 应发 − 本月日常已花（没花完自动滚存到下一天）
-     · 购物：每月 400 元
-     · 储蓄：每月目标 400 元
+     · 购物：每期 400 元
+     · 储蓄：每期目标 400 元
    ============================================================ */
 console.log('💰 Ledger module loaded');
 
@@ -60,21 +61,44 @@ async function loadLedger() {
   }
 }
 
+// ---- 账单周期：每月 6 号开始，到下月 5 号结束 ----
+function cycleInfo(now = new Date()) {
+  const y = now.getFullYear();
+  const m = now.getMonth();      // 0-based
+  const d = now.getDate();
+
+  // 6 号及以后：本期从本月 6 号开始；1~5 号：本期从上月 6 号开始
+  const start = new Date(y, d >= 6 ? m : m - 1, 6);
+  const end = new Date(start.getFullYear(), start.getMonth() + 1, 5);  // 下月 5 号
+
+  const todayStart = new Date(y, m, d);
+  const dayInCycle = Math.round((todayStart - start) / 86400000) + 1;  // 今天第几天
+
+  return {
+    start: localDateStr(start),
+    end: localDateStr(end),
+    label: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`,
+    dayInCycle,
+  };
+}
+
 // ---- 额度计算 ----
 function calcStats(entries) {
   const today = localDateStr();
-  const month = today.slice(0, 7);          // 'YYYY-MM'
-  const dayOfMonth = new Date().getDate();
+  const cyc = cycleInfo();
 
-  const inMonth = entries.filter(e => (e.spent_date || '').slice(0, 7) === month);
+  const inCycle = entries.filter(e => {
+    const d = e.spent_date || '';
+    return d >= cyc.start && d <= cyc.end;
+  });
 
-  // 日常：本月至今（<= 今天）的消费，用于「滚存」计算
-  const dailySpent = inMonth
+  // 日常：本期至今（<= 今天）的消费，用于「滚存」计算
+  const dailySpent = inCycle
     .filter(e => e.category === 'daily' && e.spent_date <= today)
     .reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
-  // 购物 / 储蓄：本月累计
-  const sumBy = cat => inMonth
+  // 购物 / 储蓄：本期累计
+  const sumBy = cat => inCycle
     .filter(e => e.category === cat)
     .reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
@@ -83,10 +107,13 @@ function calcStats(entries) {
 
   return {
     today,
-    dayOfMonth,
-    dailyIssued: LEDGER.DAILY * dayOfMonth,        // 本月累计应发
+    cycleStart: cyc.start,
+    cycleEnd: cyc.end,
+    cycleLabel: cyc.label,
+    dayInCycle: cyc.dayInCycle,
+    dailyIssued: LEDGER.DAILY * cyc.dayInCycle,      // 本期累计应发
     dailySpent,
-    todayAvailable: LEDGER.DAILY * dayOfMonth - dailySpent,
+    todayAvailable: LEDGER.DAILY * cyc.dayInCycle - dailySpent,
     shoppingSpent,
     shoppingLeft: LEDGER.SHOPPING - shoppingSpent,
     savingDone,
@@ -101,8 +128,10 @@ async function renderLedgerView() {
   const el = document.getElementById('ledgerContent');
   if (!el) return;
 
-  const month = s.today.slice(0, 7);
-  const monthItems = ledgerEntries.filter(e => (e.spent_date || '').slice(0, 7) === month);
+  const monthItems = ledgerEntries.filter(e => {
+    const d = e.spent_date || '';
+    return d >= s.cycleStart && d <= s.cycleEnd;
+  });
   const todayNeg = s.todayAvailable < 0 ? 'ledger-stat__num--neg' : '';
 
   el.innerHTML = `
@@ -110,16 +139,16 @@ async function renderLedgerView() {
       <div class="ledger-stat ledger-stat--main">
         <span class="ledger-stat__label">🍚 今日可用（日常）</span>
         <span class="ledger-stat__num ${todayNeg}">${fmtMoney(s.todayAvailable)}</span>
-        <span class="ledger-stat__sub">本月应发 ${fmtMoney(s.dailyIssued)} · 已花 ${fmtMoney(s.dailySpent)}</span>
-        <span class="ledger-stat__hint">没花完自动滚存到下一天</span>
+        <span class="ledger-stat__sub">本期第 ${s.dayInCycle} 天 · 应发 ${fmtMoney(s.dailyIssued)} · 已花 ${fmtMoney(s.dailySpent)}</span>
+        <span class="ledger-stat__hint">每月 6 号开始 · 没花完自动滚存</span>
       </div>
       <div class="ledger-stat">
-        <span class="ledger-stat__label">🛒 本月购物</span>
+        <span class="ledger-stat__label">🛒 本期购物</span>
         <span class="ledger-stat__num">${fmtMoney(s.shoppingLeft)}</span>
         <span class="ledger-stat__sub">剩余 / 预算 ${fmtMoney(LEDGER.SHOPPING)}</span>
       </div>
       <div class="ledger-stat">
-        <span class="ledger-stat__label">💰 本月储蓄</span>
+        <span class="ledger-stat__label">💰 本期储蓄</span>
         <span class="ledger-stat__num">${fmtMoney(s.savingDone)}</span>
         <span class="ledger-stat__sub">已存 / 目标 ${fmtMoney(LEDGER.SAVING)}</span>
       </div>

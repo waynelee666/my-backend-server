@@ -181,6 +181,7 @@ async function renderLedgerView() {
       </div>
       <div class="ledger-shopping__add">
         <input type="text" class="ledger-shopping__input" id="shoppingInput" placeholder="要买什么..." maxlength="100">
+        <input type="number" class="ledger-shopping__amount" id="shoppingAmount" placeholder="预估金额" min="0" step="0.01" inputmode="decimal">
         <button class="btn btn--primary btn--sm" id="shoppingAddBtn">＋ 添加</button>
       </div>
       <div class="ledger-shopping__list" id="shoppingList">
@@ -234,6 +235,7 @@ function renderEntryList(items) {
 function renderShoppingHTML() {
   const pending = ledgerShopping.filter(i => !i.done);
   const done = ledgerShopping.filter(i => i.done);
+  const pendingTotal = pending.reduce((s, i) => s + (Number(i.amount) || 0), 0);
 
   const itemHTML = item => `
     <div class="shopping-item ${item.done ? 'shopping-item--done' : ''}" data-id="${item.id}">
@@ -242,13 +244,14 @@ function renderShoppingHTML() {
         <span class="shopping-item__check"></span>
       </label>
       <span class="shopping-item__name">${esc(item.name)}</span>
+      ${item.amount ? `<span class="shopping-item__amount">${fmtMoney(item.amount)}</span>` : ''}
       <button class="shopping-item__del" data-shopping-del="${item.id}" title="删除">✕</button>
     </div>`;
 
   if (!ledgerShopping.length) return '<p class="empty-text">清单还是空的，添加要买的东西吧 🛒</p>';
 
   let html = '';
-  if (pending.length) html += '<div class="shopping-group__label">待买</div>' + pending.map(itemHTML).join('');
+  if (pending.length) html += `<div class="shopping-group__label">待买${pendingTotal > 0 ? ` · 预估合计 ${fmtMoney(pendingTotal)}` : ''}</div>` + pending.map(itemHTML).join('');
   if (done.length) html += '<div class="shopping-group__label">已买</div>' + done.map(itemHTML).join('');
   return html;
 }
@@ -334,11 +337,15 @@ async function deleteLedgerEntry(id) {
 // ---- 购物清单操作 ----
 async function addShoppingItem() {
   const input = document.getElementById('shoppingInput');
+  const amountInput = document.getElementById('shoppingAmount');
   const name = (input.value || '').trim();
   if (!name) { input.focus(); return; }
+  const amountVal = parseFloat(amountInput.value);
+  const amount = amountVal > 0 ? amountVal : null;  // 预估金额可填可不填
   try {
-    await DS.create('ledger_shopping_items', { name, done: false });
+    await DS.create('ledger_shopping_items', { name, amount, done: false });
     input.value = '';
+    amountInput.value = '';
     await renderLedgerView();
   } catch (e) {
     console.error('[ledger] 添加清单失败:', e);

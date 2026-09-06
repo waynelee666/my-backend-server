@@ -46,9 +46,13 @@ create table if not exists public.ledger_shopping_items (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
+  amount numeric(10,2),
   done boolean not null default false,
   created_at timestamptz not null default now()
 );
+
+-- 老表升级：若之前已建表，补上预估金额列（可空）
+alter table public.ledger_shopping_items add column if not exists amount numeric(10,2);
 
 alter table public.ledger_shopping_items enable row level security;
 

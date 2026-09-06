@@ -1,6 +1,6 @@
 // TaskFlow Service Worker — 离线缓存 v2
 // 🔧 改这个版本号 → 所有客户端自动更新
-const CACHE = "taskflow-v32";
+const CACHE = "taskflow-v33";
 
 // 需要预缓存的静态资源
 const PRECACHE = [
@@ -63,20 +63,17 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // JS/CSS/图片等：缓存优先，网络更新（后台静默刷新）
+  // JS/CSS/图片等：网络优先（改代码立即生效），断网才兜底缓存
   e.respondWith(
-    caches.match(e.request).then((cached) => {
-      const fetched = fetch(e.request)
-        .then((resp) => {
-          if (resp.ok) {
-            const clone = resp.clone();
-            caches.open(CACHE).then((cache) => cache.put(e.request, clone));
-          }
-          return resp;
-        })
-        .catch(() => cached);
-      return cached || fetched;
-    })
+    fetch(e.request)
+      .then((resp) => {
+        if (resp.ok) {
+          const clone = resp.clone();
+          caches.open(CACHE).then((cache) => cache.put(e.request, clone));
+        }
+        return resp;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
 

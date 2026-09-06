@@ -25,6 +25,7 @@ const LEDGER_CATS = {
 
 // ---- 内存状态 ----
 let ledgerEntries = [];        // 全部流水
+let ledgerShopping = [];       // 购物清单
 let ledgerCategory = 'daily';  // 当前选中的记账分类
 
 // ---- 工具 ----
@@ -57,6 +58,23 @@ async function loadLedger() {
     return data || [];
   } catch (e) {
     console.warn('[ledger] 加载失败:', e);
+    return [];
+  }
+}
+
+async function loadShopping() {
+  try {
+    const sb = Auth.getClient();
+    const { data, error } = await sb.from('ledger_shopping_items')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (error) {
+      console.warn('[ledger] ledger_shopping_items 表可能不存在:', error.message);
+      return [];
+    }
+    return data || [];
+  } catch (e) {
+    console.warn('[ledger] 购物清单加载失败:', e);
     return [];
   }
 }
@@ -123,7 +141,9 @@ function calcStats(entries) {
 
 // ---- 渲染 ----
 async function renderLedgerView() {
-  ledgerEntries = await loadLedger();
+  const [entries, shopping] = await Promise.all([loadLedger(), loadShopping()]);
+  ledgerEntries = entries;
+  ledgerShopping = shopping;
   const s = calcStats(ledgerEntries);
   const el = document.getElementById('ledgerContent');
   if (!el) return;
@@ -151,6 +171,20 @@ async function renderLedgerView() {
         <span class="ledger-stat__label">💰 本期储蓄</span>
         <span class="ledger-stat__num">${fmtMoney(s.savingDone)}</span>
         <span class="ledger-stat__sub">已存 / 目标 ${fmtMoney(LEDGER.SAVING)}</span>
+      </div>
+    </div>
+
+    <div class="ledger-shopping">
+      <div class="ledger-shopping__header">
+        <span class="ledger-shopping__title">🛒 购物清单</span>
+        <button class="ledger-shopping__clear" id="shoppingClearDone">清空已买</button>
+      </div>
+      <div class="ledger-shopping__add">
+        <input type="text" class="ledger-shopping__input" id="shoppingInput" placeholder="要买什么..." maxlength="100">
+        <button class="btn btn--primary btn--sm" id="shoppingAddBtn">＋ 添加</button>
+      </div>
+      <div class="ledger-shopping__list" id="shoppingList">
+        ${renderShoppingHTML()}
       </div>
     </div>
 
@@ -196,6 +230,29 @@ function renderEntryList(items) {
   }).join('');
 }
 
+// ---- 购物清单渲染 ----
+function renderShoppingHTML() {
+  const pending = ledgerShopping.filter(i => !i.done);
+  const done = ledgerShopping.filter(i => i.done);
+
+  const itemHTML = item => `
+    <div class="shopping-item ${item.done ? 'shopping-item--done' : ''}" data-id="${item.id}">
+      <label class="shopping-item__checkwrap">
+        <input type="checkbox" ${item.done ? 'checked' : ''} class="shopping-item__cb" data-toggle="${item.id}">
+        <span class="shopping-item__check"></span>
+      </label>
+      <span class="shopping-item__name">${esc(item.name)}</span>
+      <button class="shopping-item__del" data-shopping-del="${item.id}" title="删除">✕</button>
+    </div>`;
+
+  if (!ledgerShopping.length) return '<p class="empty-text">清单还是空的，添加要买的东西吧 🛒</p>';
+
+  let html = '';
+  if (pending.length) html += '<div class="shopping-group__label">待买</div>' + pending.map(itemHTML).join('');
+  if (done.length) html += '<div class="shopping-group__label">已买</div>' + done.map(itemHTML).join('');
+  return html;
+}
+
 // ---- 事件 ----
 function bindLedgerEvents() {
   document.querySelectorAll('.ledger-cat').forEach(btn => {
@@ -217,6 +274,21 @@ function bindLedgerEvents() {
   document.querySelectorAll('.ledger-item__del').forEach(btn => {
     btn.addEventListener('click', () => deleteLedgerEntry(btn.dataset.del));
   });
+
+  // 购物清单
+  const shopAdd = document.getElementById('shoppingAddBtn');
+  const shopInput = document.getElementById('shoppingInput');
+  if (shopAdd) shopAdd.addEventListener('click', addShoppingItem);
+  if (shopInput) shopInput.addEventListener('keydown', e => { if (e.key === 'Enter') addShoppingItem(); });
+
+  document.querySelectorAll('.shopping-item__cb').forEach(cb => {
+    cb.addEventListener('change', () => toggleShoppingItem(cb.dataset.toggle, cb.checked));
+  });
+  document.querySelectorAll('.shopping-item__del').forEach(btn => {
+    btn.addEventListener('click', () => deleteShoppingItem(btn.dataset.shoppingDel));
+  });
+  const clearDone = document.getElementById('shoppingClearDone');
+  if (clearDone) clearDone.addEventListener('click', clearDoneShopping);
 }
 
 async function addLedgerEntry() {
@@ -256,6 +328,54 @@ async function deleteLedgerEntry(id) {
   } catch (e) {
     console.error('[ledger] 删除失败:', e);
     showToast('删除失败', 'error');
+  }
+}
+
+// ---- 购物清单操作 ----
+async function addShoppingItem() {
+  const input = document.getElementById('shoppingInput');
+  const name = (input.value || '').trim();
+  if (!name) { input.focus(); return; }
+  try {
+    await DS.create('ledger_shopping_items', { name, done: false });
+    input.value = '';
+    await renderLedgerView();
+  } catch (e) {
+    console.error('[ledger] 添加清单失败:', e);
+    showToast('添加失败，请确认已建 ledger_shopping_items 表', 'error');
+  }
+}
+
+async function toggleShoppingItem(id, done) {
+  try {
+    await DS.update('ledger_shopping_items', id, { done });
+    await renderLedgerView();
+  } catch (e) {
+    console.error('[ledger] 更新清单失败:', e);
+    showToast('更新失败', 'error');
+  }
+}
+
+async function deleteShoppingItem(id) {
+  try {
+    await DS.remove('ledger_shopping_items', id);
+    await renderLedgerView();
+  } catch (e) {
+    console.error('[ledger] 删除清单失败:', e);
+    showToast('删除失败', 'error');
+  }
+}
+
+async function clearDoneShopping() {
+  const doneIds = ledgerShopping.filter(i => i.done).map(i => i.id);
+  if (!doneIds.length) { showToast('没有已买的项', 'info'); return; }
+  try {
+    for (const id of doneIds) await DS.remove('ledger_shopping_items', id);
+    showToast('已清空已买', 'success');
+    await renderLedgerView();
+  } catch (e) {
+    console.error('[ledger] 清空失败:', e);
+    showToast('清空失败', 'error');
   }
 }
 

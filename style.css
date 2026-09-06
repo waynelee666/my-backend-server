@@ -1166,3 +1166,51 @@ textarea.form-input { resize:vertical; }
     .ledger-cats { justify-content:space-between; }
     .ledger-cat { flex:1; text-align:center; }
 }
+
+/* ==================== 购物清单 ==================== */
+.ledger-shopping {
+    border:1px solid var(--color-border); border-radius:12px;
+    background:#fff; padding:14px; display:flex; flex-direction:column; gap:10px;
+}
+.ledger-shopping__header { display:flex; align-items:center; justify-content:space-between; }
+.ledger-shopping__title { font-size:.95rem; font-weight:700; }
+.ledger-shopping__clear {
+    border:none; background:none; color:var(--color-text-light);
+    font-size:.75rem; cursor:pointer;
+}
+.ledger-shopping__clear:hover { color:#ef4444; }
+.ledger-shopping__add { display:flex; gap:8px; }
+.ledger-shopping__input {
+    flex:1; padding:9px 12px; border:1px solid var(--color-border);
+    border-radius:8px; font-size:.9rem;
+}
+.ledger-shopping__list { display:flex; flex-direction:column; gap:6px; }
+
+.shopping-group__label {
+    font-size:.72rem; color:var(--color-text-light); font-weight:600;
+    margin-top:4px;
+}
+.shopping-item {
+    display:flex; align-items:center; gap:10px;
+    padding:8px 10px; border-radius:8px; background:#f8fafc;
+}
+.shopping-item__checkwrap { display:flex; align-items:center; cursor:pointer; }
+.shopping-item__cb { display:none; }
+.shopping-item__check {
+    width:18px; height:18px; border:2px solid #d1d5db; border-radius:50%;
+    flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    transition:all .2s; font-size:.7rem; color:#fff;
+}
+.shopping-item__cb:checked + .shopping-item__check {
+    background:var(--color-primary); border-color:var(--color-primary);
+}
+.shopping-item__cb:checked + .shopping-item__check::after { content:'✓'; }
+.shopping-item__name { flex:1; font-size:.9rem; }
+.shopping-item--done .shopping-item__name {
+    text-decoration:line-through; color:#9ca3af;
+}
+.shopping-item__del {
+    border:none; background:none; color:#ccc; cursor:pointer;
+    font-size:.85rem; padding:2px 6px; border-radius:6px;
+}
+.shopping-item__del:hover { color:#ef4444; background:#fef2f2; }

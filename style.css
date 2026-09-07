@@ -1150,6 +1150,44 @@ textarea.form-input { resize:vertical; }
     font-size:.9rem; padding:4px 6px; border-radius:6px;
 }
 .ledger-item__del:hover { color:#ef4444; background:#fef2f2; }
+.ledger-item__edit {
+    border:none; background:none; color:#ccc; cursor:pointer;
+    font-size:.9rem; padding:4px 6px; border-radius:6px;
+}
+.ledger-item__edit:hover { color:var(--color-primary); background:#eef2ff; }
+
+/* ==================== 记账：每期总金额总览 ==================== */
+.ledger-total {
+    border-radius:14px;
+    background:linear-gradient(135deg, #4f46e5, #7c3aed);
+    color:#fff; padding:18px 20px; display:flex; flex-direction:column; gap:12px;
+}
+.ledger-total__stats { display:flex; align-items:center; justify-content:space-between; }
+.ledger-total__cell { display:flex; flex-direction:column; gap:2px; }
+.ledger-total__cell--left { text-align:right; }
+.ledger-total__cell-label { font-size:.78rem; opacity:.85; font-weight:600; }
+.ledger-total__cell-num { font-size:2rem; font-weight:800; line-height:1.1; }
+.ledger-total__cell-num--neg { color:#fecaca; }
+.ledger-total__bar {
+    height:8px; border-radius:999px; background:rgba(255,255,255,.25); overflow:hidden;
+}
+.ledger-total__fill {
+    height:100%; border-radius:999px; background:#fff;
+    transition:width .4s ease;
+}
+.ledger-total__meta { font-size:.72rem; opacity:.9; }
+
+/* ==================== 记账：周期切换 ==================== */
+.ledger-cycle-nav { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ledger-cycle-nav__btn {
+    padding:6px 14px; border:1px solid var(--color-border); background:#fff;
+    border-radius:8px; cursor:pointer; font-size:.82rem; font-family:inherit;
+    color:var(--color-primary); font-weight:600;
+}
+.ledger-cycle-nav__btn:hover { background:var(--color-bg-alt); }
+.ledger-cycle-nav__btn:disabled { opacity:.35; cursor:default; }
+.ledger-cycle-nav__btn:disabled:hover { background:#fff; }
+.ledger-cycle-nav__label { font-weight:700; font-size:.9rem; }
 
 /* ==================== 移动端 记账 ==================== */
 @media (max-width: 768px) {
@@ -1225,3 +1263,26 @@ textarea.form-input { resize:vertical; }
     font-size:.85rem; padding:2px 6px; border-radius:6px;
 }
 .shopping-item__del:hover { color:#ef4444; background:#fef2f2; }
+.shopping-item__edit {
+    border:none; background:none; color:#ccc; cursor:pointer;
+    font-size:.85rem; padding:2px 6px; border-radius:6px;
+}
+.shopping-item__edit:hover { color:var(--color-primary); background:#eef2ff; }
+.shopping-item--editing { background:#eef2ff; }
+.shopping-item__editname {
+    flex:1; min-width:0; padding:6px 10px; border:1px solid var(--color-border);
+    border-radius:8px; font-size:.9rem; font-family:inherit;
+}
+.shopping-item__editamount {
+    width:80px; padding:6px 8px; border:1px solid var(--color-border);
+    border-radius:8px; font-size:.85rem; font-family:inherit;
+}
+.shopping-item__save {
+    border:none; background:var(--color-primary); color:#fff; cursor:pointer;
+    font-size:.85rem; width:28px; height:28px; border-radius:6px;
+}
+.shopping-item__cancel {
+    border:none; background:none; color:#999; cursor:pointer;
+    font-size:.9rem; padding:2px 6px; border-radius:6px;
+}
+.shopping-item__cancel:hover { color:#ef4444; background:#fef2f2; }

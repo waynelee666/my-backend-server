@@ -1,19 +1,26 @@
 /* ============================================================
-   TaskFlow - 记账模块  v1.0 — 每日40额度 + 购物 + 储蓄
-   规则（每月生活费 2000）：
+   TaskFlow - 记账模块  v1.1 — 每期总预算2000 + 购物 + 储蓄
+   规则（每期生活费 2000）：
      · 账单周期：每月 6 号 → 下月 5 号
+     · 每期总金额 2000 元，日常 / 购物 / 储蓄 都从 2000 里减
      · 日常：每天 40 元，本期「应发 = 40 × 本期第几天」
-     · 今天可用 = 应发 − 本月日常已花（没花完自动滚存到下一天）
+     · 今天可用 = 应发 − 本期日常已花（没花完自动滚存到下一天）
      · 购物：每期 400 元
      · 储蓄：每期目标 400 元
+   新增（v1.1）：
+     · 每期总金额 2000 + 剩余总览
+     · 历史周期切换（上一期 / 下一期）
+     · 编辑已记流水（金额/分类/日期/备注）
+     · 编辑购物清单项（名称/预估金额）
    ============================================================ */
 console.log('💰 Ledger module loaded');
 
 // ---- 预算常量 ----
 const LEDGER = {
+  TOTAL: 2000,     // 每期总金额（元）
   DAILY: 40,       // 每天日常额度（元）
-  SHOPPING: 400,   // 每月购物额度（元）
-  SAVING: 400,     // 每月储蓄目标（元）
+  SHOPPING: 400,   // 每期购物额度（元）
+  SAVING: 400,     // 每期储蓄目标（元）
 };
 
 // ---- 分类定义 ----
@@ -27,6 +34,10 @@ const LEDGER_CATS = {
 let ledgerEntries = [];        // 全部流水
 let ledgerShopping = [];       // 购物清单
 let ledgerCategory = 'daily';  // 当前选中的记账分类
+let ledgerCycleOffset = 0;     // 0=本期，-1=上期，-2=上上期...
+let ledgerEditId = null;       // 正在编辑的流水 id
+let ledgerEditCategory = 'daily'; // 编辑弹窗里选中的分类
+let ledgerShoppingEditId = null;  // 正在编辑的购物项 id
 
 // ---- 工具 ----
 function localDateStr(d = new Date()) {
@@ -41,6 +52,12 @@ function fmtMoney(n) {
   const abs = Math.abs(v);
   const body = Number.isInteger(abs) ? String(abs) : abs.toFixed(2);
   return (v < 0 ? '-¥' : '¥') + body;
+}
+
+function escAttr(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // ---- 数据读写 ----
@@ -80,63 +97,76 @@ async function loadShopping() {
 }
 
 // ---- 账单周期：每月 6 号开始，到下月 5 号结束 ----
-function cycleInfo(now = new Date()) {
+// offset: 0=本期，-1=上期，以此类推
+function cycleInfo(offset = 0) {
+  const now = new Date();
   const y = now.getFullYear();
   const m = now.getMonth();      // 0-based
   const d = now.getDate();
 
-  // 6 号及以后：本期从本月 6 号开始；1~5 号：本期从上月 6 号开始
-  const start = new Date(y, d >= 6 ? m : m - 1, 6);
+  // 本期起点：6 号及以后从本月 6 号开始；1~5 号从上月 6 号开始
+  const curStart = new Date(y, d >= 6 ? m : m - 1, 6);
+  const start = new Date(curStart.getFullYear(), curStart.getMonth() + offset, 6);
   const end = new Date(start.getFullYear(), start.getMonth() + 1, 5);  // 下月 5 号
 
   const todayStart = new Date(y, m, d);
-  const dayInCycle = Math.round((todayStart - start) / 86400000) + 1;  // 今天第几天
+  const dayInCycle = Math.round((todayStart - start) / 86400000) + 1;  // 今天在本期第几天
+  const fullDays = Math.round((end - start) / 86400000) + 1;           // 本期总天数
 
   return {
     start: localDateStr(start),
     end: localDateStr(end),
     label: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`,
     dayInCycle,
+    fullDays,
+    isCurrent: offset === 0,
   };
 }
 
 // ---- 额度计算 ----
-function calcStats(entries) {
+function calcStats(entries, offset = 0) {
   const today = localDateStr();
-  const cyc = cycleInfo();
+  const cyc = cycleInfo(offset);
 
   const inCycle = entries.filter(e => {
     const d = e.spent_date || '';
     return d >= cyc.start && d <= cyc.end;
   });
 
-  // 日常：本期至今（<= 今天）的消费，用于「滚存」计算
-  const dailySpent = inCycle
-    .filter(e => e.category === 'daily' && e.spent_date <= today)
-    .reduce((s, e) => s + (Number(e.amount) || 0), 0);
-
-  // 购物 / 储蓄：本期累计
   const sumBy = cat => inCycle
     .filter(e => e.category === cat)
     .reduce((s, e) => s + (Number(e.amount) || 0), 0);
 
+  const dailySpent = sumBy('daily');
   const shoppingSpent = sumBy('shopping');
   const savingDone = sumBy('saving');
+  const totalUsed = dailySpent + shoppingSpent + savingDone;
 
-  return {
+  const s = {
     today,
     cycleStart: cyc.start,
     cycleEnd: cyc.end,
     cycleLabel: cyc.label,
     dayInCycle: cyc.dayInCycle,
-    dailyIssued: LEDGER.DAILY * cyc.dayInCycle,      // 本期累计应发
+    fullDays: cyc.fullDays,
+    isCurrent: cyc.isCurrent,
     dailySpent,
-    todayAvailable: LEDGER.DAILY * cyc.dayInCycle - dailySpent,
     shoppingSpent,
     shoppingLeft: LEDGER.SHOPPING - shoppingSpent,
     savingDone,
     savingLeft: LEDGER.SAVING - savingDone,
+    totalUsed,
+    totalLeft: LEDGER.TOTAL - totalUsed,
   };
+
+  if (cyc.isCurrent) {
+    s.dailyIssued = LEDGER.DAILY * cyc.dayInCycle;      // 本期累计应发
+    s.todayAvailable = s.dailyIssued - dailySpent;      // 今日可用（滚存）
+  } else {
+    s.dailyIssued = LEDGER.DAILY * cyc.fullDays;        // 往期按整期天数计应发
+    s.todayAvailable = null;                            // 往期无「今日可用」
+  }
+  return s;
 }
 
 // ---- 渲染 ----
@@ -144,24 +174,64 @@ async function renderLedgerView() {
   const [entries, shopping] = await Promise.all([loadLedger(), loadShopping()]);
   ledgerEntries = entries;
   ledgerShopping = shopping;
-  const s = calcStats(ledgerEntries);
+  const s = calcStats(ledgerEntries, ledgerCycleOffset);
   const el = document.getElementById('ledgerContent');
   if (!el) return;
 
-  const monthItems = ledgerEntries.filter(e => {
+  const cycleItems = ledgerEntries.filter(e => {
     const d = e.spent_date || '';
     return d >= s.cycleStart && d <= s.cycleEnd;
   });
-  const todayNeg = s.todayAvailable < 0 ? 'ledger-stat__num--neg' : '';
+  const defaultDate = s.isCurrent ? s.today : s.cycleEnd;
+
+  // 总览：每期总金额 2000 + 剩余
+  const usedPct = Math.min(100, Math.max(0, Math.round(s.totalUsed / LEDGER.TOTAL * 100)));
+  const leftNeg = s.totalLeft < 0 ? 'ledger-total__cell-num--neg' : '';
+  const totalHTML = `
+    <div class="ledger-total">
+      <div class="ledger-total__stats">
+        <div class="ledger-total__cell">
+          <span class="ledger-total__cell-label">每期总金额</span>
+          <span class="ledger-total__cell-num">${fmtMoney(LEDGER.TOTAL)}</span>
+        </div>
+        <div class="ledger-total__cell ledger-total__cell--left">
+          <span class="ledger-total__cell-label">剩余</span>
+          <span class="ledger-total__cell-num ${leftNeg}">${fmtMoney(s.totalLeft)}</span>
+        </div>
+      </div>
+      <div class="ledger-total__bar"><div class="ledger-total__fill" style="width:${usedPct}%"></div></div>
+      <div class="ledger-total__meta">已用 ${fmtMoney(s.totalUsed)} = 日常 ${fmtMoney(s.dailySpent)} + 购物 ${fmtMoney(s.shoppingSpent)} + 储蓄 ${fmtMoney(s.savingDone)}</div>
+    </div>`;
+
+  // 周期切换
+  const cycleNavHTML = `
+    <div class="ledger-cycle-nav">
+      <button class="ledger-cycle-nav__btn" id="ledgerPrev">‹ 上一期</button>
+      <span class="ledger-cycle-nav__label">${s.cycleLabel} 期${s.isCurrent ? ' · 本期' : ''}</span>
+      <button class="ledger-cycle-nav__btn" id="ledgerNext" ${s.isCurrent ? 'disabled' : ''}>下一期 ›</button>
+    </div>`;
+
+  // 三张分类卡（主卡随本期/往期变化）
+  const mainStat = s.isCurrent ? `
+    <div class="ledger-stat ledger-stat--main">
+      <span class="ledger-stat__label">🍚 今日可用（日常）</span>
+      <span class="ledger-stat__num ${s.todayAvailable < 0 ? 'ledger-stat__num--neg' : ''}">${fmtMoney(s.todayAvailable)}</span>
+      <span class="ledger-stat__sub">本期第 ${s.dayInCycle} 天 · 应发 ${fmtMoney(s.dailyIssued)} · 已花 ${fmtMoney(s.dailySpent)}</span>
+      <span class="ledger-stat__hint">每月 6 号开始 · 没花完自动滚存</span>
+    </div>` : `
+    <div class="ledger-stat ledger-stat--main">
+      <span class="ledger-stat__label">🍚 日常已花（往期）</span>
+      <span class="ledger-stat__num">${fmtMoney(s.dailySpent)}</span>
+      <span class="ledger-stat__sub">本期共 ${s.fullDays} 天 · 应发 ${fmtMoney(s.dailyIssued)}</span>
+      <span class="ledger-stat__hint">历史账单</span>
+    </div>`;
 
   el.innerHTML = `
+    ${totalHTML}
+    ${cycleNavHTML}
+
     <div class="ledger-stats">
-      <div class="ledger-stat ledger-stat--main">
-        <span class="ledger-stat__label">🍚 今日可用（日常）</span>
-        <span class="ledger-stat__num ${todayNeg}">${fmtMoney(s.todayAvailable)}</span>
-        <span class="ledger-stat__sub">本期第 ${s.dayInCycle} 天 · 应发 ${fmtMoney(s.dailyIssued)} · 已花 ${fmtMoney(s.dailySpent)}</span>
-        <span class="ledger-stat__hint">每月 6 号开始 · 没花完自动滚存</span>
-      </div>
+      ${mainStat}
       <div class="ledger-stat">
         <span class="ledger-stat__label">🛒 本期购物</span>
         <span class="ledger-stat__num">${fmtMoney(s.shoppingLeft)}</span>
@@ -197,13 +267,13 @@ async function renderLedgerView() {
             ${c.icon} ${c.label}
           </button>`).join('')}
       </div>
-      <input type="date" class="ledger-date" id="ledgerDate" value="${s.today}">
+      <input type="date" class="ledger-date" id="ledgerDate" value="${defaultDate}">
       <input type="text" class="ledger-note" id="ledgerNote" placeholder="备注（可选）" maxlength="100">
       <button class="btn btn--primary ledger-add-btn" id="ledgerAddBtn">＋ 记一笔</button>
     </div>
 
     <div class="ledger-list">
-      ${renderEntryList(monthItems)}
+      ${renderEntryList(cycleItems)}
     </div>
   `;
 
@@ -211,7 +281,7 @@ async function renderLedgerView() {
 }
 
 function renderEntryList(items) {
-  if (!items.length) return '<p class="empty-text">本月还没有记账，记第一笔吧 💰</p>';
+  if (!items.length) return '<p class="empty-text">本期还没有记账，记第一笔吧 💰</p>';
   return items.map(e => {
     const c = LEDGER_CATS[e.category] || { icon: '💵', label: e.category || '其他' };
     const isSaving = e.category === 'saving';
@@ -226,6 +296,7 @@ function renderEntryList(items) {
           <span class="ledger-item__date">${e.spent_date || ''}</span>
         </div>
         <span class="ledger-item__amount ${isSaving ? 'ledger-item__amount--saving' : ''}">${sign}${amount}</span>
+        <button class="ledger-item__edit" data-edit="${e.id}" title="编辑">✎</button>
         <button class="ledger-item__del" data-del="${e.id}" title="删除">✕</button>
       </div>`;
   }).join('');
@@ -237,16 +308,28 @@ function renderShoppingHTML() {
   const done = ledgerShopping.filter(i => i.done);
   const pendingTotal = pending.reduce((s, i) => s + (Number(i.amount) || 0), 0);
 
-  const itemHTML = item => `
-    <div class="shopping-item ${item.done ? 'shopping-item--done' : ''}" data-id="${item.id}">
-      <label class="shopping-item__checkwrap">
-        <input type="checkbox" ${item.done ? 'checked' : ''} class="shopping-item__cb" data-toggle="${item.id}">
-        <span class="shopping-item__check"></span>
-      </label>
-      <span class="shopping-item__name">${esc(item.name)}</span>
-      ${item.amount ? `<span class="shopping-item__amount">${fmtMoney(item.amount)}</span>` : ''}
-      <button class="shopping-item__del" data-shopping-del="${item.id}" title="删除">✕</button>
-    </div>`;
+  const itemHTML = item => {
+    if (ledgerShoppingEditId === item.id) {
+      return `
+        <div class="shopping-item shopping-item--editing" data-id="${item.id}">
+          <input type="text" class="shopping-item__editname" id="shoppingEditName" value="${escAttr(item.name)}" maxlength="100" placeholder="名称">
+          <input type="number" class="shopping-item__editamount" id="shoppingEditAmount" value="${item.amount || ''}" min="0" step="0.01" inputmode="decimal" placeholder="金额">
+          <button class="shopping-item__save" data-shopping-save="${item.id}" title="保存">✓</button>
+          <button class="shopping-item__cancel" data-shopping-cancel="${item.id}" title="取消">✕</button>
+        </div>`;
+    }
+    return `
+      <div class="shopping-item ${item.done ? 'shopping-item--done' : ''}" data-id="${item.id}">
+        <label class="shopping-item__checkwrap">
+          <input type="checkbox" ${item.done ? 'checked' : ''} class="shopping-item__cb" data-toggle="${item.id}">
+          <span class="shopping-item__check"></span>
+        </label>
+        <span class="shopping-item__name">${esc(item.name)}</span>
+        ${item.amount ? `<span class="shopping-item__amount">${fmtMoney(item.amount)}</span>` : ''}
+        <button class="shopping-item__edit" data-shopping-edit="${item.id}" title="编辑">✎</button>
+        <button class="shopping-item__del" data-shopping-del="${item.id}" title="删除">✕</button>
+      </div>`;
+  };
 
   if (!ledgerShopping.length) return '<p class="empty-text">清单还是空的，添加要买的东西吧 🛒</p>';
 
@@ -258,6 +341,20 @@ function renderShoppingHTML() {
 
 // ---- 事件 ----
 function bindLedgerEvents() {
+  // 周期切换
+  const prevBtn = document.getElementById('ledgerPrev');
+  const nextBtn = document.getElementById('ledgerNext');
+  if (prevBtn) prevBtn.addEventListener('click', () => {
+    ledgerCycleOffset -= 1;
+    renderLedgerView();
+  });
+  if (nextBtn) nextBtn.addEventListener('click', () => {
+    if (!nextBtn.disabled) {
+      ledgerCycleOffset += 1;
+      renderLedgerView();
+    }
+  });
+
   document.querySelectorAll('.ledger-cat').forEach(btn => {
     btn.addEventListener('click', () => {
       ledgerCategory = btn.dataset.cat;
@@ -274,6 +371,10 @@ function bindLedgerEvents() {
     if (e.key === 'Enter') addLedgerEntry();
   });
 
+  // 编辑 / 删除流水
+  document.querySelectorAll('.ledger-item__edit').forEach(btn => {
+    btn.addEventListener('click', () => openLedgerEdit(btn.dataset.edit));
+  });
   document.querySelectorAll('.ledger-item__del').forEach(btn => {
     btn.addEventListener('click', () => deleteLedgerEntry(btn.dataset.del));
   });
@@ -290,10 +391,20 @@ function bindLedgerEvents() {
   document.querySelectorAll('.shopping-item__del').forEach(btn => {
     btn.addEventListener('click', () => deleteShoppingItem(btn.dataset.shoppingDel));
   });
+  document.querySelectorAll('.shopping-item__edit').forEach(btn => {
+    btn.addEventListener('click', () => editShoppingItem(btn.dataset.shoppingEdit));
+  });
+  document.querySelectorAll('.shopping-item__save').forEach(btn => {
+    btn.addEventListener('click', () => saveShoppingItem(btn.dataset.shoppingSave));
+  });
+  document.querySelectorAll('.shopping-item__cancel').forEach(btn => {
+    btn.addEventListener('click', cancelShoppingItem);
+  });
   const clearDone = document.getElementById('shoppingClearDone');
   if (clearDone) clearDone.addEventListener('click', clearDoneShopping);
 }
 
+// ---- 流水操作 ----
 async function addLedgerEntry() {
   const amountInput = document.getElementById('ledgerAmount');
   const dateInput = document.getElementById('ledgerDate');
@@ -334,6 +445,64 @@ async function deleteLedgerEntry(id) {
   }
 }
 
+// ---- 编辑流水（弹窗）----
+function openLedgerEdit(id) {
+  const e = ledgerEntries.find(x => x.id === id);
+  if (!e) return;
+  ledgerEditId = id;
+  ledgerEditCategory = e.category || 'daily';
+
+  document.getElementById('ledgerEditAmount').value = (Number(e.amount) || 0).toFixed(2);
+  document.getElementById('ledgerEditNote').value = e.note || '';
+  document.getElementById('ledgerEditDate').value = e.spent_date || localDateStr();
+  renderLedgerEditCats();
+  document.getElementById('ledgerEditModal').style.display = '';
+  document.getElementById('ledgerEditAmount').focus();
+}
+
+function renderLedgerEditCats() {
+  const box = document.getElementById('ledgerEditCats');
+  if (!box) return;
+  box.innerHTML = Object.entries(LEDGER_CATS).map(([k, c]) => `
+    <button type="button" class="ledger-cat ${k === ledgerEditCategory ? 'ledger-cat--active' : ''}" data-editcat="${k}" style="--cat-color:${c.color}">
+      ${c.icon} ${c.label}
+    </button>`).join('');
+  box.querySelectorAll('.ledger-cat').forEach(btn => {
+    btn.addEventListener('click', () => {
+      ledgerEditCategory = btn.dataset.editcat;
+      renderLedgerEditCats();
+    });
+  });
+}
+
+async function saveLedgerEdit() {
+  const amount = parseFloat(document.getElementById('ledgerEditAmount').value);
+  if (!amount || amount <= 0) {
+    showToast('请输入正确的金额', 'error');
+    return;
+  }
+  try {
+    await DS.update('ledger_entries', ledgerEditId, {
+      amount,
+      category: ledgerEditCategory,
+      note: (document.getElementById('ledgerEditNote').value || '').trim(),
+      spent_date: document.getElementById('ledgerEditDate').value || localDateStr(),
+    });
+    closeLedgerEdit();
+    showToast('已更新', 'success');
+    await renderLedgerView();
+  } catch (e) {
+    console.error('[ledger] 更新失败:', e);
+    showToast('更新失败', 'error');
+  }
+}
+
+function closeLedgerEdit() {
+  const modal = document.getElementById('ledgerEditModal');
+  if (modal) modal.style.display = 'none';
+  ledgerEditId = null;
+}
+
 // ---- 购物清单操作 ----
 async function addShoppingItem() {
   const input = document.getElementById('shoppingInput');
@@ -363,6 +532,31 @@ async function toggleShoppingItem(id, done) {
   }
 }
 
+function editShoppingItem(id) {
+  ledgerShoppingEditId = id;
+  renderLedgerView();
+}
+
+function cancelShoppingItem() {
+  ledgerShoppingEditId = null;
+  renderLedgerView();
+}
+
+async function saveShoppingItem(id) {
+  const name = (document.getElementById('shoppingEditName').value || '').trim();
+  if (!name) { showToast('名称不能为空', 'error'); return; }
+  const amt = parseFloat(document.getElementById('shoppingEditAmount').value);
+  try {
+    await DS.update('ledger_shopping_items', id, { name, amount: amt > 0 ? amt : null });
+    ledgerShoppingEditId = null;
+    showToast('已更新', 'success');
+    await renderLedgerView();
+  } catch (e) {
+    console.error('[ledger] 更新购物项失败:', e);
+    showToast('更新失败', 'error');
+  }
+}
+
 async function deleteShoppingItem(id) {
   try {
     await DS.remove('ledger_shopping_items', id);
@@ -385,6 +579,24 @@ async function clearDoneShopping() {
     showToast('清空失败', 'error');
   }
 }
+
+// ---- 编辑弹窗的静态事件（只绑定一次）----
+(function bindLedgerModal() {
+  const modal = document.getElementById('ledgerEditModal');
+  if (!modal) return;
+  const closeBtn = document.querySelector('[data-close="ledgerEditModal"]');
+  if (closeBtn) closeBtn.addEventListener('click', closeLedgerEdit);
+  modal.addEventListener('click', e => { if (e.target === modal) closeLedgerEdit(); });
+
+  const saveBtn = document.getElementById('ledgerEditSave');
+  if (saveBtn) saveBtn.addEventListener('click', saveLedgerEdit);
+  const cancelBtn = document.getElementById('ledgerEditCancel');
+  if (cancelBtn) cancelBtn.addEventListener('click', closeLedgerEdit);
+  const delBtn = document.getElementById('ledgerEditDelete');
+  if (delBtn) delBtn.addEventListener('click', () => {
+    if (ledgerEditId) { const id = ledgerEditId; closeLedgerEdit(); deleteLedgerEntry(id); }
+  });
+})();
 
 // 暴露入口（由 script.js 调用）
 window.renderLedgerView = renderLedgerView;

@@ -1286,3 +1286,66 @@ textarea.form-input { resize:vertical; }
     font-size:.9rem; padding:2px 6px; border-radius:6px;
 }
 .shopping-item__cancel:hover { color:#ef4444; background:#fef2f2; }
+
+/* ==================== 计划（每周/每月/每学期） ==================== */
+.plans-content { display:flex; flex-direction:column; gap:16px; min-height:200px; }
+.plan-section {
+    border:1px solid var(--color-border); border-radius:14px;
+    background:#fff; padding:18px 20px;
+    border-top:4px solid var(--plan-color, var(--color-primary));
+    display:flex; flex-direction:column; gap:12px;
+}
+.plan-section__head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.plan-section__title { display:flex; align-items:center; gap:8px; font-size:1.05rem; font-weight:700; color:var(--color-text); }
+.plan-section__icon { font-size:1.2rem; }
+.plan-section__period { font-size:.78rem; color:var(--color-text-light); background:var(--color-bg-alt); padding:3px 10px; border-radius:20px; font-weight:500; }
+
+.plan-section__progress { display:flex; align-items:center; gap:12px; }
+.plan-section__bar { flex:1; height:8px; background:#f1f5f9; border-radius:4px; overflow:hidden; }
+.plan-section__fill { height:100%; background:var(--plan-color, var(--color-primary)); border-radius:4px; transition:width .4s ease; }
+.plan-section__stat { font-size:.78rem; color:var(--color-text-light); font-weight:600; white-space:nowrap; }
+
+.plan-list { display:flex; flex-direction:column; gap:6px; }
+.plan-empty { text-align:center; color:var(--color-text-light); font-size:.85rem; padding:12px 0; }
+.plan-item {
+    display:flex; align-items:center; gap:10px;
+    padding:9px 10px; border-radius:9px;
+    transition:background .15s;
+}
+.plan-item:hover { background:var(--color-bg-alt); }
+.plan-item__checkwrap { display:flex; align-items:center; cursor:pointer; flex-shrink:0; }
+.plan-item__cb { display:none; }
+.plan-item__check {
+    width:19px; height:19px; border:2px solid #d1d5db; border-radius:5px;
+    display:flex; align-items:center; justify-content:center;
+    transition:all .2s; font-size:.72rem; color:#fff; flex-shrink:0;
+}
+.plan-item__cb:checked + .plan-item__check { background:var(--plan-color, var(--color-primary)); border-color:var(--plan-color, var(--color-primary)); }
+.plan-item__cb:checked + .plan-item__check::after { content:'\2713'; }
+.plan-item__text { flex:1; min-width:0; font-size:.92rem; line-height:1.45; word-break:break-word; }
+.plan-item__carried { font-style:normal; font-size:.7rem; color:var(--color-text-light); background:#f1f5f9; border-radius:6px; padding:1px 6px; margin-left:6px; vertical-align:middle; }
+.plan-item--done .plan-item__text { text-decoration:line-through; color:#9ca3af; }
+.plan-item__del {
+    border:none; background:none; color:#ccc; cursor:pointer;
+    font-size:.85rem; padding:2px 7px; border-radius:6px; flex-shrink:0;
+    opacity:0; transition:all .15s;
+}
+.plan-item:hover .plan-item__del { opacity:1; }
+.plan-item__del:hover { color:#ef4444; background:#fef2f2; }
+
+.plan-add { display:flex; gap:8px; }
+.plan-add__input {
+    flex:1; min-width:0; padding:10px 14px; border:1px solid var(--color-border);
+    border-radius:10px; font-size:.92rem; font-family:inherit; outline:none; color:var(--color-text);
+    transition:all .15s;
+}
+.plan-add__input:focus { border-color:var(--plan-color, var(--color-primary)); box-shadow:0 0 0 3px rgba(79,70,229,.1); }
+.plan-add__btn { flex-shrink:0; }
+
+/* 移动端 */
+@media (max-width: 480px) {
+    .plan-section { padding:14px 14px; }
+    .plan-section__title { font-size:.98rem; }
+    .plan-item__del { opacity:1; }
+    .plan-item__text { font-size:.88rem; }
+}

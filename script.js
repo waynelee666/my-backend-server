@@ -100,7 +100,7 @@ async function refreshAll() {
     });
     renderCurrent();
 }
-function renderCurrent() { if (currentTab==='home') renderHome(); else if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else if (currentTab==='subjects') renderSubjects(); else if (currentTab==='thoughts') renderThoughts(); else if (currentTab==='chat') renderChatView(); else if (currentTab==='vocab') renderVocabView(); else if (currentTab==='goals') renderGoalsView(); else if (currentTab==='ledger') renderLedgerView(); }
+function renderCurrent() { if (currentTab==='home') renderHome(); else if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else if (currentTab==='subjects') renderSubjects(); else if (currentTab==='thoughts') renderThoughts(); else if (currentTab==='chat') renderChatView(); else if (currentTab==='vocab') renderVocabView(); else if (currentTab==='goals') renderGoalsView(); else if (currentTab==='plans') renderPlansView(); else if (currentTab==='ledger') renderLedgerView(); }
 
 // ==================== Tab 切换 ====================
 $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
@@ -116,6 +116,7 @@ $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
     if (currentTab === 'chat') renderChatView();
     if (currentTab === 'vocab') renderVocabView();
     if (currentTab === 'goals') renderGoalsView();
+    if (currentTab === 'plans') renderPlansView();
     if (currentTab === 'ledger') renderLedgerView();
 }));
 $('.nav__logo').addEventListener('click', (e) => {
@@ -2235,6 +2236,7 @@ function switchToTab(tab) {
     if (tab === 'chat') renderChatView();
     if (tab === 'vocab') renderVocabView();
     if (tab === 'goals') renderGoalsView();
+    if (tab === 'plans') renderPlansView();
     if (tab === 'ledger') renderLedgerView();
     // 手机端收起 tabs
     document.querySelector('.nav__tabs').classList.remove('nav__tabs--open');

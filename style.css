@@ -1349,3 +1349,76 @@ textarea.form-input { resize:vertical; }
     .plan-item__del { opacity:1; }
     .plan-item__text { font-size:.88rem; }
 }
+
+/* ==================== 计划 v2（学期→月→周 链路 + 周期归档） ==================== */
+.plan-chain-hint {
+    font-size:.8rem; color:var(--color-text-light); text-align:center;
+    padding:2px 8px; background:var(--color-bg-alt); border-radius:10px; line-height:1.6;
+}
+.plan-chain-hint b { color:var(--color-primary); }
+.plan-section__step {
+    width:20px; height:20px; border-radius:50%; flex-shrink:0;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:.68rem; font-weight:700; color:#fff; background:var(--plan-color, var(--color-primary));
+}
+.plan-item__body { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.plan-item__body .plan-item__text { flex:none; }
+.plan-item__meta { display:flex; flex-wrap:wrap; gap:4px; }
+.plan-chip {
+    font-style:normal; font-size:.68rem; line-height:1; padding:3px 7px;
+    border-radius:20px; font-weight:500; display:inline-block;
+}
+.plan-chip--carried { color:#b45309; background:#fef3c7; }
+.plan-chip--src { color:#1d4ed8; background:#dbeafe; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.plan-item__acts { display:flex; align-items:center; gap:2px; flex-shrink:0; }
+.plan-item__act {
+    border:none; background:none; cursor:pointer; flex-shrink:0;
+    width:26px; height:26px; border-radius:7px; font-size:.9rem;
+    color:#9ca3af; transition:all .15s; display:inline-flex; align-items:center; justify-content:center;
+}
+.plan-item__act:hover { background:var(--color-bg-alt); }
+.plan-item__act--down:hover { color:#fff; background:#4f46e5; }
+.plan-item__act--edit:hover { color:#2563eb; background:#eff6ff; }
+.plan-item__act--del:hover { color:#ef4444; background:#fef2f2; }
+.plan-item__edit {
+    flex:1; min-width:0; padding:6px 10px; border:1px solid var(--plan-color, var(--color-primary));
+    border-radius:8px; font-size:.92rem; font-family:inherit; outline:none; color:var(--color-text);
+    box-shadow:0 0 0 3px rgba(79,70,229,.12);
+}
+.plan-item--ro { cursor:default; }
+.plan-item--ro .plan-item__checkwrap { cursor:default; }
+.plan-item--ro .plan-item__text { color:var(--color-text); }
+.plan-item--ro.plan-item--done .plan-item__text { color:#9ca3af; }
+
+.plan-archive {
+    border-top:1px dashed var(--color-border); padding-top:8px; margin-top:4px;
+}
+.plan-archive summary {
+    cursor:pointer; font-size:.8rem; font-weight:600; color:var(--color-text-light);
+    padding:4px 2px; user-select:none; border-radius:6px; transition:color .15s;
+    list-style:none;
+}
+.plan-archive summary::-webkit-details-marker { display:none; }
+.plan-archive summary::before { content:'▸ '; color:#9ca3af; }
+.plan-archive[open] summary::before { content:'▾ '; }
+.plan-archive summary:hover { color:var(--color-text); }
+.plan-archive__body { display:flex; flex-direction:column; gap:10px; margin-top:6px; }
+.plan-arch-card {
+    border:1px solid var(--color-border); border-left:3px solid var(--plan-color, var(--color-primary));
+    border-radius:10px; background:#fff; padding:10px 12px; display:flex; flex-direction:column; gap:4px;
+}
+.plan-arch-card__head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.plan-arch-card__label { font-size:.88rem; font-weight:700; color:var(--color-text); }
+.plan-arch-card__stat { font-size:.72rem; color:var(--color-text-light); font-weight:600; white-space:nowrap; }
+.plan-arch-card__bar { flex:none; height:6px; margin:2px 0; }
+.plan-arch-card .plan-list { gap:2px; }
+.plan-arch-card .plan-item { padding:5px 6px; }
+.plan-arch-card .plan-item__check { width:17px; height:17px; }
+
+.plan-toast {
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(8px);
+    background:rgba(17,24,39,.92); color:#fff; font-size:.85rem;
+    padding:9px 18px; border-radius:999px; z-index:9999; opacity:0;
+    transition:all .22s ease; pointer-events:none; max-width:80vw; text-align:center;
+}
+.plan-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }

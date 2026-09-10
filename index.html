@@ -438,9 +438,14 @@
             <div class="ledger-content" id="ledgerContent">
                 <p class="empty-text">加载中...</p>
             </div>
-            <aside class="med-panel" id="medPanel">
-                <p class="empty-text">加载中...</p>
-            </aside>
+            <div class="ledger-side">
+                <aside class="med-panel" id="medPanel">
+                    <p class="empty-text">加载中...</p>
+                </aside>
+                <aside class="bplan-panel" id="bplanPanel">
+                    <p class="empty-text">加载中...</p>
+                </aside>
+            </div>
         </div>
     </section>
 </main>
@@ -646,18 +651,21 @@
 <script src="plans.js?v=2.0"></script>
 <script src="ledger.js?v=2.0"></script>
 <script src="med.js?v=1.0"></script>
+<script src="bplan.js?v=1.0"></script>
 
 <script>
 function showAuthUI(username) {
     const ue = document.getElementById('nav-username'), le = document.getElementById('nav-logout');
     if (ue) { ue.textContent = username; ue.style.display = ''; }
     if (le) { le.style.display = ''; le.addEventListener('click', e => { e.preventDefault(); Auth.logout(); }); }
-    // 下拉菜单（手机端）    const du = document.getElementById('navDropdownUser'), dl = document.getElementById('navDropdownLogout');
+    // 下拉菜单（手机端）
+    const du = document.getElementById('navDropdownUser'), dl = document.getElementById('navDropdownLogout');
     if (du) { du.textContent = '👤 ' + username; }
     if (dl) { dl.addEventListener('click', e => { e.preventDefault(); Auth.logout(); }); }
 }
 
-// 三点菜单开关  document.addEventListener('DOMContentLoaded', () => {
+// 三点菜单开关
+document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('navMoreBtn'), dropdown = document.getElementById('navDropdown');
     if (btn && dropdown) {
         btn.addEventListener('click', (e) => {
@@ -698,14 +706,16 @@ if ('serviceWorker' in navigator) {
             });
         });
     });
-    // 定期检查更新（每 30 分钟）    setInterval(() => {
+    // 定期检查更新（每 30 分钟）
+    setInterval(() => {
         navigator.serviceWorker.getRegistration().then(reg => {
             if (reg) reg.update();
         });
     }, 30 * 60 * 1000);
 }
 
-// 安装按钮（PWA / 手动添加指引）let deferredPrompt = null;
+// 安装按钮（PWA / 手动添加指引）
+let deferredPrompt = null;
 const installBtn = document.getElementById('installBtn');
 const installDrop = document.getElementById('navDropdownInstall');
 const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
@@ -722,7 +732,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 if (isMobile && !deferredPrompt) {
-    setTimeout(() => { showInstallBtn('📲 添加到桌面); }, 1500);
+    setTimeout(() => { showInstallBtn('📲 添加到桌面'); }, 1500);
 }
 
 async function doInstall() {
@@ -731,7 +741,7 @@ async function doInstall() {
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
             if (installBtn) { installBtn.textContent = '✅ 已安装'; installBtn.disabled = true; }
-            if (installDrop) { installDrop.textContent = '✅ 已安装; }
+            if (installDrop) { installDrop.textContent = '✅ 已安装'; }
         }
         deferredPrompt = null;
     } else {
@@ -741,7 +751,7 @@ async function doInstall() {
             '   （或右上角 ··· 菜单）\n' +
             '2. 找到「添加到主屏幕」\n' +
             '3. 点「添加」完成\n\n' +
-            '💡 Chrome 浏览器体验更佳
+            '💡 Chrome 浏览器体验更佳'
         );
     }
 }
@@ -751,7 +761,7 @@ installDrop && installDrop.addEventListener('click', (e) => { e.preventDefault()
 
 window.addEventListener('appinstalled', () => {
     if (installBtn) { installBtn.textContent = '✅ 已安装'; installBtn.disabled = true; }
-    if (installDrop) { installDrop.textContent = '✅ 已安装; }
+    if (installDrop) { installDrop.textContent = '✅ 已安装'; }
 });
 </script>
 </body>

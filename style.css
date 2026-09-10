@@ -1345,6 +1345,52 @@ textarea.form-input { resize:vertical; }
 .med-notes__list li { font-size:.72rem; line-height:1.45; color:var(--color-text-light); }
 .med-notes__list b { color:#dc2626; }
 
+/* ---- 记账右侧两栏容器：滴药在上、B计划在下 ---- */
+.ledger-side { display:flex; flex-direction:column; gap:16px; min-width:0; }
+
+/* ==================== B计划面板（结构复用 .med-* 类，这里只加外壳和任务行） ==================== */
+.bplan-panel {
+    display:flex; flex-direction:column; gap:14px;
+    border:1px solid var(--color-border); border-radius:14px;
+    background:#fff; padding:16px;
+}
+.bplan-panel__title { font-size:.95rem; font-weight:700; }
+
+/* 计划开始之前的格子（W1 的 9/7、9/8） */
+.bplan-day--pre { opacity:.3; }
+
+.bplan-tasks { display:flex; flex-direction:column; gap:6px; }
+.bplan-tasks__title { font-size:.75rem; font-weight:700; color:var(--color-text-light); }
+.bplan-tasks__list {
+    margin:0; padding:0; list-style:none;
+    display:flex; flex-direction:column; gap:5px;
+}
+.bplan-task {
+    display:flex; align-items:center; gap:6px;
+    font-size:.72rem; line-height:1.45; color:var(--color-text-light);
+}
+.bplan-task__text { flex:1; min-width:0; }
+.bplan-task__edit {
+    flex:none; border:none; background:none; cursor:pointer;
+    font-size:.72rem; padding:2px 6px; border-radius:6px;
+    color:var(--color-text-light); font-family:inherit;
+}
+.bplan-task__edit:hover { color:var(--color-primary); background:#eef2ff; }
+
+.bplan-task--editing { gap:4px; }
+.bplan-task__input {
+    flex:1; min-width:0; font-family:inherit; font-size:.72rem;
+    padding:3px 6px; border:1px solid var(--color-primary); border-radius:6px;
+}
+.bplan-task__save, .bplan-task__cancel {
+    flex:none; border:none; background:none; cursor:pointer;
+    font-size:.75rem; line-height:1; padding:3px 5px; border-radius:6px;
+}
+.bplan-task__save { color:#16a34a; }
+.bplan-task__save:hover { background:#f0fdf4; }
+.bplan-task__cancel { color:#ef4444; }
+.bplan-task__cancel:hover { background:#fef2f2; }
+
 @media (max-width: 900px) {
     .ledger-layout { grid-template-columns:1fr; }
 }

@@ -283,6 +283,8 @@ async function renderLedgerView() {
 
   // 滴药记录要先就位 —— 跨期继承里的「达成周数」依赖它
   if (typeof loadMedTicks === 'function') await loadMedTicks();
+  // B计划状态（与账单周期无关，始终展示当前周）
+  if (typeof loadBplan === 'function') await loadBplan();
 
   const cyc = cycleInfo(ledgerCycleOffset);
   const carry = carryFor(cyc.label);
@@ -403,6 +405,8 @@ async function renderLedgerView() {
 
   // 右侧滴药面板（med.js）
   if (typeof renderMedPanel === 'function') renderMedPanel();
+  // 右侧 B计划面板（bplan.js），在滴药正下方
+  if (typeof renderBplanPanel === 'function') renderBplanPanel();
 }
 
 function renderEntryList(items) {

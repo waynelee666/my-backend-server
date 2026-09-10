@@ -1287,6 +1287,68 @@ textarea.form-input { resize:vertical; }
 }
 .shopping-item__cancel:hover { color:#ef4444; background:#fef2f2; }
 
+/* ==================== 滴药监督面板（记账右侧 1/4） ==================== */
+.ledger-layout {
+    display:grid; grid-template-columns:3fr 1fr; gap:16px; align-items:start;
+}
+.ledger-total__carry {
+    font-size:.72rem; opacity:.9; margin-top:4px;
+    padding-top:6px; border-top:1px solid rgba(255,255,255,.25);
+}
+
+.med-panel {
+    display:flex; flex-direction:column; gap:14px;
+    border:1px solid var(--color-border); border-radius:14px;
+    background:#fff; padding:16px;
+}
+.med-panel__title { font-size:.95rem; font-weight:700; }
+
+.med-week { display:flex; flex-direction:column; gap:6px; }
+.med-week--muted { opacity:.75; }
+.med-week__label {
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:.78rem; font-weight:600; color:var(--color-text-light);
+}
+.med-week__label span { font-variant-numeric:tabular-nums; }
+.med-week__hint { font-size:.7rem; color:#d97706; line-height:1.35; }
+
+.med-days { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.med-day {
+    display:flex; flex-direction:column; align-items:center; gap:1px;
+    padding:5px 0 4px; border:1px solid var(--color-border); border-radius:8px;
+    background:#fff; font-family:inherit; cursor:default;
+    transition:background .15s, border-color .15s;
+}
+.med-day__w { font-size:.62rem; color:var(--color-text-light); line-height:1; }
+.med-day__n { font-size:.72rem; font-weight:600; color:#bbb; line-height:1.2; }
+.med-day__mark { font-size:.68rem; line-height:1; color:#fff; height:.68rem; }
+.med-day--clickable { cursor:pointer; }
+.med-day--clickable:hover { border-color:var(--color-primary); background:#eef2ff; }
+.med-day--today { border-color:var(--color-primary); border-width:2px; padding:4px 0 3px; }
+.med-day--on { background:#22c55e; border-color:#22c55e; }
+.med-day--on .med-day__w { color:rgba(255,255,255,.85); }
+.med-day--on .med-day__n { color:#fff; }
+.med-day:disabled { opacity:.5; }
+
+.med-summary {
+    display:flex; flex-direction:column; gap:3px;
+    padding:10px 12px; border-radius:10px; background:var(--color-bg-alt);
+    font-size:.78rem; line-height:1.5;
+}
+.med-summary b { color:var(--color-primary); }
+.med-summary__bonus { color:#22c55e; }
+.med-summary__sub { font-size:.7rem; color:var(--color-text-light); }
+
+.med-notes { display:flex; flex-direction:column; gap:6px; }
+.med-notes__title { font-size:.75rem; font-weight:700; color:var(--color-text-light); }
+.med-notes__list { margin:0; padding-left:16px; display:flex; flex-direction:column; gap:5px; }
+.med-notes__list li { font-size:.72rem; line-height:1.45; color:var(--color-text-light); }
+.med-notes__list b { color:#dc2626; }
+
+@media (max-width: 900px) {
+    .ledger-layout { grid-template-columns:1fr; }
+}
+
 /* ==================== 计划（每周/每月/每学期） ==================== */
 .plans-content { display:flex; flex-direction:column; gap:16px; min-height:200px; }
 .plan-section {

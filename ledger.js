@@ -12,16 +12,28 @@
      · 历史周期切换（上一期 / 下一期）
      · 编辑已记流水（金额/分类/日期/备注）
      · 编辑购物清单项（名称/预估金额）
+   新增（v2.0 · 跨期继承）：
+     · 起本期开始，结余跨期继承（之前的历史期数字不变）
+     · 购物剩余：十位个位 → 下期购物；百位 → 下期存储基数
+     · 日常剩余 / 存储剩余 → 下期存储基数
+     · 下期存储目标 = 继承基数 + 400
+     · 购物超支（剩余为负）→ 从下期购物额度扣
+     · 滴药奖金：某周 7 格全勾 → 本期存储目标 −30、日常额度 +30
+       （结算与归属逻辑见 med.js）
    ============================================================ */
 console.log('💰 Ledger module loaded');
 
 // ---- 预算常量 ----
 const LEDGER = {
-  TOTAL: 2000,     // 每期总金额（元）
+  TOTAL: 2000,     // 每期总金额（元）—— 启用继承后由 carryFor 动态算
   DAILY: 40,       // 每天日常额度（元）
-  SHOPPING: 400,   // 每期购物额度（元）
-  SAVING: 400,     // 每期储蓄目标（元）
+  SHOPPING: 400,   // 每期购物额度基数（元）
+  SAVING: 400,     // 每期储蓄目标基数（元）
 };
+
+// 跨期继承的启用起点（周期键 'YYYY-MM'，指该月 6 号开始那一期）。
+// ⚠ 这是冻结的常量，不会随时间滑动 —— 前面的历史期不带继承，数字保持不变。
+const CARRY_START = '2026-09';
 
 // ---- 分类定义 ----
 const LEDGER_CATS = {
@@ -124,9 +136,15 @@ function cycleInfo(offset = 0) {
 }
 
 // ---- 额度计算 ----
-function calcStats(entries, offset = 0) {
+// carry: carryFor() 的结果（{shoppingBudget, savingTarget, dailyBonus, weeks}）；
+//        传 null 则退回旧规则（固定 400/400/无奖金），用于启用继承之前的历史期。
+function calcStats(entries, offset = 0, carry = null) {
   const today = localDateStr();
   const cyc = cycleInfo(offset);
+
+  const shoppingBudget = carry ? carry.shoppingBudget : LEDGER.SHOPPING;
+  const savingTarget   = carry ? carry.savingTarget   : LEDGER.SAVING;
+  const dailyBonus     = carry ? carry.dailyBonus     : 0;
 
   const inCycle = entries.filter(e => {
     const d = e.spent_date || '';
@@ -142,6 +160,10 @@ function calcStats(entries, offset = 0) {
   const savingDone = sumBy('saving');
   const totalUsed = dailySpent + shoppingSpent + savingDone;
 
+  // 本期总额 = 日常整期额度(含奖金) + 购物额度 + 存储目标
+  const dailyTotal = LEDGER.DAILY * cyc.fullDays + dailyBonus;
+  const totalBudget = dailyTotal + shoppingBudget + savingTarget;
+
   const s = {
     today,
     cycleStart: cyc.start,
@@ -152,21 +174,105 @@ function calcStats(entries, offset = 0) {
     isCurrent: cyc.isCurrent,
     dailySpent,
     shoppingSpent,
-    shoppingLeft: LEDGER.SHOPPING - shoppingSpent,
+    shoppingBudget,
+    shoppingLeft: shoppingBudget - shoppingSpent,
     savingDone,
-    savingLeft: LEDGER.SAVING - savingDone,
+    savingTarget,
+    savingLeft: savingTarget - savingDone,
+    dailyBonus,
+    dailyTotal,
+    weeksAchieved: carry ? carry.weeks : 0,
+    isCarry: !!(carry && carry.isCarry),
+    totalBudget,
     totalUsed,
-    totalLeft: LEDGER.TOTAL - totalUsed,
+    totalLeft: totalBudget - totalUsed,
   };
 
   if (cyc.isCurrent) {
-    s.dailyIssued = LEDGER.DAILY * cyc.dayInCycle;      // 本期累计应发
-    s.todayAvailable = s.dailyIssued - dailySpent;      // 今日可用（滚存）
+    s.dailyIssued = LEDGER.DAILY * cyc.dayInCycle + dailyBonus;  // 本期累计应发
+    s.todayAvailable = s.dailyIssued - dailySpent;               // 今日可用（滚存）
   } else {
-    s.dailyIssued = LEDGER.DAILY * cyc.fullDays;        // 往期按整期天数计应发
-    s.todayAvailable = null;                            // 往期无「今日可用」
+    s.dailyIssued = dailyTotal;                                  // 往期按整期天数计应发
+    s.todayAvailable = null;                                     // 往期无「今日可用」
   }
   return s;
+}
+
+// ---- 跨期继承：从 CARRY_START 逐期推演到目标期 ----
+function nextCycleKey(key) {
+  const [y, m] = key.split('-').map(Number);
+  const d = new Date(y, m, 1);                 // m 是 1-based，这里正好落到下月 1 号
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function cycleRangeOf(key) {
+  const [y, m] = key.split('-').map(Number);
+  const start = new Date(y, m - 1, 6);
+  const end = new Date(y, m, 5);               // 下月 5 号
+  return {
+    start: localDateStr(start),
+    end: localDateStr(end),
+    fullDays: Math.round((end - start) / 86400000) + 1,
+  };
+}
+
+function carryFor(targetKey) {
+  // 目标期在启用起点之前 → 走旧规则，历史数字保持不变
+  if (!targetKey || targetKey < CARRY_START) {
+    return { shoppingBudget: LEDGER.SHOPPING, savingTarget: LEDGER.SAVING,
+             dailyBonus: 0, weeks: 0, isCarry: false };
+  }
+
+  const carry = { shoppingAdd: 0, savingBase: 0 };   // 购物增量 + 存储继承基数
+  let k = CARRY_START;
+
+  for (let guard = 0; guard < 240; guard++) {
+    const r = cycleRangeOf(k);
+    const sumBy = cat => ledgerEntries
+      .filter(e => {
+        const d = e.spent_date || '';
+        return d >= r.start && d <= r.end && e.category === cat;
+      })
+      .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+    const dailySpent = sumBy('daily');
+    const shoppingSpent = sumBy('shopping');
+    const savingDone = sumBy('saving');
+
+    const weeks = (typeof weeksSettledIn === 'function')
+      ? weeksSettledIn(k, medTicks, localDateStr()) : 0;
+
+    const shoppingBudget = LEDGER.SHOPPING + carry.shoppingAdd;
+    const savingTarget = carry.savingBase + LEDGER.SAVING - 30 * weeks;
+    const dailyBonus = 30 * weeks;
+
+    // 到达目标期就返回（目标期还没结束，不需要算它的结余）
+    if (k === targetKey) {
+      return { shoppingBudget, savingTarget, dailyBonus, weeks, isCarry: true };
+    }
+
+    // 用本期的结余推下一期
+    const shopLeft = shoppingBudget - shoppingSpent;
+    const dailyLeft = (LEDGER.DAILY * r.fullDays + dailyBonus) - dailySpent;
+    const savingLeft = savingTarget - savingDone;
+
+    if (shopLeft >= 0) {
+      carry.shoppingAdd = shopLeft % 100;
+      carry.savingBase = savingLeft + dailyLeft + Math.floor(shopLeft / 100) * 100;
+    } else {
+      // 超支：不继承，欠的钱从下期购物额度扣
+      carry.shoppingAdd = shopLeft;
+      carry.savingBase = savingLeft + dailyLeft;
+    }
+
+    const next = nextCycleKey(k);
+    if (next <= k) break;                             // 防御：不可能发生
+    k = next;
+  }
+
+  // 兜底：理论上到不了这里
+  return { shoppingBudget: LEDGER.SHOPPING, savingTarget: LEDGER.SAVING,
+           dailyBonus: 0, weeks: 0, isCarry: true };
 }
 
 // ---- 渲染 ----
@@ -174,7 +280,15 @@ async function renderLedgerView() {
   const [entries, shopping] = await Promise.all([loadLedger(), loadShopping()]);
   ledgerEntries = entries;
   ledgerShopping = shopping;
-  const s = calcStats(ledgerEntries, ledgerCycleOffset);
+
+  // 滴药记录要先就位 —— 跨期继承里的「达成周数」依赖它
+  if (typeof loadMedTicks === 'function') await loadMedTicks();
+
+  const cyc = cycleInfo(ledgerCycleOffset);
+  const carry = carryFor(cyc.label);
+  if (typeof setMedCycleKey === 'function') setMedCycleKey(cyc.label);
+
+  const s = calcStats(ledgerEntries, ledgerCycleOffset, carry);
   const el = document.getElementById('ledgerContent');
   if (!el) return;
 
@@ -184,15 +298,20 @@ async function renderLedgerView() {
   });
   const defaultDate = s.isCurrent ? s.today : s.cycleEnd;
 
-  // 总览：每期总金额 2000 + 剩余
-  const usedPct = Math.min(100, Math.max(0, Math.round(s.totalUsed / LEDGER.TOTAL * 100)));
+  // 总览：每期总金额（含继承与奖金）+ 剩余
+  const usedPct = Math.min(100, Math.max(0, Math.round(s.totalUsed / s.totalBudget * 100)));
   const leftNeg = s.totalLeft < 0 ? 'ledger-total__cell-num--neg' : '';
+  const carryLine = s.isCarry
+    ? `<div class="ledger-total__carry">本期含继承 · 购物预算 ${fmtMoney(s.shoppingBudget)} · 存储目标 ${fmtMoney(s.savingTarget)}${
+        s.dailyBonus ? ` · 滴药奖金 +${fmtMoney(s.dailyBonus)}` : ''
+      }</div>`
+    : '';
   const totalHTML = `
     <div class="ledger-total">
       <div class="ledger-total__stats">
         <div class="ledger-total__cell">
           <span class="ledger-total__cell-label">每期总金额</span>
-          <span class="ledger-total__cell-num">${fmtMoney(LEDGER.TOTAL)}</span>
+          <span class="ledger-total__cell-num">${fmtMoney(s.totalBudget)}</span>
         </div>
         <div class="ledger-total__cell ledger-total__cell--left">
           <span class="ledger-total__cell-label">剩余</span>
@@ -201,6 +320,7 @@ async function renderLedgerView() {
       </div>
       <div class="ledger-total__bar"><div class="ledger-total__fill" style="width:${usedPct}%"></div></div>
       <div class="ledger-total__meta">已用 ${fmtMoney(s.totalUsed)} = 日常 ${fmtMoney(s.dailySpent)} + 购物 ${fmtMoney(s.shoppingSpent)} + 储蓄 ${fmtMoney(s.savingDone)}</div>
+      ${carryLine}
     </div>`;
 
   // 周期切换
@@ -217,7 +337,9 @@ async function renderLedgerView() {
       <span class="ledger-stat__label">🍚 今日可用（日常）</span>
       <span class="ledger-stat__num ${s.todayAvailable < 0 ? 'ledger-stat__num--neg' : ''}">${fmtMoney(s.todayAvailable)}</span>
       <span class="ledger-stat__sub">本期第 ${s.dayInCycle} 天 · 应发 ${fmtMoney(s.dailyIssued)} · 已花 ${fmtMoney(s.dailySpent)}</span>
-      <span class="ledger-stat__hint">每月 6 号开始 · 没花完自动滚存</span>
+      <span class="ledger-stat__hint">${s.dailyBonus
+        ? `含滴药奖金 +${fmtMoney(s.dailyBonus)}（达成 ${s.weeksAchieved} 周）`
+        : '每月 6 号开始 · 没花完自动滚存'}</span>
     </div>` : `
     <div class="ledger-stat ledger-stat--main">
       <span class="ledger-stat__label">🍚 日常已花（往期）</span>
@@ -235,12 +357,12 @@ async function renderLedgerView() {
       <div class="ledger-stat">
         <span class="ledger-stat__label">🛒 本期购物</span>
         <span class="ledger-stat__num">${fmtMoney(s.shoppingLeft)}</span>
-        <span class="ledger-stat__sub">剩余 / 预算 ${fmtMoney(LEDGER.SHOPPING)}</span>
+        <span class="ledger-stat__sub">剩余 / 预算 ${fmtMoney(s.shoppingBudget)}</span>
       </div>
       <div class="ledger-stat">
         <span class="ledger-stat__label">💰 本期储蓄</span>
         <span class="ledger-stat__num">${fmtMoney(s.savingDone)}</span>
-        <span class="ledger-stat__sub">已存 / 目标 ${fmtMoney(LEDGER.SAVING)}</span>
+        <span class="ledger-stat__sub">已存 / 目标 ${fmtMoney(s.savingTarget)}</span>
       </div>
     </div>
 
@@ -278,6 +400,9 @@ async function renderLedgerView() {
   `;
 
   bindLedgerEvents();
+
+  // 右侧滴药面板（med.js）
+  if (typeof renderMedPanel === 'function') renderMedPanel();
 }
 
 function renderEntryList(items) {

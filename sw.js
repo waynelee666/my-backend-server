@@ -1,6 +1,6 @@
 // TaskFlow Service Worker — 离线缓存 v2
 // 🔧 改这个版本号 → 所有客户端自动更新
-const CACHE = "taskflow-v36";
+const CACHE = "taskflow-v37";
 
 // 需要预缓存的静态资源
 const PRECACHE = [
@@ -16,6 +16,7 @@ const PRECACHE = [
   "/goals.js",
   "/plans.js",
   "/ledger.js",
+  "/med.js",
   "/supabase.min.js",
   "/icon.png",
   "/manifest.json",

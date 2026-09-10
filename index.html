@@ -10,7 +10,7 @@
     <link rel="apple-touch-icon" href="/icon.png?v=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="stylesheet" href="style.css?v=4.2">
+    <link rel="stylesheet" href="style.css?v=4.3">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 
 </head>
@@ -434,8 +434,13 @@
             <button class="btn btn--icon back-btn" data-back="home" title="返回首页">⋮</button>
             <h2>💰 记账</h2>
         </div>
-        <div class="ledger-content" id="ledgerContent">
-            <p class="empty-text">加载中...</p>
+        <div class="ledger-layout">
+            <div class="ledger-content" id="ledgerContent">
+                <p class="empty-text">加载中...</p>
+            </div>
+            <aside class="med-panel" id="medPanel">
+                <p class="empty-text">加载中...</p>
+            </aside>
         </div>
     </section>
 </main>
@@ -639,7 +644,8 @@
 <script src="vocab.js?v=2.1"></script>
 <script src="goals.js?v=1.0"></script>
 <script src="plans.js?v=2.0"></script>
-<script src="ledger.js?v=1.1"></script>
+<script src="ledger.js?v=2.0"></script>
+<script src="med.js?v=1.0"></script>
 
 <script>
 function showAuthUI(username) {

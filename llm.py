@@ -43,6 +43,18 @@ CHAT_PROMPT_MODIFY = CHAT_PROMPT + (
     "\n\n"
     "你现在处于「修改模式」，同学信任你，放手让你改。\n"
     "当同学要求增删改待办/事件/科目时，大胆去做，不用反复确认，信息不全就根据上下文合理推断。\n"
+    "\n"
+    "⚠️ 三条铁律，违反任何一条都会导致「嘴上答应、实际没改」：\n"
+    "1. 没有输出 __ACTIONS__ 块 = 什么都没做。绝对不要说「已经改好了」「帮你删掉了」这类话，\n"
+    "   除非你这次确实输出了指令块。做不到就直说做不到。\n"
+    "2. 区分两种日期，别搞混：\n"
+    "   · **用来定位现有记录**的 date（写在 data.date 里的那个）= 照抄背景信息原文。\n"
+    "     背景里写 2026-09-18，你就写 2026-09-18，不许按「周四」自己算一个。\n"
+    "     背景里没给日期，就省略这个字段。\n"
+    "   · **用户要改成的目标日期**（写在 updates.date 里的那个）= 必须换算成 YYYY-MM-DD。\n"
+    "     今天是 2026-09-11，同学说「周日」你就要写 2026-09-13，绝不能写「周日」两个字。\n"
+    "     任何写进 updates 的日期都必须是 2026-09-13 这种格式，这是硬性要求。\n"
+    "3. 改不动的（名字对不上、找不到）就不要硬编一条指令，你的回复里照实说没找到。\n"
     "做完后在回复末尾输出操作指令：\n"
     "__ACTIONS__\n"
     "[JSON数组]\n"
@@ -68,7 +80,11 @@ CHAT_PROMPT_MODIFY = CHAT_PROMPT + (
     '状态说明：draft=草稿，filming=拍摄中，done=已完成\n'
     '注意：用户说「修改绩点分布」或「改成...」时，必须用 set_components 整体替换，不要用 add 累加！\n'
     '背景信息中会标注重复项（⚠️），同学说「清理重复」或「去重」时，直接执行 dedup！\n'
-    '- ⭐切换行动完成状态（最常用！同学说「完成了XX」或「XX做完了」时用这个）: {"entity":"goal","action":"toggle_action","data":{"goal_name":"目标名","subgoal_name":"子目标名","action_text":"行动描述"}}\n'
+    '- 切换行动完成状态: {"entity":"goal","action":"toggle_action","data":{"goal_name":"目标名","subgoal_name":"子目标名","action_text":"行动描述"}}\n'
+    '  ⚠️ 同学说「XX做完了」时先分清楚 XX 是什么：\n'
+    '  · XX 是背景信息里的**待办** → 用 todo 的 update 把 status 改成 done，**不要**用 toggle_action。\n'
+    '  · XX 是某个目标下的**行动** → 才用 toggle_action。\n'
+    '  拿不准就看背景信息：待办和目标的行动是两套东西，别混。\n'
     '- 添加目标: {"entity":"goal","action":"add","data":{"name":"目标名","icon":"🎯","color":"#ef4444"}}\n'
     '- 删除目标: {"entity":"goal","action":"delete","data":{"goal_name":"目标名"}}\n'
     '- 添加子目标: {"entity":"goal","action":"add_subgoal","data":{"goal_name":"目标名","subgoal_name":"子目标名"}}\n'

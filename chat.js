@@ -368,18 +368,28 @@ async function sendChat() {
     }
 
     // 解析并执行操作指令
+    // 这里必须把「执行结果」回吐给用户：小马的正文是在执行之前写好的，
+    // 它会先乐观地说「已经帮你改好啦」。后端匹配失败时如果只 console.warn，
+    // 屏幕上就只剩那句谎话 —— 这就是「嘴上答应、实际没做」的来源。
     const fullAnswer = chatHistory[lastIdx][1];
-    const actionMatch = fullAnswer.match(/__ACTIONS__\s*([\s\S]*?)\s*__END_ACTIONS__/);
-    if (actionMatch) {
-        try {
-            const actions = JSON.parse(actionMatch[1]);
-            await executeActions(actions);
-            chatHistory[lastIdx][1] = fullAnswer.replace(/__ACTIONS__[\s\S]*?__END_ACTIONS__/, '').trim();
-        } catch (e) {
-            console.warn('操作指令解析失败（已忽略）:', e.message);
-            chatHistory[lastIdx][1] = fullAnswer.replace(/__ACTIONS__[\s\S]*?__END_ACTIONS__/, '').trim();
-        }
+    const parsed = parseActionBlock(fullAnswer);
+    let note = '';
+    let ranSomething = false;
+
+    if (parsed.kind === 'ok') {
+        chatHistory[lastIdx][1] = stripActionBlock(fullAnswer);
+        const results = await executeActions(parsed.actions);
+        note = formatActionReport(results);
+        ranSomething = true;
+    } else if (parsed.kind === 'broken') {
+        chatHistory[lastIdx][1] = stripActionBlock(fullAnswer);
+        note = `⚠️ 小马的指令格式坏了，**这次什么都没改**。换个说法再说一次试试。\n（${parsed.reason}）`;
+    } else if (chatMode === 'modify' && looksLikeDoneClaim(fullAnswer)) {
+        // 既没有指令块、口气又像已经做完了 —— 大概率就是那个 bug
+        note = '⚠️ 小马这次**没有生成任何操作指令，实际什么都没改**。\n把要改的那条说全一点（名字照抄页面上的）再说一次。';
     }
+
+    if (note) chatHistory[lastIdx][1] = (chatHistory[lastIdx][1] + '\n\n' + note).trim();
 
     chatWaiting = false;
     input.disabled = false;
@@ -387,13 +397,114 @@ async function sendChat() {
     input.focus();
     renderChat();
     // 刷新全局数据
-    if (actionMatch && typeof refreshAll === 'function') refreshAll();
+    if (ranSomething && typeof refreshAll === 'function') refreshAll();
 }
 
-/** 执行小马返回的操作指令 */
+/** 从回复里抠出指令块。宽容处理：代码围栏、尾逗号、被截断（缺 __END_ACTIONS__） */
+function parseActionBlock(text) {
+    if (!text || text.indexOf('__ACTIONS__') < 0) return { kind: 'none' };
+
+    const m = text.match(/__ACTIONS__([\s\S]*?)__END_ACTIONS__/);
+    let body;
+    if (m) {
+        body = m[1];
+    } else {
+        // 没有结束标记：多半是 max_tokens 截断了，尽力取到最后一个 ]
+        const rest = text.slice(text.indexOf('__ACTIONS__') + '__ACTIONS__'.length);
+        const end = rest.lastIndexOf(']');
+        if (end < 0) return { kind: 'broken', reason: '指令块没写完就被截断了' };
+        body = rest.slice(0, end + 1);
+    }
+
+    const cleaned = body
+        .replace(/^\s*```[a-zA-Z]*\s*/, '')     // 开头围栏
+        .replace(/\s*```\s*$/, '')              // 结尾围栏
+        .replace(/,\s*([\]}])/g, '$1')          // 尾逗号
+        .trim();
+
+    try {
+        const actions = JSON.parse(cleaned);
+        if (!Array.isArray(actions) || !actions.length) {
+            return { kind: 'broken', reason: '指令块是空的' };
+        }
+        return { kind: 'ok', actions };
+    } catch (e) {
+        return { kind: 'broken', reason: e.message };
+    }
+}
+
+/** 把指令块从展示正文里抹掉（含只有开头、没有结尾的残缺块） */
+function stripActionBlock(text) {
+    return text
+        .replace(/__ACTIONS__[\s\S]*?__END_ACTIONS__/, '')
+        .replace(/__ACTIONS__[\s\S]*$/, '')
+        .trim();
+}
+
+/** 修改模式下没吐出任何指令时，要不要提示用户一句
+ *  判定尽量保守：明显是在反问/征询意见的就不打扰。
+ *  这条提示说的是「没有生成任何操作指令」——永远是真话，不会冤枉小马。*/
+function looksLikeDoneClaim(text) {
+    const t = (text || '').trim();
+    if (!t) return false;
+    if (/[？?]\s*$/.test(t)) return false;              // 结尾在反问 → 它是在问，不是在做
+    if (/^(你想|你是想|要不要|需要我|确定|请问|建议)/.test(t)) return false;
+    // 已经明说做不到 / 找不到的，就别再叠一句「什么都没改」了，那是废话
+    if (/没找到|找不到|没有找到|没办法|没法|无法|不存在|没这门|记混了|确认一下/.test(t)) return false;
+    return true;
+}
+
+/** 逐条执行操作指令，单条失败不拖累其余，返回每条的结果 */
 async function executeActions(actions) {
-    const sb = Auth.getClient();
+    const results = [];
     for (const act of actions) {
+        const label = describeAction(act);
+        try {
+            await execOneAction(act);
+            results.push({ ok: true, label });
+        } catch (e) {
+            console.warn('[小马] 指令执行失败:', label, e.message);
+            results.push({ ok: false, label, reason: e.message });
+        }
+    }
+    return results;
+}
+
+/** 给用户看的动作描述，例如「修改待办「交物理实验报告」」 */
+function describeAction(act) {
+    const d = (act && act.data) || {};
+    const verb = {
+        add: '新增', update: '修改', delete: '删除', set_components: '重设',
+        toggle_action: '切换完成状态', add_subgoal: '新增子目标',
+        add_action: '新增行动', delete_action: '删除行动', run: '执行',
+    }[act.action] || act.action || '操作';
+    const ent = {
+        todo: '待办', event: '事件', subject: '科目', component: '绩点项',
+        thought: '脚本', goal: '目标', dedup: '去重',
+    }[act.entity] || act.entity || '';
+    const name = d.title || d.name || d.subject_name || d.goal_name || d.action_text || '';
+    return name ? `${verb}${ent}「${name}」` : `${verb}${ent}`;
+}
+
+/** 把执行结果拼成聊天气泡里的一行回执 */
+function formatActionReport(results) {
+    if (!results || !results.length) return '';
+    const ok = results.filter(r => r.ok);
+    const bad = results.filter(r => !r.ok);
+    const lines = [];
+    if (ok.length) lines.push(`✅ 已执行：${ok.map(r => r.label).join('；')}`);
+    if (bad.length) {
+        lines.push(`⚠️ **有 ${bad.length} 项没做成，实际没有改动**：`);
+        bad.forEach(r => lines.push(`　· ${r.label} — ${r.reason}`));
+        if (ok.length) lines.push(`（其余 ${ok.length} 项已完成，列表已刷新）`);
+    }
+    return lines.join('\n');
+}
+
+/** 执行单条指令。失败一律 throw —— 静默跳过等于骗用户 */
+async function execOneAction(act) {
+    const sb = Auth.getClient();
+    {
         const { entity, action, data } = act;
 
         // 一键去重
@@ -421,11 +532,12 @@ async function executeActions(actions) {
                     }
                 }
             }
-            continue;
+            return;
         }
 
         if (entity === 'todo') {
             if (action === 'add') {
+                assertDate(data.date, '待办日期');
                 const row = {
                     title: data.title,
                     date: data.date || new Date().toISOString().slice(0, 10),
@@ -437,8 +549,9 @@ async function executeActions(actions) {
                 await DS.create('todos', row);
             } else if (action === 'update') {
                 const t = findTodo(data.title);
-                if (!t) throw new Error(`未找到待办"${data.title}"`);
+                if (!t) throw new Error(notFoundNote(data.title, todos, x => x.title, '待办'));
                 const u = data.updates || {};
+                assertDate(u.date, '待办的新日期');
                 const fields = {};
                 if (u.date) fields.date = u.date;
                 if (u.priority) fields.priority = u.priority;
@@ -448,10 +561,14 @@ async function executeActions(actions) {
                 await DS.update('todos', t.id, fields);
             } else if (action === 'delete') {
                 const t = findTodo(data.title);
-                if (t) await DS.remove('todos', t.id);
+                if (!t) throw new Error(notFoundNote(data.title, todos, x => x.title, '待办'));
+                await DS.remove('todos', t.id);
             }
         } else if (entity === 'event') {
             if (action === 'add') {
+                assertDate(data.date, '事件日期');
+                assertTime(data.start_time, '开始时间');
+                assertTime(data.end_time, '结束时间');
                 const row = {
                     title: data.title,
                     date: data.date || new Date().toISOString().slice(0, 10),
@@ -463,8 +580,11 @@ async function executeActions(actions) {
                 await DS.create('events', row);
             } else if (action === 'update') {
                 const e = findEvent(data.title, data.date);
-                if (!e) throw new Error(`未找到事件"${data.title}"`);
+                if (!e) throw new Error(notFoundNote(data.title, events, x => x.title, '事件'));
                 const u = data.updates || {};
+                assertDate(u.date, '事件的新日期');
+                assertTime(u.start_time, '开始时间');
+                assertTime(u.end_time, '结束时间');
                 const fields = {};
                 if (u.new_title) fields.title = u.new_title;
                 if (u.date) fields.date = u.date;
@@ -474,7 +594,8 @@ async function executeActions(actions) {
                 await DS.update('events', e.id, fields);
             } else if (action === 'delete') {
                 const e = findEvent(data.title, data.date);
-                if (e) await DS.remove('events', e.id);
+                if (!e) throw new Error(notFoundNote(data.title, events, x => x.title, '事件'));
+                await DS.remove('events', e.id);
             }
         } else if (entity === 'subject') {
             if (action === 'add') {
@@ -488,7 +609,7 @@ async function executeActions(actions) {
                 await DS.create('subjects', row);
             } else if (action === 'update') {
                 const s = findSubject(data.name);
-                if (!s) throw new Error(`未找到科目"${data.name}"`);
+                if (!s) throw new Error(notFoundNote(data.name, subjects, x => x.name, '科目'));
                 const u = data.updates || {};
                 const fields = {};
                 if (u.new_name) fields.name = u.new_name;
@@ -497,13 +618,14 @@ async function executeActions(actions) {
                 await DS.update('subjects', s.id, fields);
             } else if (action === 'delete') {
                 const s = findSubject(data.name);
-                if (s) await DS.remove('subjects', s.id);
+                if (!s) throw new Error(notFoundNote(data.name, subjects, x => x.name, '科目'));
+                await DS.remove('subjects', s.id);
             }
         } else if (entity === 'component') {
             if (action === 'set_components') {
                 // 整体替换绩点分布
                 const s = findSubject(data.subject_name);
-                if (!s) throw new Error(`未找到科目"${data.subject_name}"`);
+                if (!s) throw new Error(notFoundNote(data.subject_name, subjects, x => x.name, '科目'));
                 const comps = (data.components || []).map(c => ({
                     name: c.name,
                     percentage: c.percentage || 0,
@@ -512,7 +634,7 @@ async function executeActions(actions) {
                 await DS.update('subjects', s.id, { components: comps });
             } else if (action === 'add') {
                 const s = findSubject(data.subject_name);
-                if (!s) throw new Error(`未找到科目"${data.subject_name}"`);
+                if (!s) throw new Error(notFoundNote(data.subject_name, subjects, x => x.name, '科目'));
                 const comps = [...(s.components || []), {
                     name: data.name,
                     percentage: data.percentage || 0,
@@ -521,10 +643,10 @@ async function executeActions(actions) {
                 await DS.update('subjects', s.id, { components: comps });
             } else if (action === 'update') {
                 const s = findSubject(data.subject_name);
-                if (!s) throw new Error(`未找到科目"${data.subject_name}"`);
+                if (!s) throw new Error(notFoundNote(data.subject_name, subjects, x => x.name, '科目'));
                 const comps = [...(s.components || [])];
                 const idx = comps.findIndex(c => c.name === data.component_name);
-                if (idx < 0) throw new Error(`未找到绩点项"${data.component_name}"`);
+                if (idx < 0) throw new Error(notFoundNote(data.component_name, comps, x => x.name, '绩点项'));
                 const u = data.updates || {};
                 if (u.name) comps[idx].name = u.name;
                 if (u.percentage !== undefined) comps[idx].percentage = u.percentage;
@@ -532,7 +654,7 @@ async function executeActions(actions) {
                 await DS.update('subjects', s.id, { components: comps });
             } else if (action === 'delete') {
                 const s = findSubject(data.subject_name);
-                if (!s) throw new Error(`未找到科目"${data.subject_name}"`);
+                if (!s) throw new Error(notFoundNote(data.subject_name, subjects, x => x.name, '科目'));
                 const comps = (s.components || []).filter(c => c.name !== data.component_name);
                 await DS.update('subjects', s.id, { components: comps });
             }
@@ -547,18 +669,24 @@ async function executeActions(actions) {
                 } else if (data.old_content) {
                     match = (thoughts || []).find(t => t.content.includes(data.old_content) || data.old_content.includes(t.content));
                 }
-                if (match) {
-                    const fields = { content: data.new_content };
-                    if (data.title) fields.title = data.title;
-                    if (data.status) fields.status = data.status;
-                    await DS.update('thoughts', match.id, fields);
-                }
+                if (!match) throw new Error(notFoundNote(data.title || data.old_content, thoughts, x => x.title || x.content, '脚本'));
+                const fields = { content: data.new_content };
+                if (data.title) fields.title = data.title;
+                if (data.status) fields.status = data.status;
+                await DS.update('thoughts', match.id, fields);
             } else if (action === 'delete') {
                 if (data.id) {
+                    // 表里没有这条也照样「成功」了，所以先在本地说清楚
+                    if (thoughts && thoughts.length && !thoughts.some(t => t.id === data.id)) {
+                        throw new Error(`没找到 id 为 ${data.id} 的脚本（可能已经删过了）`);
+                    }
                     await DS.remove('thoughts', data.id);
                 } else if (data.content) {
                     const match = (thoughts || []).find(t => t.content.includes(data.content) || data.content.includes(t.content));
-                    if (match) await DS.remove('thoughts', match.id);
+                    if (!match) throw new Error(notFoundNote(data.content, thoughts, x => x.title || x.content, '脚本'));
+                    await DS.remove('thoughts', match.id);
+                } else {
+                    throw new Error('没给 id 也没给内容，不知道该删哪条脚本');
                 }
             }
         } else if (entity === 'goal') {
@@ -570,94 +698,162 @@ async function executeActions(actions) {
             }
 
             if (action === 'toggle_action') {
-                const goalName = (data.goal_name || '').toLowerCase();
-                const subName = (data.subgoal_name || '').toLowerCase();
-                const actionText = (data.action_text || '').toLowerCase();
-                const goal = goalsData.find(g => g.name.toLowerCase().includes(goalName) || goalName.includes(g.name.toLowerCase()));
-                if (!goal) throw new Error(`未找到目标"${data.goal_name}"`);
-                const sub = goal.subgoals.find(s => s.name.toLowerCase().includes(subName) || subName.includes(s.name.toLowerCase()));
-                if (!sub) throw new Error(`未找到子目标"${data.subgoal_name}"`);
-                const act = sub.actions.find(a => a.text.toLowerCase().includes(actionText) || actionText.includes(a.text.toLowerCase()));
-                if (!act) throw new Error(`未找到行动"${data.action_text}"`);
-                act.done = !act.done;
+                const { goal, sub } = resolveGoalPath(data);
+                const found = resolveGoalAction(goal, sub, data.action_text);
+                found.act.done = !found.act.done;
                 await saveGoalsRaw(goalsData);
 
             } else if (action === 'add') {
-                const newGoal = {
+                if (!data.name) throw new Error('小马没说要加的目标叫什么');
+                goalsData.push({
                     id: 'goal_' + Date.now(),
                     name: data.name,
                     icon: data.icon || '🎯',
                     color: data.color || '#3b82f6',
                     subgoals: [],
-                };
-                goalsData.push(newGoal);
+                });
                 await saveGoalsRaw(goalsData);
 
             } else if (action === 'delete') {
-                const goalName = (data.goal_name || '').toLowerCase();
-                const idx = goalsData.findIndex(g => g.name.toLowerCase().includes(goalName) || goalName.includes(g.name.toLowerCase()));
-                if (idx < 0) throw new Error(`未找到目标"${data.goal_name}"`);
-                goalsData.splice(idx, 1);
+                const { goal } = resolveGoalPath(data);
+                if (!goal) throw new Error('小马没说是要删哪个目标');
+                goalsData.splice(goalsData.indexOf(goal), 1);
                 await saveGoalsRaw(goalsData);
 
             } else if (action === 'add_subgoal') {
-                const goalName = (data.goal_name || '').toLowerCase();
-                const goal = goalsData.find(g => g.name.toLowerCase().includes(goalName) || goalName.includes(g.name.toLowerCase()));
-                if (!goal) throw new Error(`未找到目标"${data.goal_name}"`);
-                const newSub = {
-                    id: goal.id + '-' + Date.now(),
-                    name: data.subgoal_name,
-                    actions: [],
-                };
-                goal.subgoals.push(newSub);
+                if (!data.subgoal_name) throw new Error('小马没说要加的子目标叫什么');
+                const { goal } = resolveGoalPath(data);
+                if (!goal) throw new Error('小马没说是加到哪个目标下');
+                goal.subgoals.push({ id: goal.id + '-' + Date.now(), name: data.subgoal_name, actions: [] });
                 await saveGoalsRaw(goalsData);
 
             } else if (action === 'add_action') {
-                const goalName = (data.goal_name || '').toLowerCase();
-                const subName = (data.subgoal_name || '').toLowerCase();
-                const goal = goalsData.find(g => g.name.toLowerCase().includes(goalName) || goalName.includes(g.name.toLowerCase()));
-                if (!goal) throw new Error(`未找到目标"${data.goal_name}"`);
-                const sub = goal.subgoals.find(s => s.name.toLowerCase().includes(subName) || subName.includes(s.name.toLowerCase()));
-                if (!sub) throw new Error(`未找到子目标"${data.subgoal_name}"`);
-                const newAct = {
-                    id: 'a' + Date.now(),
-                    text: data.action_text,
-                    done: false,
-                };
-                sub.actions.push(newAct);
+                if (!data.action_text) throw new Error('小马没说要加的行动内容');
+                const { sub } = resolveGoalPath(data);
+                if (!sub) throw new Error('加行动得说清楚加到哪个子目标下（子目标名没给）');
+                sub.actions.push({ id: 'a' + Date.now(), text: data.action_text, done: false });
                 await saveGoalsRaw(goalsData);
 
             } else if (action === 'delete_action') {
-                const goalName = (data.goal_name || '').toLowerCase();
-                const subName = (data.subgoal_name || '').toLowerCase();
-                const actionText = (data.action_text || '').toLowerCase();
-                const goal = goalsData.find(g => g.name.toLowerCase().includes(goalName) || goalName.includes(g.name.toLowerCase()));
-                if (!goal) throw new Error(`未找到目标"${data.goal_name}"`);
-                const sub = goal.subgoals.find(s => s.name.toLowerCase().includes(subName) || subName.includes(s.name.toLowerCase()));
-                if (!sub) throw new Error(`未找到子目标"${data.subgoal_name}"`);
-                const idx = sub.actions.findIndex(a => a.text.toLowerCase().includes(actionText) || actionText.includes(a.text.toLowerCase()));
-                if (idx < 0) throw new Error(`未找到行动"${data.action_text}"`);
-                sub.actions.splice(idx, 1);
+                const { goal, sub } = resolveGoalPath(data);
+                const found = resolveGoalAction(goal, sub, data.action_text);
+                found.sub.actions.splice(found.sub.actions.indexOf(found.act), 1);
                 await saveGoalsRaw(goalsData);
             }
         }
     }
 }
 
+/** 名字对不上时，找一条最像的，塞进报错里让用户一眼看出差在哪 */
+function closestName(target, list, getter) {
+    if (!target || !list || !list.length) return '';
+    const t = String(target).toLowerCase();
+    let best = '', bestScore = 0;
+    for (const it of list) {
+        const n = String(getter(it) || '').toLowerCase();
+        if (!n) continue;
+        const chars = new Set(n);
+        let hit = 0;
+        for (const ch of new Set(t)) if (chars.has(ch)) hit++;
+        const score = hit / Math.max(chars.size, 1);
+        if (score > bestScore) { bestScore = score; best = getter(it); }
+    }
+    // 0.4 以下基本是瞎猜，不如不说
+    return bestScore >= 0.4 && best !== target ? best : '';
+}
+
+function notFoundNote(target, list, getter, label) {
+    const near = closestName(target, list, getter);
+    if (!target) return `小马没说要改哪个${label}（缺少名字）`;
+    return near
+        ? `没找到${label}「${target}」，最接近的是「${near}」`
+        : `没找到${label}「${target}」，${label}列表里没有能对上的名字`;
+}
+
+/** 小马偶尔会把「周日」这种字面日期直接塞进字段，写进去就是脏数据。
+ *  宁可报错让用户看见，也不能落库。 */
+function assertDate(val, what) {
+    if (val == null || val === '') return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(val))) {
+        throw new Error(`${what}「${val}」不是 YYYY-MM-DD 格式，没敢写进去`);
+    }
+}
+
+function assertTime(val, what) {
+    if (val == null || val === '') return;
+    if (!/^\d{1,2}:\d{2}(:\d{2})?$/.test(String(val))) {
+        throw new Error(`${what}「${val}」不是 HH:MM 格式，没敢写进去`);
+    }
+}
+
+/** 目标 / 子目标的名称匹配。
+ *  名称留空时**绝不能**用 includes('') 去撞 —— 空串恒为真，会静默改到第一个目标/子目标上。*/
+function resolveGoalPath(data) {
+    const goalName = String((data && data.goal_name) || '').toLowerCase();
+    // 没说目标名不是错误 —— 小马经常只给行动名。交给 resolveGoalAction 全库找，
+    // 命中唯一就认，不唯一才报错。这里绝不能退化成「撞第一个目标」。
+    if (!goalName) return { goal: null, sub: null };
+    const goal = goalsData.find(g => g.name.toLowerCase().includes(goalName) || goalName.includes(g.name.toLowerCase()));
+    if (!goal) throw new Error(notFoundNote(data.goal_name, goalsData, x => x.name, '目标'));
+
+    const subName = String((data && data.subgoal_name) || '').toLowerCase();
+    if (!subName) return { goal, sub: null };
+    const sub = goal.subgoals.find(s => s.name.toLowerCase().includes(subName) || subName.includes(s.name.toLowerCase()));
+    if (!sub) throw new Error(notFoundNote(data.subgoal_name, goal.subgoals, x => x.name, '子目标'));
+    return { goal, sub };
+}
+
+/** 在（指定的 / 某个目标下的 / 全部）行动里找。命中必须唯一，否则宁可报错也不改错东西。*/
+function resolveGoalAction(goal, sub, text) {
+    const t = String(text || '').toLowerCase();
+    if (!t) throw new Error('小马没说是哪个行动');
+
+    let pairs = [];
+    if (sub) {
+        pairs = sub.actions.map(a => ({ sub, act: a }));
+    } else if (goal) {
+        for (const s of goal.subgoals) for (const a of s.actions) pairs.push({ sub: s, act: a });
+    } else {
+        for (const g of goalsData) for (const s of g.subgoals) for (const a of s.actions) pairs.push({ sub: s, act: a });
+    }
+
+    const hits = pairs.filter(p => {
+        const at = p.act.text.toLowerCase();
+        return at.includes(t) || t.includes(at);
+    });
+    if (!hits.length) throw new Error(notFoundNote(text, pairs.map(p => p.act), x => x.text, '行动'));
+    if (hits.length > 1) {
+        throw new Error(`有 ${hits.length} 个行动都能跟「${text}」对上，说清楚是哪个目标下的`);
+    }
+    return hits[0];
+}
+
 function findTodo(title) {
-    if (typeof todos === 'undefined') return null;
-    const t = title.toLowerCase();
+    if (typeof todos === 'undefined' || !title) return null;
+    const t = String(title).toLowerCase();
     return todos.find(x => x.title.toLowerCase().includes(t) || t.includes(x.title.toLowerCase()));
 }
 function findEvent(title, date) {
-    if (typeof events === 'undefined') return null;
-    const t = title.toLowerCase();
-    if (date) return events.find(x => x.title.toLowerCase().includes(t) && x.date === date);
-    return events.find(x => x.title.toLowerCase().includes(t) || t.includes(x.title.toLowerCase()));
+    if (typeof events === 'undefined' || !title) return null;
+    const t = String(title).toLowerCase();
+    const hit = x => x.title.toLowerCase().includes(t) || t.includes(x.title.toLowerCase());
+    if (date) {
+        const exact = events.find(x => hit(x) && x.date === date);
+        if (exact) return exact;
+        // 小马经常把日期算错一位，别因为日期对不上就整条放弃按标题找；
+        // 但标题撞车的有多条时宁可报错，也不能改错人
+        const byTitle = events.filter(hit);
+        if (byTitle.length === 1) return byTitle[0];
+        if (byTitle.length > 1) {
+            throw new Error(`有 ${byTitle.length} 条都叫「${title}」，请说清楚是哪一天的`);
+        }
+        return null;
+    }
+    return events.find(hit) || null;
 }
 function findSubject(name) {
-    if (typeof subjects === 'undefined') return null;
-    const n = name.toLowerCase();
+    if (typeof subjects === 'undefined' || !name) return null;
+    const n = String(name).toLowerCase();
     return subjects.find(x => x.name.toLowerCase().includes(n) || n.includes(x.name.toLowerCase()));
 }
 function findSubjectId(name) {

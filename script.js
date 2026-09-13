@@ -1676,7 +1676,7 @@ function renderSubjects() {
     // 只显示当前查看学期的科目
     const list = subjects.filter(s => termOf(s) === term);
     if (!list.length) {
-        $('#subjectGrid').innerHTML = `<p class="empty-text">${esc(termLabel(term))}还没有科目<br><small>点右上角「添加科目」，或用「导入」粘贴教务系统的考试安排</small></p>`;
+        $('#subjectGrid').innerHTML = `<p class="empty-text">${esc(termLabel(term))}还没有科目<br><small>点右上角「添加科目」，或把教务系统的考试安排存成 .txt 后点「📤 导入」</small></p>`;
         return;
     }
 

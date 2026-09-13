@@ -24,19 +24,64 @@ function displayUnit(unit) {
     return unit.replace(/^(基础|四级|六级)[—\-]/, '');
 }
 /** 查找相似科目名（"微积分" ≈ "微积分（甲）Ⅱ"） */
-function findSimilarSubject(name) {
+// ==================== 学期分期（科目按学期归档） ====================
+// 学期 key 格式 `YYYY-N`：YYYY = 学年起始年，N = 1(秋/上学期) | 2(春/下学期)
+// 例：2025-1 大一上 · 2025-2 大一下 · 2026-1 大二上 · 2026-2 大二下
+const ENROLL_YEAR = 2025;          // ⚠️ 入学年份，改这里前先确认
+const LEGACY_TERM = '2025-2';      // 老数据没有 term 字段时归入哪一期（大一下）
+
+/** 某个日期属于哪个学期 */
+function termKeyOf(d = new Date()) {
+    const y = d.getFullYear(), m = d.getMonth() + 1;
+    if (m >= 9) return `${y}-1`;       // 9~12 月 → 本学年秋季学期
+    if (m <= 1) return `${y-1}-1`;     // 1 月 → 仍属上一学年的秋季学期
+    return `${y-1}-2`;                 // 2~8 月 → 春季学期
+}
+/** 学期 key →「大二上」这种叫法 */
+function termLabel(key) {
+    const [y, n] = String(key).split('-');
+    const grade = Number(y) - ENROLL_YEAR + 1;
+    return `大${'一二三四五六七八'[grade-1] || grade}${n === '2' ? '下' : '上'}`;
+}
+/** 科目属于哪一期（老数据兜底到 LEGACY_TERM） */
+const termOf = s => s.term || LEGACY_TERM;
+
+let subjectTerm = null;            // 当前查看的学期；null = 跟随系统当前学期
+const viewTerm = () => subjectTerm || termKeyOf();
+
+/** 库里出现过的所有学期 + 当前学期，从早到晚 */
+function termsAsc() {
+    const set = new Set(subjects.map(termOf));
+    set.add(termKeyOf());
+    return [...set].sort();
+}
+
+/** 建科目：自动带上当前查看的学期；term 列还没建时降级为不带 term 写入 */
+async function createSubject(row) {
+    try {
+        return await DS.create('subjects', { ...row, term: row.term || viewTerm() });
+    } catch (e) {
+        if (row.term) throw e;   // 调用方显式指定了 term，失败就正常抛
+        console.warn('[createSubject] 带 term 写入失败（term 列可能还没建），降级重试：', e && e.message);
+        return await DS.create('subjects', row);
+    }
+}
+
+function findSimilarSubject(name, term) {
     if (!name) return null;
     const simplify = s => s.replace(/[（(][^)）]*[)）]/g,'').replace(/[ⅠⅡⅢⅣⅤV\d]+$/,'').replace(/\s+/g,'').trim();
     const a = simplify(name);
     if (!a) return null;
+    // 只在同一学期内匹配，避免大二上的课被合并进大一下的同名科目
+    const pool = subjects.filter(s => termOf(s) === (term || viewTerm()));
     // 精确匹配（简化后）
-    let s = subjects.find(s=>simplify(s.name)===a);
+    let s = pool.find(s=>simplify(s.name)===a);
     if (s) return s;
     // 包含关系
-    s = subjects.find(s=>{ const sb=simplify(s.name); return sb.includes(a) || a.includes(sb); });
+    s = pool.find(s=>{ const sb=simplify(s.name); return sb.includes(a) || a.includes(sb); });
     if (s) return s;
     // 字符重叠率 ≥ 65%
-    s = subjects.find(s=>{
+    s = pool.find(s=>{
         const sb = simplify(s.name);
         if (!sb || !a) return false;
         const overlap = [...a].filter(c=>sb.includes(c)).length;
@@ -1603,12 +1648,41 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==================== 科目视图 ====================
-function renderSubjects() {
-    if (!subjects.length) { $('#subjectGrid').innerHTML = '<p class="empty-text">暂无科目，点击上方按钮添加</p>'; return; }
+/** 学期切换器（交互对齐记账模块的上一期/下一期） */
+function renderSubjectTermNav(term) {
+    const el = document.getElementById('subjectTermNav');
+    if (!el) return;
+    const terms = termsAsc();
+    const i = terms.indexOf(term);
+    el.innerHTML = `
+        <button class="subject-term-nav__btn" data-nav="prev" ${i <= 0 ? 'disabled' : ''}>‹ 上一学期</button>
+        <span class="subject-term-nav__label">${esc(termLabel(term))}${term === termKeyOf() ? '<small>当前</small>' : ''}</span>
+        <button class="subject-term-nav__btn" data-nav="next" ${i >= terms.length-1 ? 'disabled' : ''}>下一学期 ›</button>`;
+}
 
-    // 计算总 GPA
+function shiftSubjectTerm(delta) {
+    const terms = termsAsc();
+    const i = terms.indexOf(viewTerm());
+    const ni = i + delta;
+    if (i < 0 || ni < 0 || ni >= terms.length) return;
+    subjectTerm = terms[ni];
+    renderSubjects();
+}
+
+function renderSubjects() {
+    const term = viewTerm();
+    renderSubjectTermNav(term);
+
+    // 只显示当前查看学期的科目
+    const list = subjects.filter(s => termOf(s) === term);
+    if (!list.length) {
+        $('#subjectGrid').innerHTML = `<p class="empty-text">${esc(termLabel(term))}还没有科目<br><small>点右上角「添加科目」，或用「导入」粘贴教务系统的考试安排</small></p>`;
+        return;
+    }
+
+    // 计算本学期 GPA（只在本学期内加权）
     let totalWeight = 0, totalPoints = 0;
-    const subjectGPAs = subjects.map(s => {
+    const subjectGPAs = list.map(s => {
         const { gpa } = calcSubjectGPA(s.components || []);
         if (gpa != null && s.credits) { totalWeight += s.credits; totalPoints += s.credits * gpa; }
         return { ...s, gpa };
@@ -1618,8 +1692,8 @@ function renderSubjects() {
     let html = '';
     if (overallGPA != null) {
         html += `<div class="gpa-summary">
-            📊 加权平均绩点：<strong>${overallGPA}</strong>
-            <span style="font-size:.8rem;color:var(--color-text-light)">（${subjectGPAs.filter(s=>s.gpa!=null).length}/${subjects.length} 科已评分）</span>
+            📊 ${esc(termLabel(term))}加权平均绩点：<strong>${overallGPA}</strong>
+            <span style="font-size:.8rem;color:var(--color-text-light)">（${subjectGPAs.filter(s=>s.gpa!=null).length}/${list.length} 科已评分）</span>
         </div>`;
     }
 
@@ -1667,16 +1741,26 @@ $('#subjectGrid').addEventListener('click', async e => {
     }
 });
 
+// 学期切换（监听器只绑一次，按钮是每次渲染重建的，走事件委托）
+$('#subjectTermNav').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-nav]');
+    if (!btn || btn.disabled) return;
+    shiftSubjectTerm(btn.dataset.nav === 'prev' ? -1 : 1);
+});
+
 async function moveSubject(id, direction) {
-    const idx = subjects.findIndex(s=>s.id===id); if (idx<0) return;
+    // 只在当前学期内部调整顺序
+    const list = subjects.filter(s => termOf(s) === viewTerm());
+    const idx = list.findIndex(s=>s.id===id); if (idx<0) return;
     const newIdx = idx + direction;
-    if (newIdx<0 || newIdx>=subjects.length) return;
-    // 交换数组位置
-    const a = subjects[idx], b = subjects[newIdx];
+    if (newIdx<0 || newIdx>=list.length) return;
+    const a = list[idx], b = list[newIdx];
     const ap = a.position!=null ? a.position : idx;
     const bp = b.position!=null ? b.position : newIdx;
-    subjects[newIdx] = {...a, position: bp};
-    subjects[idx] = {...b, position: ap};
+    const ia = subjects.findIndex(s=>s.id===a.id), ib = subjects.findIndex(s=>s.id===b.id);
+    if (ia < 0 || ib < 0) return;
+    subjects[ia] = {...a, position: bp};
+    subjects[ib] = {...b, position: ap};
     renderSubjects();
     // 持久化
     try { await DS.update('subjects', a.id, { position: bp }); } catch(e) {}
@@ -1815,8 +1899,8 @@ function updateComponentsFromDOM() {
 async function saveModal() {
     if (modalMode === 'subject') {
         const name = $('#mfName').value.trim(); if (!name) return;
-        const row = { name, credits: parseFloat($('#mfCredits').value)||0, target_gpa: parseFloat($('#mfGPA').value)||null, components:[], position: subjects.length };
-        await DS.create('subjects', row); closeModal(); await refreshAll();
+        const row = { name, credits: parseFloat($('#mfCredits').value)||0, target_gpa: parseFloat($('#mfGPA').value)||null, components:[], position: subjects.filter(s=>termOf(s)===viewTerm()).length };
+        await createSubject(row); closeModal(); await refreshAll();
     } else if (modalMode === 'event') {
         const title = $('#mfTitle').value.trim(); if (!title) return;
         const event_type = $('#mfEventType').value;
@@ -1997,6 +2081,8 @@ function parseGradeRules(text) {
 async function applyImport(results) {
     let examCount = 0, subjectCount = 0;
     const createdSubjects = {}; // name → id mapping
+    // 新建科目从本学期现有条数往后排（import 全程用同一个计数器，避免都拿到同一个 position）
+    let newPos = subjects.filter(s => termOf(s) === viewTerm()).length;
 
     for (const r of results) {
         const rtype = r.type;
@@ -2021,9 +2107,9 @@ async function applyImport(results) {
                         ...(credits && !existing.credits ? { credits } : {}),
                     });
                 } else {
-                    const created = await DS.create('subjects', {
+                    const created = await createSubject({
                         name: subjectName,
-                        position: subjects.length,
+                        position: newPos++,
                         credits: credits || 0,
                         components: r.components || [],
                     });
@@ -2043,9 +2129,9 @@ async function applyImport(results) {
                         await DS.update('subjects', subId, { credits });
                     }
                 } else {
-                    const created = await DS.create('subjects', {
+                    const created = await createSubject({
                         name: subjectName,
-                        position: subjects.length,
+                        position: newPos++,
                         credits: credits || 0,
                     });
                     subId = created.id;
@@ -2075,7 +2161,7 @@ async function applyImport(results) {
     await refreshAll();
     let msg = [];
     if (examCount) msg.push(`${examCount} 场考试已导入日历`);
-    if (subjectCount) msg.push(`${subjectCount} 门科目已导入并配置绩点`);
+    if (subjectCount) msg.push(`${subjectCount} 门科目已导入到${termLabel(viewTerm())}`);
     showToast(msg.join('，') || '未识别到有效数据', msg.length?'success':'error');
 }
 

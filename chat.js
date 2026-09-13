@@ -604,9 +604,12 @@ async function execOneAction(act) {
                     credits: data.credits || 0,
                     target_gpa: data.target_gpa || null,
                     components: [],
-                    position: (typeof subjects !== 'undefined' ? subjects.length : 0),
+                    position: (typeof subjects !== 'undefined'
+                        ? subjects.filter(s => termOf(s) === viewTerm()).length : 0),
                 };
-                await DS.create('subjects', row);
+                // 走 createSubject 才会带上当前学期（term）
+                if (typeof createSubject === 'function') await createSubject(row);
+                else await DS.create('subjects', row);
             } else if (action === 'update') {
                 const s = findSubject(data.name);
                 if (!s) throw new Error(notFoundNote(data.name, subjects, x => x.name, '科目'));

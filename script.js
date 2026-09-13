@@ -2157,24 +2157,23 @@ const SEMESTER_GOALS = [
     { icon: '📊', name: '均绩',          target: '≥ 4.1' },
     { icon: '🧴', name: 'B计划',         target: '坚持整学期' },
     { icon: '🔤', name: '六级',          target: '550+' },
-    { icon: '📐', name: '数竞 / 美赛',   target: '拿二等奖' },
-    { icon: '🤝', name: '志愿者 / 活动', target: '30 小时' },
+    { icon: '📐', name: '数竞·美赛',     target: '拿二等奖' },
+    { icon: '🤝', name: '志愿者·活动',   target: '30 小时' },
 ];
 
 function renderSemesterGoals() {
     const el = document.getElementById('homeGoals');
     if (!el) return;
     el.innerHTML = `
-        <div class="home-goals__header">🎯 本学期目标<span class="home-goals__hint">按重要性排序</span></div>
         <div class="home-goals__list">
             ${SEMESTER_GOALS.map((g, i) => `
                 <div class="home-goal">
-                    <div class="home-goal__rank">${i + 1}</div>
-                    <div class="home-goal__icon">${g.icon || '📌'}</div>
-                    <div class="home-goal__body">
-                        <div class="home-goal__name">${esc(g.name)}</div>
-                        ${g.target ? `<div class="home-goal__target">${esc(g.target)}</div>` : ''}
+                    <div class="home-goal__top">
+                        <div class="home-goal__rank">${i + 1}</div>
+                        <span class="home-goal__icon">${g.icon || '📌'}</span>
                     </div>
+                    <div class="home-goal__name">${esc(g.name)}</div>
+                    ${g.target ? `<div class="home-goal__target">${esc(g.target)}</div>` : ''}
                 </div>`).join('')}
         </div>`;
 }

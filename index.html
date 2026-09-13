@@ -10,7 +10,7 @@
     <link rel="apple-touch-icon" href="/icon.png?v=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="stylesheet" href="style.css?v=4.4">
+    <link rel="stylesheet" href="style.css?v=4.5">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 
 </head>
@@ -60,12 +60,12 @@
 
     <!-- ===== 首页视图 ===== -->
     <section class="view active" id="view-home">
+        <!-- 本学期目标条（按重要性排序，内容见 script.js 的 SEMESTER_GOALS） -->
+        <div class="home-goals" id="homeGoals"></div>
         <div class="home-header">
             <h1 class="home-greeting" id="homeGreeting"></h1>
             <p class="home-date" id="homeDate"></p>
         </div>
-        <!-- 本学期目标（按重要性排序，内容见 script.js 的 SEMESTER_GOALS） -->
-        <div class="home-goals" id="homeGoals"></div>
         <div class="home-countdowns" id="homeCountdowns"></div>
         <div class="home-nav">
             <button class="home-nav-card" data-tab="vocab">
@@ -645,7 +645,7 @@
 
 <script src="supabase.min.js"></script>
 <script src="auth.js?v=3.2"></script>
-<script src="script.js?v=5.3"></script>
+<script src="script.js?v=5.4"></script>
 
 <script src="chat.js?v=1.4"></script>
 <script src="vocab.js?v=2.1"></script>

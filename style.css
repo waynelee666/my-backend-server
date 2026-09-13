@@ -191,6 +191,33 @@ textarea.form-input { resize:vertical; }
 .home-greeting { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
 .home-date { font-size: .9rem; color: var(--color-text-light); }
 
+/* ---- 本学期目标（按重要性排序，越靠前越重要）---- */
+.home-goals { margin: 24px 0 20px; }
+.home-goals__header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; font-size: 1rem; font-weight: 700; }
+.home-goals__hint { font-size: .75rem; font-weight: 500; color: var(--color-text-light); }
+.home-goals__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.home-goal {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; background: #fff; border: 1px solid var(--color-border);
+    border-radius: var(--radius); transition: all var(--transition);
+}
+.home-goal:hover { box-shadow: 0 2px 12px var(--color-shadow); }
+.home-goal__rank {
+    width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .8rem; font-weight: 700;
+    background: var(--color-bg-alt); color: var(--color-text-light);
+}
+.home-goal__icon { font-size: 1.5rem; flex-shrink: 0; }
+.home-goal__body { min-width: 0; }
+.home-goal__name { font-size: .95rem; font-weight: 600; }
+.home-goal__target { font-size: .8rem; color: var(--color-text-light); margin-top: 2px; }
+/* 重要性递减：前三条给不同强度的强调 */
+.home-goals__list .home-goal:nth-child(1) { border-color: var(--color-primary); background: rgba(79,70,229,.05); }
+.home-goals__list .home-goal:nth-child(1) .home-goal__rank { background: var(--color-primary); color: #fff; }
+.home-goals__list .home-goal:nth-child(2) .home-goal__rank,
+.home-goals__list .home-goal:nth-child(3) .home-goal__rank { background: rgba(79,70,229,.15); color: var(--color-primary); }
+
 .home-countdowns { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin: 20px 0; }
 .home-countdown-card {
     background: #fff; border: 1px solid var(--color-border); border-radius: var(--radius);

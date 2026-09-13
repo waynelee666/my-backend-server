@@ -2138,12 +2138,45 @@ function renderHome() {
     $('#homeDate').textContent =
         `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 星期${weekdays[now.getDay()]}`;
 
+    // 本学期目标
+    renderSemesterGoals();
+
     // 倒计时卡片
     renderCountdowns();
 
     // 每30秒刷新
     if (countdownTimer) clearInterval(countdownTimer);
     countdownTimer = setInterval(renderCountdowns, 30000);
+}
+
+// ==================== 本学期目标 ====================
+// ✏️ 改目标只改这个数组：数组顺序 = 首页从上到下的显示顺序（第 1 条最重要）
+//    name   目标名
+//    target 具体指标，如 '≥ 3.8'；留空则只显示目标名，不占位
+const SEMESTER_GOALS = [
+    { icon: '📊', name: '均绩',          target: '≥ 4.1' },
+    { icon: '🧴', name: 'B计划',         target: '坚持整学期' },
+    { icon: '🔤', name: '六级',          target: '550+' },
+    { icon: '📐', name: '数竞 / 美赛',   target: '拿二等奖' },
+    { icon: '🤝', name: '志愿者 / 活动', target: '30 小时' },
+];
+
+function renderSemesterGoals() {
+    const el = document.getElementById('homeGoals');
+    if (!el) return;
+    el.innerHTML = `
+        <div class="home-goals__header">🎯 本学期目标<span class="home-goals__hint">按重要性排序</span></div>
+        <div class="home-goals__list">
+            ${SEMESTER_GOALS.map((g, i) => `
+                <div class="home-goal">
+                    <div class="home-goal__rank">${i + 1}</div>
+                    <div class="home-goal__icon">${g.icon || '📌'}</div>
+                    <div class="home-goal__body">
+                        <div class="home-goal__name">${esc(g.name)}</div>
+                        ${g.target ? `<div class="home-goal__target">${esc(g.target)}</div>` : ''}
+                    </div>
+                </div>`).join('')}
+        </div>`;
 }
 
 function renderCountdowns() {

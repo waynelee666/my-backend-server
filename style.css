@@ -210,11 +210,7 @@ textarea.form-input { resize:vertical; }
 .home-goal__icon { font-size: 1rem; line-height: 1; }
 .home-goal__name { font-size: .85rem; font-weight: 600; }
 .home-goal__target { font-size: .72rem; color: var(--color-text-light); }
-/* 重要性递减：前三条给不同强度的强调 */
-.home-goals__list .home-goal:nth-child(1) { border-color: var(--color-primary); background: rgba(79,70,229,.05); }
-.home-goals__list .home-goal:nth-child(1) .home-goal__rank { background: var(--color-primary); color: #fff; }
-.home-goals__list .home-goal:nth-child(2) .home-goal__rank,
-.home-goals__list .home-goal:nth-child(3) .home-goal__rank { background: rgba(79,70,229,.15); color: var(--color-primary); }
+/* 五格样式完全一致，优先级只靠序号 1~5 表达 */
 /* 窄屏：五格挤不下，仍保持单行 → 横向滑动 */
 @media (max-width: 640px) {
     .home-goals__list { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
@@ -247,6 +243,23 @@ textarea.form-input { resize:vertical; }
 .home-nav-card:hover { box-shadow: 0 2px 12px var(--color-shadow); transform: translateY(-2px); border-color: var(--color-primary); }
 .home-nav-card__icon { font-size: 1.8rem; }
 .home-nav-card__label { font-size: .85rem; font-weight: 600; color: var(--color-text); }
+
+/* ---- 常用网站 ---- */
+.home-links { margin-top: 32px; }
+.home-links__title { font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
+.home-links__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.home-link {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; background: #fff; border: 1px solid var(--color-border);
+    border-radius: var(--radius); transition: all var(--transition);
+}
+.home-link:hover { box-shadow: 0 2px 12px var(--color-shadow); transform: translateY(-2px); border-color: var(--color-primary); }
+.home-link__icon { font-size: 1.4rem; flex-shrink: 0; }
+.home-link__text { flex: 1; min-width: 0; }
+.home-link__name { display: block; font-size: .9rem; font-weight: 600; }
+.home-link__desc { display: block; font-size: .75rem; color: var(--color-text-light); margin-top: 2px; }
+.home-link__arrow { font-size: .85rem; color: var(--color-text-light); flex-shrink: 0; transition: color var(--transition); }
+.home-link:hover .home-link__arrow { color: var(--color-primary); }
 
 /* ==================== 响应式 ==================== */
 

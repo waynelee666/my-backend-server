@@ -2141,6 +2141,9 @@ function renderHome() {
     // 本学期目标
     renderSemesterGoals();
 
+    // 常用网站
+    renderQuickLinks();
+
     // 倒计时卡片
     renderCountdowns();
 
@@ -2175,6 +2178,33 @@ function renderSemesterGoals() {
                     <div class="home-goal__name">${esc(g.name)}</div>
                     ${g.target ? `<div class="home-goal__target">${esc(g.target)}</div>` : ''}
                 </div>`).join('')}
+        </div>`;
+}
+
+// ==================== 常用网站 ====================
+// ✏️ 加/删常用网站只改这个数组
+// 注：jwbinfosys.zju.edu.cn 已 302 到 zdbk.zju.edu.cn，是同一套系统，用 zdbk 即可
+const QUICK_LINKS = [
+    { icon: '📚', name: '本科教学服务平台', desc: '选课 · 成绩 · 学籍', url: 'https://zdbk.zju.edu.cn' },
+    { icon: '⚡', name: '电气工程学院',     desc: '学院官网',           url: 'http://ee.zju.edu.cn' },
+    { icon: '💬', name: 'CC98 论坛',        desc: '校内论坛',           url: 'https://www.cc98.org' },
+];
+
+function renderQuickLinks() {
+    const el = document.getElementById('homeLinks');
+    if (!el) return;
+    el.innerHTML = `
+        <div class="home-links__title">🔗 常用网站</div>
+        <div class="home-links__list">
+            ${QUICK_LINKS.map(l => `
+                <a class="home-link" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">
+                    <span class="home-link__icon">${l.icon || '🔗'}</span>
+                    <span class="home-link__text">
+                        <span class="home-link__name">${esc(l.name)}</span>
+                        ${l.desc ? `<span class="home-link__desc">${esc(l.desc)}</span>` : ''}
+                    </span>
+                    <span class="home-link__arrow">↗</span>
+                </a>`).join('')}
         </div>`;
 }
 

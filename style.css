@@ -185,19 +185,21 @@ textarea.form-input { resize:vertical; }
 }
 .gpa-summary strong { font-size: 1.8rem; margin: 0 4px; }
 
-/* ---- 科目学期切换（样式对齐记账的期切换）---- */
-.subject-term-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
-.subject-term-nav__btn {
-    padding: 6px 14px; border: 1px solid var(--color-border); background: #fff;
-    border-radius: 8px; cursor: pointer; font-size: .82rem; font-family: inherit;
-    color: var(--color-primary); font-weight: 600; transition: all var(--transition);
+/* ---- 科目「回顾」入口（右上角小角落，往期学期）---- */
+.subject-review { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 12px; min-height: 28px; }
+.subject-review__btn {
+    padding: 5px 12px; border: 1px solid var(--color-border); background: #fff;
+    border-radius: 8px; cursor: pointer; font-size: .78rem; font-family: inherit;
+    color: var(--color-text-light); font-weight: 600; transition: all var(--transition);
 }
-.subject-term-nav__btn:hover:not(:disabled) { background: var(--color-bg-alt); }
-.subject-term-nav__btn:disabled { opacity: .35; cursor: default; }
-.subject-term-nav__label { font-size: 1rem; font-weight: 700; }
-.subject-term-nav__label small {
-    font-size: .7rem; font-weight: 600; color: var(--color-primary);
-    background: rgba(79,70,229,.1); padding: 2px 8px; border-radius: 10px; margin-left: 6px;
+.subject-review__btn:hover { background: var(--color-bg-alt); color: var(--color-primary); border-color: var(--color-primary); }
+.subject-review__label {
+    font-size: .78rem; font-weight: 600; color: var(--color-primary);
+    background: rgba(79,70,229,.1); padding: 3px 10px; border-radius: 10px;
+}
+.subject-review__select {
+    padding: 5px 8px; border: 1px solid var(--color-border); background: #fff;
+    border-radius: 8px; font-size: .78rem; font-family: inherit; color: var(--color-text); cursor: pointer;
 }
 
 /* ==================== 首页 ==================== */

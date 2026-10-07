@@ -10,11 +10,9 @@ import os
 from urllib.request import Request, urlopen
 from urllib.error import URLError
 
-# --- 配置 ---
-SUPABASE_URL = "https://swouijpxhujlwlrsmwmo.supabase.co"
-SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3b3VpanB4aHVqbHdscnNtd21vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTEyNDEzMiwiZXhwIjoyMDk2NzAwMTMyfQ.QweD9E3W6wSYf_JmM1kZU1s5Us1ic1YgVzF8El9ku7s"
+# --- 配置：全部从 config.py 读（那个文件已被 .gitignore 忽略，不会上传）---
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from config import DEEPSEEK_API_KEY
+from config import DEEPSEEK_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY
 
 BATCH_SIZE = 50  # 每批发给 DeepSeek 的词数
 

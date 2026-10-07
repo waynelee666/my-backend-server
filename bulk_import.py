@@ -11,12 +11,17 @@ if sys.platform == 'win32':
 
 import requests
 
-SUPABASE_URL = "https://swouijpxhujlwlrsmwmo.supabase.co"
-ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3b3VpanB4aHVqbHdscnNtd21vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMjQxMzIsImV4cCI6MjA5NjcwMDEzMn0.VhL4p8yoILq-5nFe2K5TKafoC03vsDwa_MBb-uBp8PQ"
 SERVER_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, SERVER_DIR)
 
-EMAIL = "2810303976@qq.com"
-PASSWORDS = ["Mw002530.", "Mw003520!"]
+# 密钥全部从 config.py 读（已被 .gitignore 忽略，不会上传）
+from config import (
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY as ANON_KEY,
+    TF_EMAIL as EMAIL,
+    TF_PASSWORD,
+)
+PASSWORDS = [TF_PASSWORD]
 
 BOOKS = [
     ("基础", "basic_import.json"),

@@ -1,8 +1,9 @@
-import re, json
+import re, json, os, sys
 from urllib.request import Request, urlopen
 
-SK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3b3VpanB4aHVqbHdscnNtd21vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTEyNDEzMiwiZXhwIjoyMDk2NzAwMTMyfQ.QweD9E3W6wSYf_JmM1kZU1s5Us1ic1YgVzF8El9ku7s'
-URL = 'https://swouijpxhujlwlrsmwmo.supabase.co'
+# 密钥从 config.py 读（已被 .gitignore 忽略，不会上传）
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from config import SUPABASE_URL as URL, SUPABASE_SERVICE_KEY as SK
 
 def fetch(table, select='*'):
     rows, offset, limit = [], 0, 1000

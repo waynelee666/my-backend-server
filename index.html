@@ -724,7 +724,56 @@ if ('serviceWorker' in navigator) {
 let deferredPrompt = null;
 const installBtn = document.getElementById('installBtn');
 const installDrop = document.getElementById('navDropdownInstall');
-const isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+// 华为/鸿蒙浏览器不实现标准 PWA 安装流程：beforeinstallprompt 不触发，
+// 即便触发，prompt() 也是空实现 —— 这类浏览器一律走手动指引
+const NO_PWA_INSTALL = /HuaweiBrowser|HarmonyOS|HMSCore|ArkWeb/i.test(navigator.userAgent);
+const isMobile = /Mobi|Android|iPhone|iPad|HarmonyOS|HuaweiBrowser|HMSCore/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+function markInstalled() {
+    if (installBtn) { installBtn.textContent = '✅ 已安装'; installBtn.disabled = true; }
+    if (installDrop) { installDrop.textContent = '✅ 已安装'; }
+}
+
+function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;
+}
+
+function installSteps() {
+    const ua = navigator.userAgent;
+    if (NO_PWA_INSTALL) return '华为浏览器：\n1. 点右上角「≡」菜单\n2. 选「添加到主屏幕」\n3. 确认添加';
+    if (/MicroMessenger/i.test(ua)) return '微信内不能安装：\n1. 点右上角「···」\n2. 选「在浏览器打开」\n3. 再按浏览器的方法添加';
+    if (/iPhone|iPad|iPod/i.test(ua)) return 'Safari：\n1. 点底部「分享」按钮\n2. 选「添加到主屏幕」\n3. 点「添加」';
+    return 'Chrome / Edge：\n1. 点右上角「⋮」菜单\n2. 选「安装应用」或「添加到主屏幕」\n3. 确认';
+}
+
+// 页面内指引弹层。不用 alert：部分国产浏览器会静默忽略 alert，点了像「没反应」
+function showInstallHelp() {
+    if (document.getElementById('installHelp')) return;
+    const mask = document.createElement('div');
+    mask.id = 'installHelp';
+    mask.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:10000;'
+        + 'display:flex;align-items:center;justify-content:center;padding:20px;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#fff;border-radius:14px;padding:22px;max-width:340px;width:100%;'
+        + 'box-shadow:0 20px 50px rgba(0,0,0,.25);';
+    const h = document.createElement('h3');
+    h.textContent = '📲 添加到桌面';
+    h.style.cssText = 'margin:0 0 10px;font-size:1.05rem;';
+    const pre = document.createElement('pre');
+    pre.textContent = installSteps();
+    pre.style.cssText = 'margin:0;white-space:pre-wrap;font-family:inherit;font-size:.85rem;'
+        + 'line-height:1.75;color:#475569;';
+    const ok = document.createElement('button');
+    ok.textContent = '知道了';
+    ok.style.cssText = 'margin-top:16px;width:100%;padding:11px;border:none;border-radius:9px;'
+        + 'background:#4f46e5;color:#fff;font-size:.9rem;font-weight:600;font-family:inherit;';
+    ok.addEventListener('click', () => mask.remove());
+    mask.addEventListener('click', (e) => { if (e.target === mask) mask.remove(); });
+    box.append(h, pre, ok);
+    mask.appendChild(box);
+    document.body.appendChild(mask);
+}
 
 function showInstallBtn(label) {
     if (installBtn) { installBtn.style.display = ''; installBtn.textContent = label; }
@@ -737,38 +786,31 @@ window.addEventListener('beforeinstallprompt', (e) => {
     showInstallBtn('📲 安装应用');
 });
 
-if (isMobile && !deferredPrompt) {
+if (isMobile && !deferredPrompt && !isStandalone()) {
     setTimeout(() => { showInstallBtn('📲 添加到桌面'); }, 1500);
 }
 
 async function doInstall() {
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            if (installBtn) { installBtn.textContent = '✅ 已安装'; installBtn.disabled = true; }
-            if (installDrop) { installDrop.textContent = '✅ 已安装'; }
+    if (isStandalone()) { showToast('✅ 已经添加到桌面了', 'info'); return; }
+    // 华为/鸿蒙浏览器：prompt() 是空实现，调了不会弹任何东西 → 直接给手动指引
+    if (deferredPrompt && !NO_PWA_INSTALL) {
+        try {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            if (outcome === 'accepted') { markInstalled(); }
+            return; // 用户自己取消的，不再弹指引
+        } catch (err) {
+            deferredPrompt = null; // 失败则掉到下面的手动指引
         }
-        deferredPrompt = null;
-    } else {
-        alert(
-            '📲 添加到桌面步骤：\n\n' +
-            '1. 点浏览器底部「分享」按钮\n' +
-            '   （或右上角 ··· 菜单）\n' +
-            '2. 找到「添加到主屏幕」\n' +
-            '3. 点「添加」完成\n\n' +
-            '💡 Chrome 浏览器体验更佳'
-        );
     }
+    showInstallHelp();
 }
 
 installBtn && installBtn.addEventListener('click', doInstall);
 installDrop && installDrop.addEventListener('click', (e) => { e.preventDefault(); doInstall(); });
 
-window.addEventListener('appinstalled', () => {
-    if (installBtn) { installBtn.textContent = '✅ 已安装'; installBtn.disabled = true; }
-    if (installDrop) { installDrop.textContent = '✅ 已安装'; }
-});
+window.addEventListener('appinstalled', markInstalled);
 </script>
 </body>
 </html>

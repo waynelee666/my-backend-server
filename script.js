@@ -163,24 +163,31 @@ $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
     if (currentTab === 'plans') renderPlansView();
     if (currentTab === 'ledger') renderLedgerView();
 }));
+// 导航折叠断点：与 style.css 的 @media (max-width:1099.98px) 保持一致
+const NAV_FOLD_QUERY = window.matchMedia('(max-width: 1099.98px)');
+
 $('.nav__logo').addEventListener('click', (e) => {
-    if (window.innerWidth < 768) {
+    if (NAV_FOLD_QUERY.matches) {
         e.preventDefault();
         document.querySelector('.nav__tabs').classList.toggle('nav__tabs--open');
         return;
     }
     currentTab='home'; $$('.nav__tab').forEach(b=>b.classList.remove('active')); $('[data-tab="home"]').classList.add('active'); $$('.view').forEach(v=>v.classList.remove('active')); $('#view-home').classList.add('active'); renderHome();
 });
-// 手机端：点 tab 按钮后自动收起
+// 折叠态下：点 tab 按钮后自动收起
 $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
     document.querySelector('.nav__tabs').classList.remove('nav__tabs--open');
 }));
 // 点页面其他位置收起
 document.addEventListener('click', (e) => {
-    if (window.innerWidth >= 768) return;
+    if (!NAV_FOLD_QUERY.matches) return;
     if (!e.target.closest('.nav__tabs') && !e.target.closest('.nav__logo')) {
         document.querySelector('.nav__tabs').classList.remove('nav__tabs--open');
     }
+});
+// 跨断点（旋转/缩放）后菜单状态归位
+NAV_FOLD_QUERY.addEventListener('change', (e) => {
+    if (!e.matches) document.querySelector('.nav__tabs').classList.remove('nav__tabs--open');
 });
 
 // ==================== 通用模态框 ====================

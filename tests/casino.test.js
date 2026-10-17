@@ -169,6 +169,24 @@ eq(R.target, 10000, '胜利线 10000');
   C._setRand(() => 0.9);  // >= 0.5 → 一半
   eq(C.rollEnvelopeOther(50), 25, '50 的一半 = 25');
   eq(C.rollEnvelopeOther(200), 100, '200 的一半 = 100');
+  eq(C.rollEnvelopeOther(51), 25, '奇数的一半向下取整，不会出现 0.5 元');
+
+  // 已开信封只出偶数，保证另一个信封永远是整数元
+  C._setRand(() => 0);
+  eq(C.rollEnvelopeShown(), 50, '已开信封最小值 50');
+  C._setRand(() => 0.999999);
+  eq(C.rollEnvelopeShown(), 200, '已开信封最大值 200');
+
+  C._setRand(Math.random);
+  let odd = 0;
+  let out = 0;
+  for (let i = 0; i < 100000; i += 1) {
+    const v = C.rollEnvelopeShown();
+    if (v % 2 !== 0) odd += 1;
+    if (v < 50 || v > 200) out += 1;
+  }
+  eq(odd, 0, '已开信封永远是偶数');
+  eq(out, 0, '已开信封始终在 50–200 之间');
 })();
 
 /* ================= 5. 摸球结算 ================= */

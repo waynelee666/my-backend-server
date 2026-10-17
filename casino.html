@@ -217,6 +217,8 @@
     border: 1px solid rgba(255, 255, 255, .14); outline: none;
   }
   .bet-row input:focus { border-color: var(--line-strong); box-shadow: 0 0 0 3px rgba(168, 85, 247, .16); }
+  .bet-row input:disabled { opacity: .45; cursor: not-allowed; }
+  .bet-chip:disabled { opacity: .4; cursor: not-allowed; }
   .bet-chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .bet-chip {
     border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .04);
@@ -911,8 +913,15 @@
     return pool;
   }
 
+  // 已开信封只生成偶数金额，保证「另一个是它的 2 倍 / 一半」永远是整数元
+  function rollEnvelopeShown() {
+    const lo = Math.ceil(RATES.envelope.min / 2);
+    const hi = Math.floor(RATES.envelope.max / 2);
+    return randInt(lo, hi) * 2;
+  }
+
   function rollEnvelopeOther(shown) {
-    return rnd() < RATES.envelope.doubleChance ? shown * 2 : shown / 2;
+    return rnd() < RATES.envelope.doubleChance ? shown * 2 : Math.floor(shown / 2);
   }
 
   function flipCoin() {
@@ -977,6 +986,7 @@
   }
 
   let state = freshState();
+  let gameEpoch = 0; // 重开时 +1，让还在飞的旧动画结果作废
 
   /* ============================================================
      账号 / 存档
@@ -1262,6 +1272,7 @@
     let raf = 0;
     let running = false;
     let lastT = 0;
+    let calm = 0;
     let phase = 'idle'; // idle | shake | lift
     let shakeEnd = 0;
     let flying = null;
@@ -1273,7 +1284,10 @@
     } catch (e) { /* ignore */ }
 
     function later(fn, ms) {
-      const id = setTimeout(fn, ms);
+      const id = setTimeout(function () {
+        timers = timers.filter(function (t) { return t !== id; });
+        fn();
+      }, ms);
       timers.push(id);
       return id;
     }
@@ -1533,6 +1547,23 @@
       }
       step(dt);
       draw();
+
+      // 球都静下来后就停掉 rAF，省电；下次抽球或缩放再唤醒
+      if (phase === 'idle' && !flying) {
+        let maxV = 0;
+        for (let i = 0; i < balls.length; i += 1) {
+          const v = Math.abs(balls[i].vx) + Math.abs(balls[i].vy);
+          if (v > maxV) maxV = v;
+        }
+        if (maxV < 0.12) {
+          calm += 1;
+          if (calm >= 36) { running = false; raf = 0; return; }
+        } else {
+          calm = 0;
+        }
+      } else {
+        calm = 0;
+      }
       raf = requestAnimationFrame(loop);
     }
 
@@ -1540,6 +1571,7 @@
       if (running) return;
       running = true;
       lastT = 0;
+      calm = 0;
       raf = requestAnimationFrame(loop);
     }
 
@@ -1567,7 +1599,7 @@
       if (!listening) {
         listening = true;
         window.addEventListener('resize', function () {
-          if (running) resize();
+          if (canvas && canvas.getBoundingClientRect().width > 0) resize();
         });
       }
     }
@@ -1575,6 +1607,17 @@
     function reset() {
       if (phase !== 'idle') return;
       clearTimers();
+      flying = null;
+      if (canvas) canvas.classList.remove('is-shaking');
+      if (!ctx) return;
+      ensureFull();
+      draw();
+    }
+
+    // 重开时用：不管抽到哪一步都直接取消，旧结果不再结算
+    function abort() {
+      clearTimers();
+      phase = 'idle';
       flying = null;
       if (canvas) canvas.classList.remove('is-shaking');
       if (!ctx) return;
@@ -1598,10 +1641,12 @@
 
       if (reduce) {
         balls.splice(idx, 1);
+        draw();
         later(function () { phase = 'idle'; if (cb) cb(color); }, 260);
         return true;
       }
 
+      start();
       phase = 'shake';
       shakeEnd = performance.now() + 700;
       if (canvas) canvas.classList.add('is-shaking');
@@ -1627,6 +1672,7 @@
     return {
       mount: mount,
       reset: reset,
+      abort: abort,
       isIdle: isIdle,
       beginDraw: beginDraw,
       stop: stop
@@ -1762,6 +1808,7 @@
     state.money = 0;
     state.started = false;
     state.celebrated = false;
+    resetGames();
     save();
     renderMoney();
     renderLobby();
@@ -1880,10 +1927,14 @@
     } else {
       money = 50;
     }
+    const keepBest = state.best;
+    const keepWins = state.wins;
     state = freshState();
     state.money = money;
-    state.best = money;
+    state.best = Math.max(keepBest, money);
+    state.wins = keepWins;
     state.started = true;
+    gameEpoch += 1;
     save();
     renderMoney();
     showScreen('lobby');
@@ -1930,7 +1981,9 @@
       btn.classList.add('is-wipe');
       $('#laborLast').innerHTML = '<b class="c-danger">被老板发现了！资金清零。</b>';
       spawnFloat('归零', true);
+      const epoch = gameEpoch;
       setTimeout(function () {
+        if (epoch !== gameEpoch) return;
         btn.classList.remove('is-wipe');
         laborBusy = false;
         queueModal({
@@ -1977,9 +2030,16 @@
     setBallButtons(!busy);
   }
 
+  function setBetControls(targetId, on) {
+    const input = document.getElementById(targetId);
+    if (input) input.disabled = !on;
+    $$('.bet-chip[data-target="' + targetId + '"]').forEach(function (c) { c.disabled = !on; });
+  }
+
   function setBallButtons(on) {
     $('#betRed').disabled = !on;
     $('#betBlack').disabled = !on;
+    setBetControls('ballBet', on);
   }
 
   function readBet(inputId, max) {
@@ -2023,7 +2083,9 @@
     Sfx.chip();
 
     // 球池里真的抓一个球：颜色在装球时就定好了
+    const epoch = gameEpoch;
     Pit.beginDraw(function (color) {
+      if (epoch !== gameEpoch) return;
       const won = color === choice;
       const back = settleBalls(stake, choice, color);
       state.money += back;
@@ -2175,7 +2237,7 @@
     Sfx.envelope();
     haptic(8);
     env.picked = idx;
-    env.shown = randInt(RATES.envelope.min, RATES.envelope.max);
+    env.shown = rollEnvelopeShown();
     env.other = rollEnvelopeOther(env.shown);
     env.phase = 'decide';
     renderEnvelope();
@@ -2207,6 +2269,7 @@
     const status = $('#doorStatus');
     const actions = $('#doorActions');
     actions.innerHTML = '';
+    setBetControls('doorBet', door.phase === 'idle');
 
     els.forEach(function (el, i) {
       el.classList.remove('is-picked', 'is-open', 'is-prize', 'is-final');
@@ -2413,6 +2476,7 @@
     petersburgRound.n += 1;
 
     const round = petersburgRound;
+    const epoch = gameEpoch;
     const isHead = flipCoin() === 'H';
     const coin = $('#coin3d');
 
@@ -2428,6 +2492,7 @@
     Sfx.coinFlip(false);
 
     setTimeout(function () {
+      if (epoch !== gameEpoch) return;
       const log = $('#flipLog');
       if (log) {
         log.innerHTML += '<div class="flip-line">第 ' + round.n + ' 抛：' +
@@ -2469,6 +2534,43 @@
     setTierButtons(true);
     setFlipButton('抛一次', true);
     checkMilestones(prev);
+  }
+
+  /* ============================================================
+     重开时清空所有桌面的临时状态
+     ============================================================ */
+  function resetGames() {
+    gameEpoch += 1;
+
+    laborBusy = false;
+    const laborBtn = $('#laborBtn');
+    if (laborBtn) laborBtn.classList.remove('is-wipe', 'is-dig');
+
+    ballBusy = false;
+    Pit.abort();
+    resetBalls();
+
+    env.phase = 'idle';
+    env.picked = -1;
+    env.shown = 0;
+    env.other = 0;
+    env.final = 0;
+    env.prevMoney = 0;
+    renderEnvelope();
+
+    door.phase = 'idle';
+    door.pick = -1;
+    door.prize = -1;
+    door.opened = -1;
+    door.finalPick = -1;
+    door.bet = 0;
+    door.won = false;
+    door.prevMoney = 0;
+    renderDoors();
+
+    petersburgRound = null;
+    petersburgBusy = false;
+    resetPetersburg();
   }
 
   /* ============================================================
@@ -2534,9 +2636,13 @@
     const soundBtn = $('#soundBtn');
     if (soundBtn) {
       soundBtn.textContent = Sfx.isEnabled() ? '🔊' : '🔇';
+      soundBtn.setAttribute('aria-label', Sfx.isEnabled() ? '关闭音效' : '开启音效');
+      soundBtn.setAttribute('aria-pressed', Sfx.isEnabled() ? 'true' : 'false');
       soundBtn.addEventListener('click', function () {
         const on = Sfx.setEnabled(!Sfx.isEnabled());
         soundBtn.textContent = on ? '🔊' : '🔇';
+        soundBtn.setAttribute('aria-label', on ? '关闭音效' : '开启音效');
+        soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
         if (on) Sfx.click();
       });
     }
@@ -2639,6 +2745,7 @@
     rollLabor: rollLabor,
     rollBall: rollBall,
     makePool: makePool,
+    rollEnvelopeShown: rollEnvelopeShown,
     rollEnvelopeOther: rollEnvelopeOther,
     flipCoin: flipCoin,
     rollPetersburg: rollPetersburg,

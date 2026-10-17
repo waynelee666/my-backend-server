@@ -222,6 +222,24 @@ eq(C.settleBalls(500, 'red', 'red'), 2000, '押 500 中红拿回 2000');
   near(cnt[4] / N, 0.0625, 0.008, 'n=4 概率 6.25%');
 })();
 
+/* ================= 6b. 手动抛硬币（按一次抛一次） ================= */
+(() => {
+  C._setRand(() => 0);
+  eq(C.flipCoin(), 'H', '随机数 0 → 正面');
+  C._setRand(() => 0.499999);
+  eq(C.flipCoin(), 'H', '0.499999 → 正面');
+  C._setRand(() => 0.5);
+  eq(C.flipCoin(), 'T', '0.5 → 反面');
+  C._setRand(() => 0.999999);
+  eq(C.flipCoin(), 'T', '0.999999 → 反面');
+
+  C._setRand(Math.random);
+  const N = 200000;
+  let heads = 0;
+  for (let i = 0; i < N; i += 1) if (C.flipCoin() === 'H') heads += 1;
+  near(heads / N, 0.5, 0.005, '手动抛硬币正面率 50%');
+})();
+
 /* ================= 7. 1000 元关卡 ================= */
 (() => {
   C._setRand(Math.random);

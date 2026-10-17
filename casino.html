@@ -444,7 +444,7 @@
   .coin3d {
     position: relative; width: 88px; height: 88px;
     transform-style: preserve-3d; will-change: transform;
-    transition: transform .3s cubic-bezier(.3, .05, .3, 1);
+    transition: transform .55s cubic-bezier(.2, .7, .25, 1);
   }
   .coin3d__face {
     position: absolute; inset: 0; border-radius: 50%;
@@ -468,6 +468,7 @@
     font-variant-numeric: tabular-nums;
   }
   .flip-log:empty { display: none; }
+  .flip-btn { margin-top: 12px; min-width: 150px; letter-spacing: .06em; }
   .flip-line b { color: var(--gold); }
   .flip-result { margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255, 255, 255, .12); }
 
@@ -789,7 +790,7 @@
       <h2>🪙 圣彼得堡</h2>
     </div>
     <div class="panel">
-      <p class="rules">一直抛硬币，<b>直到出现正面</b>为止，抛的次数记为 <b>n</b>，按入场等级发奖金。注意 n 越大奖金越离谱，但概率也越小。</p>
+      <p class="rules">一直抛硬币，<b>直到出现正面</b>为止。选好等级后，点一次「抛一次」就抛一次，抛的次数记为 <b>n</b>，按入场等级发奖金。注意 n 越大奖金越离谱，但概率也越小。</p>
       <div class="tiers">
         <button class="tier" data-tier="0" type="button">
           <b>入场 100 元</b><span>奖金 8ⁿ</span><small>n=3 → 512 元</small>
@@ -808,6 +809,7 @@
             <div class="coin3d__face coin3d__face--back">反</div>
           </div>
         </div>
+        <button class="btn btn--gold flip-btn" id="flipBtn" type="button" disabled>抛一次</button>
         <div class="flip-log" id="flipLog" aria-live="polite"></div>
       </div>
     </div>
@@ -911,6 +913,10 @@
 
   function rollEnvelopeOther(shown) {
     return rnd() < RATES.envelope.doubleChance ? shown * 2 : shown / 2;
+  }
+
+  function flipCoin() {
+    return rnd() < 0.5 ? 'H' : 'T';
   }
 
   function rollPetersburg(base) {
@@ -2340,12 +2346,33 @@
   /* ============================================================
      5. 圣彼得堡
      ============================================================ */
+  const PETERSBURG_FLIP_MS = 560;
   let petersburgBusy = false;
+  let petersburgRound = null; // { tier, n, prev }：一轮里玩家自己逐次抛
 
   let coinRot = 0;
 
+  function setTierButtons(on) {
+    document.querySelectorAll('.tier').forEach(function (b) { b.disabled = !on; });
+  }
+
+  function setFlipButton(label, disabled) {
+    const b = $('#flipBtn');
+    if (!b) return;
+    if (label) b.textContent = label;
+    b.disabled = !!disabled;
+  }
+
   function resetPetersburg() {
+    // 中途离开再回来：这一轮不取消，接着抛
+    if (petersburgRound) {
+      setTierButtons(false);
+      setFlipButton(petersburgBusy ? '抛…' : '再抛一次', petersburgBusy);
+      return;
+    }
     petersburgBusy = false;
+    setTierButtons(true);
+    setFlipButton('抛一次', true);
     $('#flipLog').innerHTML = '';
     const coin = $('#coin3d');
     if (!coin) return;
@@ -2357,7 +2384,7 @@
   }
 
   function playPetersburg(idx) {
-    if (petersburgBusy) return;
+    if (petersburgBusy || petersburgRound) return;
     const tier = RATES.petersburg[idx];
     if (!tier) return;
     if (state.money < tier.fee) {
@@ -2365,50 +2392,64 @@
       return;
     }
 
-    petersburgBusy = true;
     const prev = state.money;
     state.money -= tier.fee;
     state.plays += 1;
     save();
     renderMoney();
 
-    const res = rollPetersburg(tier.base);
+    petersburgRound = { tier: tier, n: 0, prev: prev };
+    Sfx.chip();
     $('#flipLog').innerHTML =
-      '<div class="flip-line">入场费 <b class="c-danger">−' + fmt(tier.fee) + ' 元</b>，开始抛硬币…</div>';
-    animateFlip(res.seq, 0, tier, res, prev);
+      '<div class="flip-line">入场费 <b class="c-danger">−' + fmt(tier.fee) +
+      ' 元</b>，点「抛一次」开始抛硬币…</div>';
+    setTierButtons(false);
+    setFlipButton('抛一次', false);
   }
 
-  function animateFlip(seq, i, tier, res, prev) {
+  function flipPetersburg() {
+    if (!petersburgRound || petersburgBusy) return;
+    petersburgBusy = true;
+    petersburgRound.n += 1;
+
+    const round = petersburgRound;
+    const isHead = flipCoin() === 'H';
     const coin = $('#coin3d');
-    const log = $('#flipLog');
-    const quick = seq.length > 12;
-    const delay = quick ? 90 : 300;
-    const isHead = seq[i] === 'H';
 
     if (coin) {
       const cur = ((coinRot % 360) + 360) % 360;
       const target = isHead ? 0 : 180;
       let delta = (target - cur + 360) % 360;
       if (delta === 0) delta = 360;
-      coinRot += delta + (quick ? 360 : 720);
+      coinRot += delta + 720; // 每次至少转两圈
       coin.style.transform = 'rotateX(' + coinRot + 'deg)';
     }
-    Sfx.coinFlip(quick);
+    setFlipButton('抛…', true);
+    Sfx.coinFlip(false);
 
     setTimeout(function () {
-      log.innerHTML += '<div class="flip-line">第 ' + (i + 1) + ' 抛：' +
-        (isHead ? '<b class="c-gold">正面</b>' : '反面') + '</div>';
-      log.scrollTop = log.scrollHeight;
-
-      if (i + 1 < seq.length) {
-        animateFlip(seq, i + 1, tier, res, prev);
-      } else {
-        finishPetersburg(tier, res, prev);
+      const log = $('#flipLog');
+      if (log) {
+        log.innerHTML += '<div class="flip-line">第 ' + round.n + ' 抛：' +
+          (isHead ? '<b class="c-gold">正面</b>' : '反面') + '</div>';
+        log.scrollTop = log.scrollHeight;
       }
-    }, delay);
+      Sfx.coinLand();
+
+      if (isHead) {
+        const res = { n: round.n, prize: Math.pow(round.tier.base, round.n) };
+        finishPetersburg(round.tier, res, round.prev);
+      } else {
+        petersburgBusy = false;
+        setFlipButton('再抛一次', false);
+        haptic(8);
+      }
+    }, PETERSBURG_FLIP_MS);
   }
 
   function finishPetersburg(tier, res, prev) {
+    petersburgRound = null;
+    petersburgBusy = false;
     state.money += res.prize;
     setBest();
     Sfx.coinLand();
@@ -2425,7 +2466,8 @@
     $('#flipLog').innerHTML += '<div class="flip-result">第 <b>' + res.n + '</b> 次出现正面 → ' +
       '奖金 ' + tier.base + '^' + res.n + ' = <b class="c-gold">' + fmt(res.prize) + ' 元</b></div>';
 
-    petersburgBusy = false;
+    setTierButtons(true);
+    setFlipButton('抛一次', true);
     checkMilestones(prev);
   }
 
@@ -2539,6 +2581,7 @@
     document.querySelectorAll('.tier').forEach(function (b) {
       b.addEventListener('click', function () { playPetersburg(Number(b.dataset.tier)); });
     });
+    $('#flipBtn').addEventListener('click', flipPetersburg);
 
     // 押注快捷金额
     document.body.addEventListener('click', function (e) {
@@ -2597,6 +2640,7 @@
     rollBall: rollBall,
     makePool: makePool,
     rollEnvelopeOther: rollEnvelopeOther,
+    flipCoin: flipCoin,
     rollPetersburg: rollPetersburg,
     rollGate: rollGate,
     settleBalls: settleBalls,

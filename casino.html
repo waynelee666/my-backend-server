@@ -896,6 +896,8 @@
 
   const STORE_PREFIX = 'tf_casino_v1:';
   const GUEST = 'guest';
+  const RESTART_PREFIX = 'tf_casino_restarts_v1:';
+  const RESTART_LIMIT = 5; // 每人每天的重开机会
 
   /* ============================================================
      随机数（测试可注入）
@@ -1042,6 +1044,96 @@
       localStorage.setItem(storeKey(), JSON.stringify(state));
     } catch (e) { /* 存储不可用时静默 */ }
     scheduleSync();
+  }
+
+  /* ---- 每日重开机会（按账号、按本地日期） ---- */
+  function dayKey() {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + mm + '-' + dd;
+  }
+
+  function restartKey() {
+    return RESTART_PREFIX + (username || GUEST);
+  }
+
+  function restartQuota() {
+    const today = dayKey();
+    let used = 0;
+    try {
+      const raw = JSON.parse(localStorage.getItem(restartKey()) || 'null');
+      // 不是今天的记录一律作废 —— 每天 0 点自动恢复 5 次
+      if (raw && raw.day === today) used = normNum(raw.used, 0);
+    } catch (e) { /* 存档坏了就当今天还没用过 */ }
+    return { day: today, used: Math.min(RESTART_LIMIT, used) };
+  }
+
+  function restartsLeft() {
+    return Math.max(0, RESTART_LIMIT - restartQuota().used);
+  }
+
+  // 扣掉一次重开机会，返回扣完还剩几次
+  function consumeRestart() {
+    const q = restartQuota();
+    q.used = Math.min(RESTART_LIMIT, q.used + 1);
+    try {
+      localStorage.setItem(restartKey(), JSON.stringify(q));
+    } catch (e) { /* 存储不可用时静默 */ }
+    return Math.max(0, RESTART_LIMIT - q.used);
+  }
+
+  /* ---- 登录账号用服务端次数（跨设备生效） ---- */
+  let serverQuotaBroken = false; // 数据库函数没建/表没建时，退回本机次数
+  let restartPending = false;
+
+  function isServerQuotaMode() {
+    return !!(sb && authUser && !serverQuotaBroken);
+  }
+
+  // 网络卡住时别让按钮一直转，最多等 6 秒就退回本机次数
+  function rpcWithTimeout(call, ms) {
+    return Promise.race([
+      call,
+      new Promise(function (resolve) {
+        setTimeout(function () { resolve({ error: { code: 'TIMEOUT' } }); }, ms || 6000);
+      })
+    ]);
+  }
+
+  async function serverRestartsLeft() {
+    if (!isServerQuotaMode()) return null;
+    try {
+      const res = await rpcWithTimeout(sb.rpc('game_restart_status'));
+      if (res.error) {
+        const code = res.error.code;
+        if (code === 'PGRST202' || code === '42883' || code === '42P01') {
+          serverQuotaBroken = true;
+          toast('服务端重开限制未启用，暂用本机次数');
+        }
+        return null;
+      }
+      const n = Number(res.data);
+      return Number.isFinite(n) ? Math.max(0, Math.min(RESTART_LIMIT, Math.round(n))) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 成功时返回扣完剩余次数（0~4）；-1 = 今天已用完；null = 服务端不可用
+  async function consumeServerRestart() {
+    try {
+      const res = await rpcWithTimeout(sb.rpc('game_restart_consume'));
+      if (res.error) {
+        const code = res.error.code;
+        if (code === 'PGRST202' || code === '42883' || code === '42P01') serverQuotaBroken = true;
+        return null;
+      }
+      const n = Number(res.data);
+      return Number.isFinite(n) ? Math.round(n) : null;
+    } catch (e) {
+      return null;
+    }
   }
 
   async function initAuth() {
@@ -1752,7 +1844,8 @@
         $('#overlay').hidden = true;
         modalOpen = false;
         if (typeof a.onClick === 'function') a.onClick();
-        openNextModal();
+        // 如果 onClick 里已经弹了新弹窗，就别再把它关掉
+        if (!modalOpen) openNextModal();
       };
       actionsEl.appendChild(b);
     });
@@ -1807,7 +1900,7 @@
                 : ''),
         actions: [
           { label: '继续游玩', style: 'btn--ghost' },
-          { label: '重新开始', style: 'btn--gold', onClick: doRestart }
+          { label: '重新开始', style: 'btn--gold', onClick: askRestart }
         ]
       });
     }
@@ -1873,16 +1966,86 @@
     showScreen('start');
   }
 
-  function askRestart() {
+  function noRestartsModal() {
+    queueModal({
+      icon: '⛔',
+      title: '今天的机会用完了',
+      body: '每人每天只有 <b class="c-gold">5 次</b> 重开机会，今天已经用完。<br>明天 0 点后再来。',
+      actions: [{ label: '知道了', style: 'btn--gold' }]
+    });
+  }
+
+  async function askRestart() {
+    let left = null;
+    if (isServerQuotaMode()) left = await serverRestartsLeft();
+    if (left === null) left = restartsLeft();
+    if (left <= 0) {
+      noRestartsModal();
+      return;
+    }
     queueModal({
       icon: '↺',
       title: '重新开始？',
-      body: '当前资金会清零，然后重新选择初始资金。最高纪录和胜场会保留。',
+      body: '当前资金会清零，然后重新选择初始资金。最高纪录和胜场会保留。<br>' +
+            '<span class="muted">今天还剩 ' + left + ' 次重开机会。</span>',
       actions: [
         { label: '取消', style: 'btn--ghost' },
-        { label: '重新开始', style: 'btn--danger', onClick: doRestart }
+        { label: '重新开始', style: 'btn--danger', onClick: confirmRestart }
       ]
     });
+  }
+
+  async function confirmRestart() {
+    let left = null;
+    if (isServerQuotaMode()) left = await serverRestartsLeft();
+    if (left === null) left = restartsLeft();
+    if (left <= 0) {
+      noRestartsModal();
+      return;
+    }
+    queueModal({
+      icon: '⚠️',
+      title: '最后确认',
+      body: '你确定要重开吗？<br><b class="c-gold">请珍惜你的机会</b>，每人一天只有 5 次重开机会，' +
+            '<span style="white-space:nowrap">当前还剩 <b class="c-gold">' + left + '</b> 次。</span>',
+      actions: [
+        { label: '取消', style: 'btn--ghost' },
+        { label: '确定重开', style: 'btn--danger', onClick: finishRestart }
+      ]
+    });
+  }
+
+  function consumeLocalRestart() {
+    if (restartsLeft() <= 0) {
+      noRestartsModal();
+      return false;
+    }
+    consumeRestart();
+    return true;
+  }
+
+  async function finishRestart() {
+    if (restartPending) return;
+    restartPending = true;
+    try {
+      if (isServerQuotaMode()) {
+        const r = await consumeServerRestart();
+        if (r === null) {
+          // 服务端暂时连不上：退回本机次数，保证还能玩
+          if (consumeLocalRestart()) doRestart();
+          return;
+        }
+        if (r < 0) {
+          noRestartsModal();
+          return;
+        }
+        doRestart();
+        return;
+      }
+      if (consumeLocalRestart()) doRestart();
+    } finally {
+      restartPending = false;
+    }
   }
 
   /* ============================================================
@@ -2845,6 +3008,9 @@
      ============================================================ */
   window.__casino = {
     RATES: RATES,
+    restartLimit: RESTART_LIMIT,
+    restartsLeft: restartsLeft,
+    consumeRestart: consumeRestart,
     getState: function () {
       return {
         money: state.money,

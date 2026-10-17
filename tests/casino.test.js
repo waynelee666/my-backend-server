@@ -16,10 +16,13 @@ const html = fs.readFileSync(path.join(ROOT, 'casino.html'), 'utf8');
 
 /* ---------------- 加载游客环境 ---------------- */
 global.window = global;
+const memoryStore = {};
 global.localStorage = {
-  getItem() { return null; },
-  setItem() {},
-  removeItem() {}
+  getItem(key) {
+    return Object.prototype.hasOwnProperty.call(memoryStore, key) ? memoryStore[key] : null;
+  },
+  setItem(key, value) { memoryStore[key] = String(value); },
+  removeItem(key) { delete memoryStore[key]; }
 };
 
 const m = html.match(/<script id="casino-app">([\s\S]*?)<\/script>/);
@@ -330,6 +333,26 @@ eq(C.settleBalls(500, 'red', 'red'), 2000, '押 500 中红拿回 2000');
   });
 })();
 
+/* ================= 8c. 每日重开机会 ================= */
+(() => {
+  eq(C.restartLimit, 5, '每人每天 5 次重开机会');
+  eq(C.restartsLeft(), 5, '一开始剩 5 次');
+  eq(C.consumeRestart(), 4, '用掉一次剩 4 次');
+  eq(C.restartsLeft(), 4, '剩余次数会持久化');
+  C.consumeRestart();
+  C.consumeRestart();
+  C.consumeRestart();
+  eq(C.restartsLeft(), 1, '用掉 4 次后剩 1 次');
+  eq(C.consumeRestart(), 0, '用掉第 5 次后剩 0');
+  eq(C.restartsLeft(), 0, '用完后读到的仍是 0');
+  eq(C.consumeRestart(), 0, '用完后不会变成负数');
+
+  // 换一天自动恢复 5 次
+  localStorage.setItem('tf_casino_restarts_v1:guest',
+    JSON.stringify({ day: '2000-01-01', used: 5 }));
+  eq(C.restartsLeft(), 5, '到了新的一天自动恢复 5 次');
+})();
+
 /* ================= 9. 静态接线检查 ================= */
 (() => {
   // JS 里用到的所有 id 必须在 HTML 里存在
@@ -357,6 +380,14 @@ eq(C.settleBalls(500, 'red', 'red'), 2000, '押 500 中红拿回 2000');
   const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
   ok(sw.includes('"/casino.html"'), 'sw.js 预缓存 casino.html');
   ok(/taskflow-v(5[1-9]|[6-9]\d)/.test(sw), 'sw.js 缓存版本已提升');
+
+  // 服务端每日重开限制
+  ok(m[1].includes("rpc('game_restart_status')"), '客户端读取服务端剩余重开次数');
+  ok(m[1].includes("rpc('game_restart_consume')"), '客户端在服务端原子扣次数');
+  const restartSql = fs.readFileSync(path.join(ROOT, 'game_restarts_setup.sql'), 'utf8');
+  ok(restartSql.includes('function public.game_restart_consume'), 'SQL 里有扣次数函数');
+  ok(restartSql.includes("Asia/Shanghai"), 'SQL 按中国时区计算每天');
+  ok(restartSql.includes('security definer'), 'SQL 函数用 security definer 保护表');
 })();
 
 C._setRand(Math.random);

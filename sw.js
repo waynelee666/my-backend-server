@@ -1,6 +1,6 @@
 // TaskFlow Service Worker — 离线缓存 v2
 // 🔧 改这个版本号 → 所有客户端自动更新
-const CACHE = "taskflow-v50";
+const CACHE = "taskflow-v51";
 
 // 需要预缓存的静态资源
 const PRECACHE = [
@@ -9,6 +9,7 @@ const PRECACHE = [
   "/login.html",
   "/pes.html",
   "/gacha.html",
+  "/casino.html",
   "/style.css",
   "/script.js",
   "/auth.js",

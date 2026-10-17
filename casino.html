@@ -72,6 +72,8 @@
   }
   .chip--money { border-color: rgba(251, 191, 36, .38); background: rgba(251, 191, 36, .07); }
   .chip--money b { color: var(--gold); font-variant-numeric: tabular-nums; }
+  .chip--gambles { border-color: rgba(34, 211, 238, .38); background: rgba(34, 211, 238, .07); }
+  .chip--gambles b { color: var(--cyan); font-variant-numeric: tabular-nums; }
   .chip--btn { cursor: pointer; transition: border-color .18s, color .18s, box-shadow .18s; }
   .chip--btn:hover { border-color: var(--line-strong); color: #fff; box-shadow: 0 0 16px rgba(168, 85, 247, .25); }
 
@@ -574,6 +576,7 @@
     <div class="brand">🎰 谁先到 1 万？ <span class="brand__bang">TASKFLOW</span></div>
     <div class="wallet">
       <span class="chip chip--money">资金 <b id="moneyLabel">—</b></span>
+      <span class="chip chip--gambles">赌 <b id="topGambles">0</b> 次</span>
       <button class="chip chip--btn" id="soundBtn" type="button" title="音效开关">🔊</button>
       <button class="chip chip--btn" id="boardBtn" type="button">🏆 排行榜</button>
       <button class="chip chip--btn" id="restartBtn" type="button">↺ 重开</button>
@@ -1969,6 +1972,8 @@
     if (best) best.textContent = fmt(state.best);
     const gambles = $('#lobbyGambles');
     if (gambles) gambles.textContent = fmt(state.gambles);
+    const topGambles = $('#topGambles');
+    if (topGambles) topGambles.textContent = fmt(state.gambles);
 
     // 赌博次数横条：以个人最少纪录为标尺，超过纪录变红
     const gambleBar = $('#lobbyGambleBar');

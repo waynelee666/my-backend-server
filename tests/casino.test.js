@@ -92,6 +92,43 @@ eq(R.target, 10000, '胜利线 10000');
   near(hit.yellow / N, 0.30, 0.005, '黄球掉率 30%');
 })();
 
+/* ================= 2b. 真·球池 ================= */
+(() => {
+  C._setRand(Math.random);
+  const pool = C.makePool();
+  eq(pool.length, 100, '球池正好 100 个球');
+  const cnt = { red: 0, black: 0, yellow: 0 };
+  let bad = 0;
+  pool.forEach(function (c) {
+    if (cnt[c] === undefined) bad += 1;
+    else cnt[c] += 1;
+  });
+  eq(bad, 0, '球池里只有红/黑/黄');
+  eq(cnt.red, 30, '球池红球 30');
+  eq(cnt.black, 40, '球池黑球 40');
+  eq(cnt.yellow, 30, '球池黄球 30');
+
+  const first = C.makePool().join(',');
+  let shuffled = false;
+  for (let i = 0; i < 8; i += 1) {
+    if (C.makePool().join(',') !== first) shuffled = true;
+  }
+  ok(shuffled, '球池每次都会重新洗牌');
+
+  // 从洗好的球池里均匀抓一个球，颜色分布必须还是 30/40/30
+  const N = 100000;
+  let red = 0;
+  let black = 0;
+  for (let i = 0; i < N; i += 1) {
+    const p = C.makePool();
+    const c = p[Math.floor(Math.random() * p.length)];
+    if (c === 'red') red += 1;
+    else if (c === 'black') black += 1;
+  }
+  near(red / N, 0.30, 0.007, '从球池抓球：红 30%');
+  near(black / N, 0.40, 0.007, '从球池抓球：黑 40%');
+})();
+
 /* ================= 3. 干苦力 ================= */
 (() => {
   C._setRand(Math.random);

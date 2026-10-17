@@ -241,6 +241,13 @@
   .labor-btn:hover { border-color: rgba(251, 191, 36, .7); box-shadow: 0 0 60px rgba(251, 191, 36, .22); }
   .labor-btn:active { transform: scale(.96); }
   .labor-btn.is-wipe { animation: wipeShake .12s linear; border-color: var(--danger); box-shadow: 0 0 60px rgba(251, 113, 133, .5); }
+  .labor-btn.is-dig .labor-btn__icon { animation: digSwing .32s ease; }
+  @keyframes digSwing {
+    0% { transform: rotate(0deg) translateY(0); }
+    35% { transform: rotate(-20deg) translateY(-4px); }
+    70% { transform: rotate(9deg) translateY(1px); }
+    100% { transform: rotate(0deg) translateY(0); }
+  }
   @keyframes wipeShake {
     0% { transform: translateX(0); } 25% { transform: translateX(-5px); }
     50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } 100% { transform: translateX(0); }
@@ -263,31 +270,30 @@
   .labor-shell { position: relative; }
 
   /* ============ 摸球 ============ */
-  .ball-stage { display: flex; flex-direction: column; align-items: center; margin: 18px 0 6px; }
-  .drum {
-    position: relative; width: 176px; height: 176px; border-radius: 50%;
-    border: 2px solid rgba(168, 85, 247, .45); overflow: hidden;
-    background:
-      radial-gradient(circle at 50% 45%, rgba(168, 85, 247, .18), transparent 62%),
-      rgba(0, 0, 0, .38);
-    box-shadow: inset 0 0 40px rgba(0, 0, 0, .7), 0 0 30px rgba(168, 85, 247, .14);
+  .ball-stage { display: flex; flex-direction: column; align-items: center; margin: 16px 0 4px; }
+  .pit-wrap { position: relative; width: min(100%, 430px); }
+  #ballCanvas {
+    display: block; width: 100%; height: 236px; border-radius: 24px;
+    touch-action: manipulation;
   }
-  .drum.is-drawing { animation: drumShake .1s linear infinite; }
-  @keyframes drumShake {
-    0% { transform: rotate(0deg) translate(0, 0); }
-    25% { transform: rotate(-1.4deg) translate(-1px, 1px); }
-    50% { transform: rotate(0deg) translate(0, -1px); }
-    75% { transform: rotate(1.4deg) translate(1px, 1px); }
-    100% { transform: rotate(0deg) translate(0, 0); }
+  #ballCanvas.is-shaking { animation: pitShake .1s linear infinite; }
+  @keyframes pitShake {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    25% { transform: translate(-1.5px, 1px) rotate(-.3deg); }
+    50% { transform: translate(1px, -1.5px) rotate(.3deg); }
+    75% { transform: translate(1.5px, 1px) rotate(-.2deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
   }
-  .pit-ball {
-    position: absolute; width: 24px; height: 24px; border-radius: 50%;
-    background: radial-gradient(circle at 32% 28%, #a78bfa, #4c1d95 62%, #2e1065);
-    box-shadow: inset -3px -4px 8px rgba(0, 0, 0, .5), 0 0 6px rgba(168, 85, 247, .3);
-    transform: translate(-50%, -50%);
+  .ball-tray {
+    position: relative; width: 92px; height: 46px; margin-top: 2px;
+    border-radius: 0 0 32px 32px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .015));
+    border: 1px solid rgba(255, 255, 255, .12); border-top: 0;
+    box-shadow: inset 0 -10px 20px rgba(0, 0, 0, .5);
   }
   .drawn-ball {
-    width: 66px; height: 66px; border-radius: 50%; margin-top: -30px;
+    position: absolute; left: 50%; bottom: -8px; margin-left: -31px;
+    width: 62px; height: 62px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 1.5rem; opacity: 0;
     border: 2px solid rgba(255, 255, 255, .28);
@@ -306,50 +312,108 @@
   .bet-actions .btn { flex: 1; }
   .btn--red { background: linear-gradient(135deg, #fb7185, #be123c); box-shadow: 0 6px 22px rgba(244, 63, 94, .28); }
 
-  /* ============ 两信封 ============ */
-  .env-stage { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0 6px; }
+  /* ============ 两信封（3D 拆封） ============ */
+  .env-stage { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 20px 0 6px; }
   .envelope {
-    position: relative; min-height: 148px; border-radius: 16px; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-    padding: 16px; color: var(--text); font-family: inherit;
-    border: 1px solid rgba(255, 255, 255, .12);
-    background: linear-gradient(165deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .015));
-    transition: transform .18s, border-color .18s, box-shadow .18s, opacity .18s;
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 0; border: 0; background: transparent; color: var(--text); font-family: inherit;
+    cursor: pointer; opacity: 1; transition: opacity .2s, transform .2s;
   }
-  .envelope:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--line-strong); box-shadow: 0 12px 30px rgba(168, 85, 247, .2); }
+  .envelope:hover:not(:disabled) { transform: translateY(-2px); }
   .envelope:disabled { cursor: default; }
-  .envelope__icon { font-size: 2.3rem; }
+  .envelope__scene {
+    position: relative; display: block; width: 100%; height: 150px;
+    perspective: 640px;
+  }
+  .envelope__body {
+    position: absolute; left: 8%; right: 8%; top: 26%; bottom: 0; z-index: 3;
+    border-radius: 8px;
+    background: linear-gradient(165deg, #f3e6c8, #d9c49a 55%, #bfa774);
+    border: 1px solid rgba(255, 240, 200, .55);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 10px 24px rgba(0, 0, 0, .4);
+  }
+  .envelope__body::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(150deg, transparent 49.4%, rgba(150, 120, 70, .25) 50%, transparent 50.6%);
+  }
+  .envelope__flap {
+    position: absolute; left: 8%; right: 8%; top: 26%; height: 42%; z-index: 4;
+    border-radius: 8px 8px 0 0;
+    background: linear-gradient(180deg, #f7ecd4, #c9ad78);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    transform-origin: top center;
+    transition: transform .45s cubic-bezier(.3, .1, .3, 1);
+    filter: drop-shadow(0 3px 3px rgba(70, 45, 10, .3));
+  }
+  .envelope__card {
+    position: absolute; left: 14%; right: 14%; top: 16%; bottom: 8%; z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 7px; border: 1px solid #e6d3a8;
+    background: linear-gradient(170deg, #fffdf5, #f4e8c9);
+    color: #6b4a10; font-weight: 900; font-size: 1.15rem;
+    font-variant-numeric: tabular-nums;
+    transform: translateY(26%) scale(.94); opacity: 0;
+    transition: transform .5s cubic-bezier(.2, .9, .3, 1.2), opacity .35s;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .35);
+  }
+  .envelope.is-open .envelope__flap { transform: rotateX(178deg); z-index: 1; }
+  .envelope.is-open .envelope__card { transform: translateY(-16%) scale(1); opacity: 1; z-index: 5; }
+  .envelope__amount { font-size: 1.15rem; font-weight: 900; font-variant-numeric: tabular-nums; }
   .envelope__label { font-size: .82rem; color: var(--muted); }
-  .envelope__amount { font-size: 1.25rem; font-weight: 900; color: var(--gold); font-variant-numeric: tabular-nums; min-height: 1.5em; }
-  .envelope.is-picked { border-color: rgba(251, 191, 36, .65); box-shadow: 0 0 30px rgba(251, 191, 36, .2); }
+  .envelope.is-picked .envelope__label { color: var(--gold); font-weight: 700; }
+  .envelope.is-picked .envelope__card { box-shadow: 0 0 28px rgba(251, 191, 36, .35); }
   .envelope.is-dim { opacity: .45; }
-  .envelope.is-open { background: linear-gradient(165deg, rgba(251, 191, 36, .13), rgba(168, 85, 247, .05)); }
   .env-status { min-height: 56px; margin-top: 14px; text-align: center; font-size: .88rem; line-height: 1.7; color: #d8d0ea; }
   .env-actions, .door-actions {
     display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;
   }
   .env-actions .btn, .door-actions .btn { flex: 1; min-width: 130px; }
 
-  /* ============ 三门 ============ */
+  /* ============ 三门（3D 开门） ============ */
   .doors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0 6px; }
   .door {
-    position: relative; min-height: 158px; border-radius: 14px 14px 10px 10px; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-    color: var(--text); font-family: inherit;
-    border: 1px solid rgba(255, 255, 255, .12);
-    background: linear-gradient(180deg, rgba(168, 85, 247, .10), rgba(0, 0, 0, .28));
-    transition: transform .18s, border-color .18s, box-shadow .18s, opacity .18s;
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px;
+    padding: 0; border: 0; background: transparent; color: var(--text); font-family: inherit;
+    cursor: pointer; transition: transform .18s, opacity .2s;
   }
-  .door:hover:not(:disabled) { transform: translateY(-3px); border-color: var(--line-strong); box-shadow: 0 14px 34px rgba(168, 85, 247, .24); }
   .door:disabled { cursor: default; }
-  .door__face { font-size: 2.7rem; line-height: 1; }
-  .door__num { font-size: .8rem; color: var(--muted); }
+  .door:hover:not(:disabled) { transform: translateY(-3px); }
+  .door__frame {
+    position: relative; display: block; width: 100%; height: 152px;
+    border-radius: 12px 12px 8px 8px; overflow: hidden;
+    background: radial-gradient(circle at 50% 40%, #24123f, #0c0518 70%);
+    border: 1px solid rgba(255, 255, 255, .12);
+    box-shadow: inset 0 -14px 30px rgba(0, 0, 0, .6);
+    perspective: 720px;
+  }
+  .door__behind {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 2.7rem; color: var(--muted);
+  }
+  .door__panel {
+    position: absolute; inset: 0; z-index: 2;
+    display: flex; align-items: center; justify-content: center;
+    background:
+      linear-gradient(100deg, rgba(255, 255, 255, .16), transparent 24%),
+      linear-gradient(170deg, #5b2f8c, #2c1450 58%, #1a0b31);
+    transform-origin: left center;
+    transition: transform .6s cubic-bezier(.3, .1, .25, 1), box-shadow .3s;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1), inset 0 0 30px rgba(0, 0, 0, .45);
+  }
+  .door__panel::before {
+    content: ""; position: absolute; inset: 14px; border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, .13);
+    box-shadow: inset 0 0 18px rgba(0, 0, 0, .35);
+  }
+  .door__num {
+    font-size: 2rem; font-weight: 900; color: rgba(255, 255, 255, .85);
+    text-shadow: 0 0 18px rgba(168, 85, 247, .6);
+  }
   .door__tag { min-height: 1.1em; font-size: .68rem; color: var(--cyan); }
-  .door.is-picked { border-color: rgba(251, 191, 36, .7); box-shadow: 0 0 26px rgba(251, 191, 36, .22); }
+  .door.is-open .door__panel { transform: rotateY(-112deg); box-shadow: -18px 0 30px rgba(0, 0, 0, .65); }
+  .door.is-picked .door__frame { border-color: rgba(251, 191, 36, .75); box-shadow: 0 0 26px rgba(251, 191, 36, .22), inset 0 -14px 30px rgba(0, 0, 0, .6); }
   .door.is-picked .door__tag { color: var(--gold); }
-  .door.is-open { opacity: .72; background: linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(0, 0, 0, .3)); }
-  .door.is-open .door__face { filter: grayscale(.4); }
-  .door.is-prize { border-color: rgba(251, 191, 36, .9); box-shadow: 0 0 40px rgba(251, 191, 36, .4); }
+  .door.is-prize .door__frame { border-color: rgba(251, 191, 36, .9); box-shadow: 0 0 42px rgba(251, 191, 36, .45), inset 0 -14px 30px rgba(0, 0, 0, .6); }
   .door.is-final::after {
     content: "你的"; position: absolute; top: 8px; right: 8px;
     font-size: .6rem; padding: 2px 6px; border-radius: 999px;
@@ -372,20 +436,28 @@
   .tier span { font-size: 1.05rem; font-weight: 800; color: var(--gold); }
   .tier small { font-size: .66rem; color: var(--muted); }
   .coin-stage { display: flex; flex-direction: column; align-items: center; margin-top: 18px; }
-  .coin {
-    width: 84px; height: 84px; border-radius: 50%;
+  .coin-scene {
+    width: 100%; height: 116px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 1.5rem; font-weight: 900; color: #3a2300;
-    background: radial-gradient(circle at 34% 28%, #fef3c7, #fbbf24 52%, #b45309);
-    box-shadow: 0 0 30px rgba(251, 191, 36, .45), inset 0 -6px 12px rgba(120, 53, 15, .45);
-    transition: transform .18s;
+    perspective: 900px;
   }
-  .coin.is-head { background: radial-gradient(circle at 34% 28%, #fde68a, #f59e0b 52%, #7c2d12); }
-  .coin.is-flipping { animation: coinFlip .3s ease-in-out; }
-  @keyframes coinFlip {
-    0% { transform: rotateY(0) translateY(0); }
-    50% { transform: rotateY(180deg) translateY(-14px) scale(1.06); }
-    100% { transform: rotateY(360deg) translateY(0); }
+  .coin3d {
+    position: relative; width: 88px; height: 88px;
+    transform-style: preserve-3d; will-change: transform;
+    transition: transform .3s cubic-bezier(.3, .05, .3, 1);
+  }
+  .coin3d__face {
+    position: absolute; inset: 0; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.7rem; font-weight: 900; color: #3a2300;
+    background: radial-gradient(circle at 34% 28%, #fef3c7, #fbbf24 52%, #b45309);
+    border: 3px solid #fde68a;
+    box-shadow: 0 0 30px rgba(251, 191, 36, .35), inset 0 -8px 14px rgba(120, 53, 15, .5);
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  }
+  .coin3d__face--back {
+    transform: rotateX(180deg);
+    background: radial-gradient(circle at 34% 28%, #fde68a, #f59e0b 52%, #7c2d12);
   }
   .flip-log {
     width: 100%; max-width: 420px; margin-top: 14px;
@@ -398,6 +470,23 @@
   .flip-log:empty { display: none; }
   .flip-line b { color: var(--gold); }
   .flip-result { margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255, 255, 255, .12); }
+
+  /* ============ 特效 ============ */
+  .flash { position: fixed; inset: 0; z-index: 160; pointer-events: none; opacity: 0; }
+  .flash.is-red { animation: flashRed .65s ease-out; }
+  .flash.is-gold { animation: flashGold .9s ease-out; }
+  @keyframes flashRed {
+    0% { opacity: .9; background: radial-gradient(circle, rgba(244, 63, 94, .6), rgba(120, 0, 20, .92)); }
+    100% { opacity: 0; }
+  }
+  @keyframes flashGold {
+    0% { opacity: .8; background: radial-gradient(circle, rgba(251, 191, 36, .55), rgba(120, 70, 0, .85)); }
+    100% { opacity: 0; }
+  }
+  #confetti {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    z-index: 150; pointer-events: none;
+  }
 
   /* ============ 排行榜 ============ */
   .board-list { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
@@ -452,12 +541,12 @@
     .hero { padding-top: 30px; }
     .panel { padding: 16px; }
     .doors { gap: 7px; }
-    .door { min-height: 132px; }
-    .door__face { font-size: 2.1rem; }
+    .door__frame { height: 126px; }
     .tiers { gap: 7px; }
     .tier { padding: 13px 6px; }
     .tier span { font-size: .92rem; }
-    .envelope { min-height: 128px; }
+    .envelope__scene { height: 126px; }
+    #ballCanvas { height: 204px; }
     .topbar { padding-top: 9px; padding-bottom: 9px; justify-content: center; }
     .brand { font-size: .92rem; flex: 1 1 100%; justify-content: center; }
     .wallet { flex: 1 1 100%; justify-content: center; }
@@ -472,6 +561,7 @@
     <div class="brand">🎰 谁先到 1 万？ <span class="brand__bang">TASKFLOW</span></div>
     <div class="wallet">
       <span class="chip chip--money">资金 <b id="moneyLabel">—</b></span>
+      <button class="chip chip--btn" id="soundBtn" type="button" title="音效开关">🔊</button>
       <button class="chip chip--btn" id="boardBtn" type="button">🏆 排行榜</button>
       <button class="chip chip--btn" id="restartBtn" type="button">↺ 重开</button>
     </div>
@@ -586,8 +676,12 @@
     <div class="panel">
       <p class="rules">池子里一共 100 个球：<b class="c-red">30 个红球</b>，其余都是黑球或黄球，<b>各有多少不公开</b>。押红或押黑，押中拿回 <b class="c-gold">4 倍总回报</b>（押 100 拿回 400）；押错本金归零。</p>
       <div class="ball-stage">
-        <div class="drum" id="ballDrum"></div>
-        <div class="drawn-ball" id="drawnBall"></div>
+        <div class="pit-wrap">
+          <canvas id="ballCanvas" aria-label="抽球机：100 颗球正在滚动"></canvas>
+        </div>
+        <div class="ball-tray">
+          <div class="drawn-ball" id="drawnBall"></div>
+        </div>
       </div>
       <div class="ball-result" id="ballResult" aria-live="polite"></div>
       <div class="bet-row">
@@ -619,14 +713,20 @@
       <p class="rules">交 <b class="c-gold">100 元</b> 参与。两个信封里，一个的金额是另一个的 <b>2 倍</b>。先选一个打开看金额，然后决定换不换 —— 最终那个信封里的钱归你。</p>
       <div class="env-stage">
         <button class="envelope" id="env0" type="button" disabled>
-          <span class="envelope__icon">✉️</span>
+          <span class="envelope__scene">
+            <span class="envelope__flap"></span>
+            <span class="envelope__card"><span class="envelope__amount" id="env0Amount"></span></span>
+            <span class="envelope__body"></span>
+          </span>
           <span class="envelope__label">信封 A</span>
-          <span class="envelope__amount" id="env0Amount"></span>
         </button>
         <button class="envelope" id="env1" type="button" disabled>
-          <span class="envelope__icon">✉️</span>
+          <span class="envelope__scene">
+            <span class="envelope__flap"></span>
+            <span class="envelope__card"><span class="envelope__amount" id="env1Amount"></span></span>
+            <span class="envelope__body"></span>
+          </span>
           <span class="envelope__label">信封 B</span>
-          <span class="envelope__amount" id="env1Amount"></span>
         </button>
       </div>
       <div class="env-status" id="envStatus" aria-live="polite"></div>
@@ -644,13 +744,25 @@
       <p class="rules">三扇门，只有一扇后面有奖励。押一笔钱选一扇门，庄家会打开另外两扇中<b>没有奖励</b>的一扇，然后你可以保持或更换。押中押注翻倍，押错押金归零。</p>
       <div class="doors" id="doors">
         <button class="door" data-door="0" type="button">
-          <span class="door__face">🚪</span><span class="door__num">1 号门</span><span class="door__tag"></span>
+          <span class="door__frame">
+            <span class="door__behind"></span>
+            <span class="door__panel"><span class="door__num">1</span></span>
+          </span>
+          <span class="door__tag"></span>
         </button>
         <button class="door" data-door="1" type="button">
-          <span class="door__face">🚪</span><span class="door__num">2 号门</span><span class="door__tag"></span>
+          <span class="door__frame">
+            <span class="door__behind"></span>
+            <span class="door__panel"><span class="door__num">2</span></span>
+          </span>
+          <span class="door__tag"></span>
         </button>
         <button class="door" data-door="2" type="button">
-          <span class="door__face">🚪</span><span class="door__num">3 号门</span><span class="door__tag"></span>
+          <span class="door__frame">
+            <span class="door__behind"></span>
+            <span class="door__panel"><span class="door__num">3</span></span>
+          </span>
+          <span class="door__tag"></span>
         </button>
       </div>
       <div class="door-status" id="doorStatus" aria-live="polite"></div>
@@ -690,7 +802,12 @@
         </button>
       </div>
       <div class="coin-stage">
-        <div class="coin" id="coin"><span id="coinFace">正</span></div>
+        <div class="coin-scene">
+          <div class="coin3d" id="coin3d">
+            <div class="coin3d__face coin3d__face--front">正</div>
+            <div class="coin3d__face coin3d__face--back">反</div>
+          </div>
+        </div>
         <div class="flip-log" id="flipLog" aria-live="polite"></div>
       </div>
     </div>
@@ -723,6 +840,8 @@
   </div>
 </div>
 
+<canvas id="confetti" aria-hidden="true"></canvas>
+<div class="flash" id="flash" aria-hidden="true"></div>
 <div class="toast" id="toast"></div>
 
 <script src="supabase.min.js"></script>
@@ -771,6 +890,23 @@
     if (r < RATES.balls.red) return 'red';
     if (r < RATES.balls.red + RATES.balls.black) return 'black';
     return 'yellow';
+  }
+
+  // 真·球池：先按 30/40/30 装好 100 个球再洗牌，抽的时候随机抓一个球，
+  // 而不是先摇颜色再假装抓球 —— 这样动画和概率是同一件事。
+  function makePool() {
+    const pool = [];
+    let i;
+    for (i = 0; i < RATES.balls.red; i += 1) pool.push('red');
+    for (i = 0; i < RATES.balls.black; i += 1) pool.push('black');
+    for (i = 0; i < RATES.balls.yellow; i += 1) pool.push('yellow');
+    for (i = pool.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(rnd() * (i + 1));
+      const t = pool[i];
+      pool[i] = pool[j];
+      pool[j] = t;
+    }
+    return pool;
   }
 
   function rollEnvelopeOther(shown) {
@@ -936,6 +1072,562 @@
   }
 
   /* ============================================================
+     音效 —— 全部用 WebAudio 现场合成，不依赖任何音频文件
+     ============================================================ */
+  const Sfx = (() => {
+    let ctx = null;
+    let noiseBuf = null;
+    let enabled = true;
+    try { enabled = localStorage.getItem('tf_casino_sound') !== '0'; } catch (e) { /* 隐私模式 */ }
+
+    function ac() {
+      if (!enabled) return null;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      if (!ctx) {
+        try { ctx = new AC(); } catch (e) { return null; }
+      }
+      if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) { /* ignore */ } }
+      return ctx;
+    }
+
+    function noise(a) {
+      if (noiseBuf) return noiseBuf;
+      const len = Math.floor(a.sampleRate * 0.7);
+      noiseBuf = a.createBuffer(1, len, a.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < len; i += 1) d[i] = Math.random() * 2 - 1;
+      return noiseBuf;
+    }
+
+    function tone(freq, dur, type, vol, slideTo, delay) {
+      const a = ac();
+      if (!a) return;
+      const t0 = a.currentTime + (delay || 0);
+      const o = a.createOscillator();
+      const g = a.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, t0);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(1, slideTo), t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol || 0.04), t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g);
+      g.connect(a.destination);
+      o.start(t0);
+      o.stop(t0 + dur + 0.03);
+    }
+
+    function burst(dur, vol, type, freq, delay) {
+      const a = ac();
+      if (!a) return;
+      const t0 = a.currentTime + (delay || 0);
+      const src = a.createBufferSource();
+      src.buffer = noise(a);
+      const f = a.createBiquadFilter();
+      f.type = type || 'lowpass';
+      f.frequency.setValueAtTime(freq || 900, t0);
+      const g = a.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol || 0.04), t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      src.connect(f);
+      f.connect(g);
+      g.connect(a.destination);
+      src.start(t0);
+      src.stop(t0 + dur + 0.03);
+    }
+
+    return {
+      unlock: function () { ac(); },
+      isEnabled: function () { return enabled; },
+      setEnabled: function (v) {
+        enabled = !!v;
+        try { localStorage.setItem('tf_casino_sound', enabled ? '1' : '0'); } catch (e) { /* ignore */ }
+        if (enabled) ac();
+        return enabled;
+      },
+      click: function () { tone(880, 0.04, 'square', 0.022); },
+      chip: function () { tone(1180, 0.05, 'triangle', 0.035); tone(1560, 0.045, 'triangle', 0.022, 0, 0.04); },
+      ballShake: function () { burst(0.6, 0.055, 'bandpass', 1400); tone(90, 0.5, 'sine', 0.018, 60); },
+      ballLift: function () { tone(360, 0.34, 'sine', 0.04, 900); burst(0.2, 0.025, 'highpass', 1800, 0.1); },
+      ballDrop: function () { tone(250, 0.16, 'sine', 0.09, 90); burst(0.07, 0.045, 'lowpass', 500); },
+      win: function () {
+        [523, 659, 784, 1047].forEach(function (f, i) { tone(f, 0.16, 'sine', 0.06, 0, i * 0.08); });
+      },
+      bigWin: function () {
+        [523, 659, 784, 1047, 1319].forEach(function (f, i) { tone(f, 0.2, 'sine', 0.07, 0, i * 0.09); });
+        burst(0.5, 0.05, 'highpass', 2200, 0.2);
+      },
+      lose: function () {
+        tone(240, 0.3, 'sawtooth', 0.03, 110);
+        tone(160, 0.4, 'sine', 0.045, 80, 0.04);
+      },
+      coinFlip: function (quick) { tone(quick ? 1800 : 1500, 0.03, 'square', 0.016, 1100); },
+      coinLand: function () { tone(920, 0.16, 'triangle', 0.045); tone(1380, 0.12, 'sine', 0.028, 0, 0.02); },
+      door: function () { tone(150, 0.5, 'sawtooth', 0.028, 70); burst(0.4, 0.018, 'lowpass', 380); },
+      envelope: function () { burst(0.2, 0.045, 'highpass', 2600); tone(600, 0.08, 'triangle', 0.026, 900, 0.05); },
+      gate: function () { tone(70, 0.9, 'sine', 0.05, 55); tone(140, 0.5, 'sine', 0.026, 90, 0.1); },
+      jackpot: function () {
+        [523, 659, 784, 1047, 1319, 1568].forEach(function (f, i) { tone(f, 0.22, 'sine', 0.07, 0, i * 0.1); });
+        burst(0.8, 0.045, 'highpass', 2600, 0.3);
+      }
+    };
+  })();
+
+  function haptic(ms) {
+    try {
+      if (navigator.vibrate) navigator.vibrate(ms || 10);
+    } catch (e) { /* 桌面上没有振动 */ }
+  }
+
+  function flashScreen(kind) {
+    const el = $('#flash');
+    if (!el) return;
+    el.className = 'flash';
+    void el.offsetWidth;
+    el.classList.add(kind === 'red' ? 'is-red' : 'is-gold');
+    setTimeout(function () { el.className = 'flash'; }, 1050);
+  }
+
+  function celebrate() {
+    const cv = $('#confetti');
+    if (!cv) return;
+    const c = cv.getContext('2d');
+    if (!c) return;
+    const ratio = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(window.innerWidth * ratio);
+    cv.height = Math.round(window.innerHeight * ratio);
+    const colors = ['#fbbf24', '#a855f7', '#ec4899', '#22d3ee', '#fcd34d', '#f472b6'];
+    const parts = [];
+    for (let i = 0; i < 170; i += 1) {
+      parts.push({
+        x: rnd() * window.innerWidth,
+        y: -20 - rnd() * window.innerHeight * 0.45,
+        vx: (rnd() - 0.5) * 2.4,
+        vy: 2 + rnd() * 3.4,
+        w: 4 + rnd() * 6,
+        h: 7 + rnd() * 8,
+        rot: rnd() * Math.PI * 2,
+        vr: (rnd() - 0.5) * 0.3,
+        c: colors[Math.floor(rnd() * colors.length)]
+      });
+    }
+    const start = performance.now();
+    function frame(t) {
+      c.clearRect(0, 0, cv.width, cv.height);
+      c.save();
+      c.scale(ratio, ratio);
+      for (let i = 0; i < parts.length; i += 1) {
+        const p = parts[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.035;
+        p.rot += p.vr;
+        c.save();
+        c.translate(p.x, p.y);
+        c.rotate(p.rot);
+        c.fillStyle = p.c;
+        c.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        c.restore();
+      }
+      c.restore();
+      if (t - start < 4200) requestAnimationFrame(frame);
+      else c.clearRect(0, 0, cv.width, cv.height);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* ============================================================
+     球池物理（Canvas）：重、碰撞、气泵、出口
+     ============================================================ */
+  const Pit = (() => {
+    const R = 8.5;
+    const COUNT = RATES.balls.red + RATES.balls.black + RATES.balls.yellow;
+    const MAX_DT = 2.2;
+    let canvas = null;
+    let ctx = null;
+    let W = 380;
+    let H = 236;
+    let dpr = 1;
+    let bounds = { l: 18, r: 362, t: 18, b: 218 };
+    let balls = [];
+    let sprite = null;
+    let raf = 0;
+    let running = false;
+    let lastT = 0;
+    let phase = 'idle'; // idle | shake | lift
+    let shakeEnd = 0;
+    let flying = null;
+    let timers = [];
+    let listening = false;
+    let reduce = false;
+    try {
+      reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (e) { /* ignore */ }
+
+    function later(fn, ms) {
+      const id = setTimeout(fn, ms);
+      timers.push(id);
+      return id;
+    }
+    function clearTimers() {
+      timers.forEach(function (id) { clearTimeout(id); });
+      timers = [];
+    }
+
+    function newBall() {
+      return {
+        x: bounds.l + rnd() * Math.max(1, bounds.r - bounds.l),
+        y: bounds.t + rnd() * Math.max(1, bounds.b - bounds.t),
+        vx: (rnd() - 0.5) * 2,
+        vy: 0,
+        color: 'red',
+        r: R
+      };
+    }
+
+    function ensureFull() {
+      while (balls.length < COUNT) balls.push(newBall());
+      if (balls.length > COUNT) balls.length = COUNT;
+    }
+
+    function rr(c, x, y, w, h, r) {
+      c.beginPath();
+      c.moveTo(x + r, y);
+      c.arcTo(x + w, y, x + w, y + h, r);
+      c.arcTo(x + w, y + h, x, y + h, r);
+      c.arcTo(x, y + h, x, y, r);
+      c.arcTo(x, y, x + w, y, r);
+      c.closePath();
+    }
+
+    function makeSprite() {
+      if (!document.createElement) return;
+      const px = Math.max(2, Math.ceil(R * 2 * dpr));
+      sprite = document.createElement('canvas');
+      sprite.width = px;
+      sprite.height = px;
+      const c = sprite.getContext('2d');
+      const cx = px / 2;
+      const rad = px / 2;
+      const g = c.createRadialGradient(
+        cx - rad * 0.36, cx - rad * 0.4, rad * 0.08,
+        cx, cx, rad
+      );
+      g.addColorStop(0, '#f3eeff');
+      g.addColorStop(0.22, '#cbb8f4');
+      g.addColorStop(0.55, '#8a63d2');
+      g.addColorStop(0.82, '#4c2a8f');
+      g.addColorStop(1, '#241046');
+      c.beginPath();
+      c.arc(cx, cx, rad, 0, Math.PI * 2);
+      c.fillStyle = g;
+      c.fill();
+      c.beginPath();
+      c.arc(cx - rad * 0.32, cx - rad * 0.38, rad * 0.2, 0, Math.PI * 2);
+      c.fillStyle = 'rgba(255,255,255,.72)';
+      c.fill();
+      c.beginPath();
+      c.arc(cx + rad * 0.34, cx + rad * 0.4, rad * 0.5, 0, Math.PI * 2);
+      c.fillStyle = 'rgba(20,6,45,.16)';
+      c.fill();
+    }
+
+    function resize() {
+      if (!canvas || !ctx) return;
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.round(rect.width) || 380;
+      const h = Math.round(rect.height) || 236;
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      W = Math.max(240, w);
+      H = Math.max(170, h);
+      if (canvas.width !== Math.round(W * dpr) || canvas.height !== Math.round(H * dpr)) {
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+      }
+      const pad = 12;
+      bounds = { l: pad + R, r: W - pad - R, t: pad + R, b: H - pad - R };
+      for (let i = 0; i < balls.length; i += 1) {
+        const b = balls[i];
+        b.x = Math.min(bounds.r, Math.max(bounds.l, b.x));
+        b.y = Math.min(bounds.b, Math.max(bounds.t, b.y));
+      }
+      makeSprite();
+      draw();
+    }
+
+    function drawDrum() {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, 'rgba(30,16,58,.94)');
+      g.addColorStop(0.55, 'rgba(16,7,32,.96)');
+      g.addColorStop(1, 'rgba(7,2,16,.98)');
+      rr(ctx, 3, 3, W - 6, H - 6, 26);
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(168,85,247,.5)';
+      ctx.stroke();
+
+      // 内壁阴影
+      ctx.save();
+      rr(ctx, 3, 3, W - 6, H - 6, 26);
+      ctx.clip();
+      const v = ctx.createRadialGradient(W / 2, H * 0.42, H * 0.1, W / 2, H * 0.45, H * 0.85);
+      v.addColorStop(0, 'rgba(168,85,247,.08)');
+      v.addColorStop(1, 'rgba(0,0,0,.55)');
+      ctx.fillStyle = v;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+
+      // 顶部出口
+      rr(ctx, W / 2 - 30, -6, 60, 20, 9);
+      ctx.fillStyle = 'rgba(6,2,14,1)';
+      ctx.fill();
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(251,191,36,.55)';
+      ctx.stroke();
+    }
+
+    function drawGlass() {
+      ctx.save();
+      rr(ctx, 3, 3, W - 6, H - 6, 26);
+      ctx.clip();
+      const g = ctx.createLinearGradient(0, 0, W, H);
+      g.addColorStop(0, 'rgba(255,255,255,.055)');
+      g.addColorStop(0.4, 'rgba(255,255,255,.012)');
+      g.addColorStop(1, 'rgba(255,255,255,.04)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      ctx.beginPath();
+      ctx.ellipse(W * 0.32, H * 0.07, W * 0.26, 16, -0.22, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,.05)';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawBallAt(x, y, glow) {
+      if (!sprite) return;
+      if (glow) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, R + 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(251,191,36,.18)';
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.drawImage(sprite, x - R, y - R, R * 2, R * 2);
+    }
+
+    function drawFlying() {
+      if (!flying) return;
+      const p = flying.t < 1 ? flying.t : 1;
+      const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      const x = flying.x0 + (W / 2 - flying.x0) * e;
+      const y = flying.y0 + (6 - flying.y0) * e - Math.sin(e * Math.PI) * 22;
+      drawBallAt(x, y, true);
+      // 拖尾
+      ctx.beginPath();
+      ctx.moveTo(flying.x0, flying.y0);
+      ctx.quadraticCurveTo(x, y, x, y);
+      ctx.strokeStyle = 'rgba(251,191,36,.14)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function draw() {
+      if (!ctx) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+      drawDrum();
+      for (let i = 0; i < balls.length; i += 1) {
+        drawBallAt(balls[i].x, balls[i].y, false);
+      }
+      drawFlying();
+      drawGlass();
+    }
+
+    function step(dt) {
+      const now = performance.now();
+      const shaking = phase === 'shake' && now < shakeEnd;
+      const g = 0.5 * dt;
+      const damp = Math.pow(0.993, dt);
+      let i;
+      let j;
+      for (i = 0; i < balls.length; i += 1) {
+        const b = balls[i];
+        if (shaking && rnd() < 0.12) {
+          b.vy -= (2.4 + rnd() * 3.2) * dt;
+          b.vx += (rnd() - 0.5) * 2.4 * dt;
+        }
+        b.vy += g;
+        b.vx *= damp;
+        b.vy *= damp;
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+        if (b.x < bounds.l) { b.x = bounds.l; b.vx = Math.abs(b.vx) * 0.55; }
+        else if (b.x > bounds.r) { b.x = bounds.r; b.vx = -Math.abs(b.vx) * 0.55; }
+        if (b.y < bounds.t) { b.y = bounds.t; b.vy = Math.abs(b.vy) * 0.4; }
+        else if (b.y > bounds.b) {
+          b.y = bounds.b;
+          if (b.vy > 0.25) b.vy = -b.vy * 0.34;
+          else b.vy = 0;
+          b.vx *= 0.93;
+        }
+      }
+      const min = R * 2;
+      for (i = 0; i < balls.length; i += 1) {
+        const a = balls[i];
+        for (j = i + 1; j < balls.length; j += 1) {
+          const b = balls[j];
+          let dx = b.x - a.x;
+          let dy = b.y - a.y;
+          if (dx > min || dx < -min || dy > min || dy < -min) continue;
+          const d2 = dx * dx + dy * dy;
+          if (d2 >= min * min) continue;
+          if (d2 < 0.0001) {
+            dx = (rnd() - 0.5) * 0.4;
+            dy = (rnd() - 0.5) * 0.4;
+          }
+          const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+          const nx = dx / d;
+          const ny = dy / d;
+          const overlap = (min - d) / 2;
+          a.x -= nx * overlap;
+          a.y -= ny * overlap;
+          b.x += nx * overlap;
+          b.y += ny * overlap;
+          const rel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+          if (rel < 0) {
+            const imp = -(1 + 0.32) * rel / 2;
+            a.vx -= imp * nx;
+            a.vy -= imp * ny;
+            b.vx += imp * nx;
+            b.vy += imp * ny;
+          }
+        }
+      }
+      // 碰撞可能把球挤出边界，收一下
+      for (i = 0; i < balls.length; i += 1) {
+        const b = balls[i];
+        if (b.x < bounds.l) b.x = bounds.l;
+        else if (b.x > bounds.r) b.x = bounds.r;
+        if (b.y < bounds.t) b.y = bounds.t;
+        else if (b.y > bounds.b) b.y = bounds.b;
+      }
+    }
+
+    function loop(t) {
+      if (!running) return;
+      const dt = Math.min(MAX_DT, lastT ? (t - lastT) / 16.667 : 1) || 1;
+      lastT = t;
+      if (flying) {
+        flying.t += dt / 34;
+        if (flying.t >= 1) flying.t = 1;
+      }
+      step(dt);
+      draw();
+      raf = requestAnimationFrame(loop);
+    }
+
+    function start() {
+      if (running) return;
+      running = true;
+      lastT = 0;
+      raf = requestAnimationFrame(loop);
+    }
+
+    function stop() {
+      running = false;
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+    }
+
+    function spawn() {
+      balls = [];
+      for (let i = 0; i < COUNT; i += 1) balls.push(newBall());
+      for (let k = 0; k < 90; k += 1) step(1);
+      draw();
+    }
+
+    function mount(el) {
+      if (el) canvas = el;
+      if (!canvas) return;
+      ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      resize();
+      if (!balls.length) spawn();
+      start();
+      if (!listening) {
+        listening = true;
+        window.addEventListener('resize', function () {
+          if (running) resize();
+        });
+      }
+    }
+
+    function reset() {
+      if (phase !== 'idle') return;
+      clearTimers();
+      flying = null;
+      if (canvas) canvas.classList.remove('is-shaking');
+      if (!ctx) return;
+      ensureFull();
+      draw();
+    }
+
+    function isIdle() {
+      return phase === 'idle';
+    }
+
+    function beginDraw(cb) {
+      if (phase !== 'idle') return false;
+      ensureFull();
+      const pool = makePool();
+      for (let i = 0; i < balls.length && i < pool.length; i += 1) balls[i].color = pool[i];
+
+      const idx = randInt(0, balls.length - 1);
+      const picked = balls[idx];
+      const color = picked.color;
+
+      if (reduce) {
+        balls.splice(idx, 1);
+        later(function () { phase = 'idle'; if (cb) cb(color); }, 260);
+        return true;
+      }
+
+      phase = 'shake';
+      shakeEnd = performance.now() + 700;
+      if (canvas) canvas.classList.add('is-shaking');
+      Sfx.ballShake();
+
+      later(function () {
+        if (canvas) canvas.classList.remove('is-shaking');
+        const at = balls.indexOf(picked);
+        if (at >= 0) balls.splice(at, 1);
+        flying = { x0: picked.x, y0: picked.y, t: 0 };
+        phase = 'lift';
+        Sfx.ballLift();
+        later(function () {
+          flying = null;
+          phase = 'idle';
+          Sfx.ballDrop();
+          if (cb) cb(color);
+        }, 600);
+      }, 700);
+      return true;
+    }
+
+    return {
+      mount: mount,
+      reset: reset,
+      isIdle: isIdle,
+      beginDraw: beginDraw,
+      stop: stop
+    };
+  })();
+
+  /* ============================================================
      弹窗队列（一次只显示一个，按顺序排队）
      ============================================================ */
   let modalOpen = false;
@@ -997,6 +1689,9 @@
       state.celebrated = true;
       state.wins += 1;
       save();
+      Sfx.jackpot();
+      flashScreen('gold');
+      celebrate();
       queueModal({
         icon: '🏆',
         title: '你赢了！',
@@ -1010,6 +1705,7 @@
   }
 
   function openGate() {
+    Sfx.gate();
     queueModal({
       icon: '🎲',
       title: '1000 元关卡',
@@ -1031,12 +1727,17 @@
       state.money = 0;
       icon = '💀';
       msg = '<b class="c-danger">全部清零。</b>你回到了起点，去干苦力重新攒吧。';
+      Sfx.lose();
+      flashScreen('red');
     } else if (r === 'bonus') {
       state.money += RATES.gate.bonusAmount;
       icon = '💎';
       msg = '<b class="c-gold">白拿 ' + fmt(RATES.gate.bonusAmount) + ' 元！</b>';
+      Sfx.bigWin();
+      flashScreen('gold');
     } else {
       msg = '什么都没发生，资金保持原样。';
+      Sfx.click();
     }
 
     setBest();
@@ -1086,9 +1787,10 @@
       const el = document.getElementById('screen-' + n);
       if (el) el.hidden = (n !== name);
     });
+    if (name !== 'balls') Pit.stop();
     if (name === 'lobby') renderLobby();
     if (name === 'labor') renderLabor();
-    if (name === 'balls') resetBalls();
+    if (name === 'balls') { resetBalls(); Pit.mount($('#ballCanvas')); }
     if (name === 'envelope') renderEnvelope();
     if (name === 'doors') renderDoors();
     if (name === 'petersburg') resetPetersburg();
@@ -1096,11 +1798,63 @@
     renderMoney();
   }
 
-  function renderMoney() {
+  /* 资金数字滚动：下注、派彩、清零都有数钱的感觉 */
+  let shownMoney = 0;
+  let moneyRaf = 0;
+  let moneyGen = 0;
+  let moneyFallback = 0;
+
+  function paintMoney(v) {
     const label = $('#moneyLabel');
-    if (label) label.textContent = state.started ? fmt(state.money) + ' 元' : '—';
+    if (label) label.textContent = state.started ? fmt(v) + ' 元' : '—';
     const lm = $('#lobbyMoney');
-    if (lm) lm.textContent = fmt(state.money);
+    if (lm) lm.textContent = fmt(v);
+  }
+
+  function animateMoney(target) {
+    if (!state.started) {
+      shownMoney = 0;
+      paintMoney(0);
+      return;
+    }
+    if (shownMoney === target) {
+      paintMoney(target);
+      return;
+    }
+    const from = shownMoney;
+    const t0 = performance.now();
+    const dur = Math.min(650, 200 + Math.abs(target - from) * 1.2);
+    const gen = ++moneyGen;
+    if (moneyRaf) cancelAnimationFrame(moneyRaf);
+    if (moneyFallback) clearTimeout(moneyFallback);
+    function tick(t) {
+      if (gen !== moneyGen) return;
+      const p = Math.min(1, Math.max(0, (t - t0) / dur));
+      const e = 1 - Math.pow(1 - p, 3);
+      const v = Math.round(from + (target - from) * e);
+      shownMoney = v;
+      paintMoney(v);
+      if (p < 1) {
+        moneyRaf = requestAnimationFrame(tick);
+      } else {
+        shownMoney = target;
+        paintMoney(target);
+        moneyRaf = 0;
+      }
+    }
+    moneyRaf = requestAnimationFrame(tick);
+    // 后台标签页 rAF 会被挂起；兜底保证数字最终一定对
+    moneyFallback = setTimeout(function () {
+      if (gen !== moneyGen) return;
+      if (moneyRaf) cancelAnimationFrame(moneyRaf);
+      moneyRaf = 0;
+      shownMoney = target;
+      paintMoney(target);
+    }, dur + 150);
+  }
+
+  function renderMoney() {
+    animateMoney(state.money);
     const gap = $('#lobbyGap');
     if (gap) gap.textContent = fmt(Math.max(0, RATES.target - state.money));
     const best = $('#lobbyBest');
@@ -1161,6 +1915,8 @@
       laborBusy = true;
       state.money = 0;
       setBest();
+      Sfx.lose();
+      flashScreen('red');
       save();
       renderMoney();
       renderLabor();
@@ -1183,6 +1939,12 @@
 
     state.money += roll.gain;
     setBest();
+    Sfx.click();
+    const btn = $('#laborBtn');
+    btn.classList.remove('is-dig');
+    void btn.offsetWidth;
+    btn.classList.add('is-dig');
+    setTimeout(function () { btn.classList.remove('is-dig'); }, 340);
     save();
     renderMoney();
     renderLabor();
@@ -1196,31 +1958,17 @@
      ============================================================ */
   let ballBusy = false;
 
-  const PIT_POS = [
-    [18, 26], [38, 15], [62, 19], [81, 31], [25, 45], [50, 38], [73, 49],
-    [15, 64], [39, 63], [64, 67], [84, 60], [29, 81], [53, 84], [76, 80]
-  ];
-
-  function buildPit() {
-    const drum = $('#ballDrum');
-    if (!drum || drum.childElementCount) return;
-    PIT_POS.forEach(function (p) {
-      const b = document.createElement('span');
-      b.className = 'pit-ball';
-      b.style.left = p[0] + '%';
-      b.style.top = p[1] + '%';
-      drum.appendChild(b);
-    });
-  }
-
   function resetBalls() {
-    buildPit();
-    ballBusy = false;
-    $('#ballDrum').classList.remove('is-drawing');
-    const ball = $('#drawnBall');
-    ball.className = 'drawn-ball';
-    $('#ballResult').textContent = '';
-    setBallButtons(true);
+    const busy = ballBusy || !Pit.isIdle();
+    Pit.reset();
+    if (!busy) {
+      ballBusy = false;
+      const ball = $('#drawnBall');
+      if (ball) ball.className = 'drawn-ball';
+      const res = $('#ballResult');
+      if (res) res.textContent = '';
+    }
+    setBallButtons(!busy);
   }
 
   function setBallButtons(on) {
@@ -1250,13 +1998,13 @@
 
   function playBalls(choice) {
     if (ballBusy) return;
+    if (!Pit.isIdle()) { toast('球还在管道里，稍等一下'); return; }
     const stake = readBet('ballBet', RATES.balls.maxBet);
     if (!stake) return;
 
     ballBusy = true;
     setBallButtons(false);
     const prev = state.money;
-    const color = rollBall();
 
     state.money -= stake;
     state.plays += 1;
@@ -1266,24 +2014,27 @@
     const ball = $('#drawnBall');
     ball.className = 'drawn-ball';
     $('#ballResult').textContent = '';
-    $('#ballDrum').classList.add('is-drawing');
+    Sfx.chip();
 
-    setTimeout(function () {
+    // 球池里真的抓一个球：颜色在装球时就定好了
+    Pit.beginDraw(function (color) {
       const won = color === choice;
       const back = settleBalls(stake, choice, color);
       state.money += back;
       setBest();
-      $('#ballDrum').classList.remove('is-drawing');
+      haptic(14);
 
       ball.classList.add('is-revealed', 'is-' + color);
       revealBall(color, choice, stake, won);
+      if (won) { Sfx.win(); flashScreen('gold'); }
+      else { Sfx.lose(); }
 
       save();
       renderMoney();
       ballBusy = false;
       setBallButtons(true);
       checkMilestones(prev);
-    }, 950);
+    });
   }
 
   function revealBall(color, choice, stake, won) {
@@ -1400,6 +2151,7 @@
       toast('资金不足 100 元，玩不了这个');
       return;
     }
+    Sfx.chip();
     env.prevMoney = state.money;
     state.money -= RATES.envelope.fee;
     save();
@@ -1414,6 +2166,8 @@
 
   function envelopePick(idx) {
     if (env.phase !== 'pick') return;
+    Sfx.envelope();
+    haptic(8);
     env.picked = idx;
     env.shown = randInt(RATES.envelope.min, RATES.envelope.max);
     env.other = rollEnvelopeOther(env.shown);
@@ -1425,9 +2179,12 @@
     if (env.phase !== 'decide') return;
     env.final = swap ? env.other : env.shown;
     env.phase = 'done';
+    Sfx.envelope();
     state.money += env.final;
     state.plays += 1;
     setBest();
+    if (env.final - RATES.envelope.fee >= 0) { Sfx.win(); flashScreen('gold'); }
+    else { Sfx.lose(); }
     save();
     renderMoney();
     renderEnvelope();
@@ -1446,9 +2203,10 @@
     actions.innerHTML = '';
 
     els.forEach(function (el, i) {
-      el.className = 'door';
+      el.classList.remove('is-picked', 'is-open', 'is-prize', 'is-final');
       el.disabled = true;
-      el.querySelector('.door__face').textContent = '🚪';
+      el.querySelector('.door__behind').textContent = '';
+      el.querySelector('.door__num').textContent = String(i + 1);
       el.querySelector('.door__tag').textContent = '';
       if (door.phase === 'idle') {
         el.disabled = false;
@@ -1460,7 +2218,7 @@
       }
       if (i === door.opened) {
         el.classList.add('is-open');
-        el.querySelector('.door__face').textContent = '🐐';
+        el.querySelector('.door__behind').textContent = '🐐';
         el.querySelector('.door__tag').textContent = '空的';
       }
     });
@@ -1491,15 +2249,15 @@
 
     // done
     const prizeEl = els[door.prize];
-    prizeEl.classList.add('is-prize');
-    prizeEl.querySelector('.door__face').textContent = '💰';
+    prizeEl.classList.add('is-prize', 'is-open');
+    prizeEl.querySelector('.door__behind').textContent = '💰';
     prizeEl.querySelector('.door__tag').textContent = '奖励在这';
 
     const finalEl = els[door.finalPick];
     finalEl.classList.add('is-final');
     if (door.finalPick !== door.prize) {
       finalEl.classList.add('is-open');
-      finalEl.querySelector('.door__face').textContent = '❌';
+      finalEl.querySelector('.door__behind').textContent = '❌';
       finalEl.querySelector('.door__tag').textContent = '你的门';
     }
 
@@ -1534,6 +2292,7 @@
     const bet = readBet('doorBet', RATES.doors.maxBet);
     if (!bet) return;
 
+    Sfx.chip();
     door.prevMoney = state.money;
     state.money -= bet;
     save();
@@ -1548,6 +2307,8 @@
     });
     door.opened = candidates[randInt(0, candidates.length - 1)];
     door.phase = 'decide';
+    Sfx.door();
+    haptic(10);
     renderDoors();
   }
 
@@ -1567,6 +2328,9 @@
     state.plays += 1;
     setBest();
     door.phase = 'done';
+    Sfx.door();
+    if (door.won) { Sfx.win(); flashScreen('gold'); }
+    else { Sfx.lose(); }
     save();
     renderMoney();
     renderDoors();
@@ -1578,12 +2342,18 @@
      ============================================================ */
   let petersburgBusy = false;
 
+  let coinRot = 0;
+
   function resetPetersburg() {
     petersburgBusy = false;
     $('#flipLog').innerHTML = '';
-    const coin = $('#coin');
-    coin.className = 'coin';
-    $('#coinFace').textContent = '正';
+    const coin = $('#coin3d');
+    if (!coin) return;
+    coinRot = 0;
+    coin.style.transition = 'none';
+    coin.style.transform = 'rotateX(0deg)';
+    void coin.offsetWidth;
+    coin.style.transition = '';
   }
 
   function playPetersburg(idx) {
@@ -1609,18 +2379,23 @@
   }
 
   function animateFlip(seq, i, tier, res, prev) {
-    const coin = $('#coin');
+    const coin = $('#coin3d');
     const log = $('#flipLog');
-    const delay = seq.length > 12 ? 90 : 300;
+    const quick = seq.length > 12;
+    const delay = quick ? 90 : 300;
+    const isHead = seq[i] === 'H';
 
-    coin.classList.remove('is-flipping');
-    void coin.offsetWidth;
-    coin.classList.add('is-flipping');
+    if (coin) {
+      const cur = ((coinRot % 360) + 360) % 360;
+      const target = isHead ? 0 : 180;
+      let delta = (target - cur + 360) % 360;
+      if (delta === 0) delta = 360;
+      coinRot += delta + (quick ? 360 : 720);
+      coin.style.transform = 'rotateX(' + coinRot + 'deg)';
+    }
+    Sfx.coinFlip(quick);
 
     setTimeout(function () {
-      const isHead = seq[i] === 'H';
-      $('#coinFace').textContent = isHead ? '正' : '反';
-      coin.classList.toggle('is-head', isHead);
       log.innerHTML += '<div class="flip-line">第 ' + (i + 1) + ' 抛：' +
         (isHead ? '<b class="c-gold">正面</b>' : '反面') + '</div>';
       log.scrollTop = log.scrollHeight;
@@ -1636,6 +2411,14 @@
   function finishPetersburg(tier, res, prev) {
     state.money += res.prize;
     setBest();
+    Sfx.coinLand();
+    if (res.prize >= tier.fee) {
+      if (res.prize >= 1000) Sfx.bigWin();
+      else Sfx.win();
+      flashScreen('gold');
+    } else {
+      Sfx.lose();
+    }
     save();
     renderMoney();
 
@@ -1704,6 +2487,18 @@
      事件绑定
      ============================================================ */
   function bindEvents() {
+    document.addEventListener('pointerdown', function () { Sfx.unlock(); }, { once: true, passive: true });
+
+    const soundBtn = $('#soundBtn');
+    if (soundBtn) {
+      soundBtn.textContent = Sfx.isEnabled() ? '🔊' : '🔇';
+      soundBtn.addEventListener('click', function () {
+        const on = Sfx.setEnabled(!Sfx.isEnabled());
+        soundBtn.textContent = on ? '🔊' : '🔇';
+        if (on) Sfx.click();
+      });
+    }
+
     $('#startFixed').addEventListener('click', function () { startGame('fixed'); });
     $('#startGamble').addEventListener('click', function () { startGame('gamble'); });
 
@@ -1751,6 +2546,7 @@
       if (!chip) return;
       const input = document.getElementById(chip.dataset.target);
       if (!input) return;
+      Sfx.chip();
       const max = chip.dataset.target === 'ballBet' ? RATES.balls.maxBet : RATES.doors.maxBet;
       let v;
       if (chip.dataset.amount === 'max') {
@@ -1772,7 +2568,6 @@
     ]);
 
     state = loadState();
-    buildPit();
     bindEvents();
     renderMoney();
     showScreen(state.started ? 'lobby' : 'start');
@@ -1800,6 +2595,7 @@
     },
     rollLabor: rollLabor,
     rollBall: rollBall,
+    makePool: makePool,
     rollEnvelopeOther: rollEnvelopeOther,
     rollPetersburg: rollPetersburg,
     rollGate: rollGate,

@@ -138,7 +138,7 @@
     box-shadow: 0 0 14px rgba(236, 72, 153, .7);
     transition: width .45s cubic-bezier(.2, .8, .2, 1);
   }
-  .bank__meta { display: flex; justify-content: space-between; max-width: 480px; margin: 0 auto; font-size: .78rem; color: var(--muted); }
+  .bank__meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 14px; max-width: 520px; margin: 0 auto; font-size: .78rem; color: var(--muted); }
   .bank__meta b { color: var(--text); font-variant-numeric: tabular-nums; }
 
   .game-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(248px, 1fr)); gap: 12px; margin-top: 16px; }
@@ -600,6 +600,7 @@
       <div class="bank__bar"><div class="bank__fill" id="lobbyBar"></div></div>
       <div class="bank__meta">
         <span>距离 10000 还差 <b id="lobbyGap">10000</b></span>
+        <span>本次已赌 <b id="lobbyGambles">0</b> 次</span>
         <span>最高纪录 <b id="lobbyBest">0</b></span>
       </div>
     </div>
@@ -824,7 +825,7 @@
       <h2>🏆 排行榜</h2>
     </div>
     <div class="panel">
-      <p class="rules muted" style="margin:0">按历史最高资金排序 · 同时显示当前资金</p>
+      <p class="rules muted" style="margin:0">按到达 1 万所需的赌博次数排序，越少越强 · 还没到过 1 万的排在最后</p>
       <div class="board-list" id="boardList"></div>
       <div style="display:flex;justify-content:center;margin-top:16px">
         <button class="btn btn--ghost" id="boardRefresh" type="button">刷新</button>
@@ -961,6 +962,8 @@
       best: 0,
       wins: 0,
       plays: 0,
+      gambles: 0,       // 本次开局以来的赌博次数（干苦力不算）
+      winGambles: null, // 历史最少用多少次赌博到达 1 万；null = 还没到过
       started: false,
       celebrated: false,
       laborPresses: 0
@@ -979,6 +982,11 @@
     s.best = Math.max(normNum(raw.best, 0), s.money);
     s.wins = normNum(raw.wins, 0);
     s.plays = normNum(raw.plays, 0);
+    s.gambles = normNum(raw.gambles, 0);
+    // 0 次是有效成绩（全靠干苦力到 1 万），所以「没到过」只能用 null 表示
+    s.winGambles = raw.winGambles === null || !Number.isFinite(Number(raw.winGambles))
+      ? null
+      : Math.max(0, Math.round(Number(raw.winGambles)));
     s.started = !!raw.started;
     s.celebrated = !!raw.celebrated;
     s.laborPresses = normNum(raw.laborPresses, 0);
@@ -1046,17 +1054,26 @@
 
   async function syncScore() {
     if (!sb || !authUser) return;
+    const row = {
+      user_id: authUser.id,
+      username: username || '匿名',
+      money: Math.round(state.money),
+      best_money: Math.round(state.best),
+      wins: state.wins,
+      plays: state.plays,
+      win_gambles: state.winGambles === null ? null : state.winGambles,
+      updated_at: new Date().toISOString()
+    };
     try {
-      await sb.from('game_scores').upsert({
-        user_id: authUser.id,
-        username: username || '匿名',
-        money: Math.round(state.money),
-        best_money: Math.round(state.best),
-        wins: state.wins,
-        plays: state.plays,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' });
-    } catch (e) { /* 离线 / 表未建时静默，成绩仍存在本机 */ }
+      const res = await sb.from('game_scores').upsert(row, { onConflict: 'user_id' });
+      if (res && res.error) throw res.error;
+    } catch (e) {
+      // 老表还没加 win_gambles 列时，退回旧字段同步，别把整条成绩弄丢
+      try {
+        delete row.win_gambles;
+        await sb.from('game_scores').upsert(row, { onConflict: 'user_id' });
+      } catch (e2) { /* 离线 / 表未建时静默，成绩仍存在本机 */ }
+    }
   }
 
   /* ============================================================
@@ -1726,6 +1743,18 @@
     if (state.money > state.best) state.best = state.money;
   }
 
+  // 只有真正下注/花钱的赌局才计数 —— 干苦力按一次不算赌博
+  function recordGamble() {
+    state.gambles += 1;
+  }
+
+  // 记录一次到达 1 万，保留历史上最少的赌博次数；返回是否刷新纪录
+  function noteWin(gambles) {
+    const isRecord = state.winGambles === null || gambles < state.winGambles;
+    if (isRecord) state.winGambles = gambles;
+    return isRecord;
+  }
+
   function checkMilestones(prev) {
     if (state.money < RATES.target) state.celebrated = false;
 
@@ -1740,6 +1769,8 @@
     if (state.money >= RATES.target && !state.celebrated) {
       state.celebrated = true;
       state.wins += 1;
+      const gambles = state.gambles;
+      const isRecord = noteWin(gambles);
       save();
       Sfx.jackpot();
       flashScreen('gold');
@@ -1747,7 +1778,11 @@
       queueModal({
         icon: '🏆',
         title: '你赢了！',
-        body: '资金达到 <b class="c-gold">' + fmt(state.money) + ' 元</b>，先到 1 万。',
+        body: '资金达到 <b class="c-gold">' + fmt(state.money) + ' 元</b>，先到 1 万。<br>' +
+              '本次一共赌博 <b class="c-gold">' + fmt(gambles) + ' 次</b>。' +
+              (isRecord && state.wins > 1
+                ? '<br><span class="muted">新的最少纪录！</span>'
+                : ''),
         actions: [
           { label: '继续游玩', style: 'btn--ghost' },
           { label: '重新开始', style: 'btn--gold', onClick: doRestart }
@@ -1771,6 +1806,7 @@
   }
 
   function resolveGate() {
+    recordGamble();
     const r = rollGate();
     let icon = '🎲';
     let msg;
@@ -1912,6 +1948,8 @@
     if (gap) gap.textContent = fmt(Math.max(0, RATES.target - state.money));
     const best = $('#lobbyBest');
     if (best) best.textContent = fmt(state.best);
+    const gambles = $('#lobbyGambles');
+    if (gambles) gambles.textContent = fmt(state.gambles);
     const bar = $('#lobbyBar');
     if (bar) bar.style.width = Math.min(100, (state.money / RATES.target) * 100) + '%';
   }
@@ -2074,6 +2112,7 @@
 
     state.money -= stake;
     state.plays += 1;
+    recordGamble();
     save();
     renderMoney();
 
@@ -2250,6 +2289,7 @@
     Sfx.envelope();
     state.money += env.final;
     state.plays += 1;
+    recordGamble();
     setBest();
     if (env.final - RATES.envelope.fee >= 0) { Sfx.win(); flashScreen('gold'); }
     else { Sfx.lose(); }
@@ -2395,6 +2435,7 @@
 
     if (door.won) state.money += door.bet * RATES.doors.payout;
     state.plays += 1;
+    recordGamble();
     setBest();
     door.phase = 'done';
     Sfx.door();
@@ -2458,6 +2499,7 @@
     const prev = state.money;
     state.money -= tier.fee;
     state.plays += 1;
+    recordGamble();
     save();
     renderMoney();
 
@@ -2592,13 +2634,28 @@
     }
 
     let res;
+    let hasGambleCol = true;
     try {
       res = await sb.from('game_scores')
-        .select('user_id,username,money,best_money,wins,plays,updated_at')
+        .select('user_id,username,money,best_money,wins,plays,win_gambles,updated_at')
+        .order('win_gambles', { ascending: true, nullsFirst: false })
         .order('best_money', { ascending: false })
         .limit(50);
     } catch (e) {
       res = { error: e };
+    }
+
+    // 数据库还没加 win_gambles 列时退回旧排序，别让整个排行榜打不开
+    if (res.error) {
+      hasGambleCol = false;
+      try {
+        res = await sb.from('game_scores')
+          .select('user_id,username,money,best_money,wins,plays,updated_at')
+          .order('best_money', { ascending: false })
+          .limit(50);
+      } catch (e) {
+        res = { error: e };
+      }
     }
 
     if (res.error) {
@@ -2614,15 +2671,32 @@
       return;
     }
 
-    list.innerHTML = rows.map(function (r, i) {
+    if (hasGambleCol) {
+      rows.sort(function (a, b) {
+        const av = a.win_gambles == null ? Infinity : Number(a.win_gambles);
+        const bv = b.win_gambles == null ? Infinity : Number(b.win_gambles);
+        if (av !== bv) return av - bv;
+        return Number(b.best_money || 0) - Number(a.best_money || 0);
+      });
+    }
+
+    const note = hasGambleCol ? '' :
+      '<p class="board-empty" style="padding:10px 4px">数据库还没加 win_gambles 列，暂时按最高资金排序。' +
+      '在 Supabase SQL Editor 跑一次文末的建表/升级语句后，就会按赌博次数排名。</p>';
+
+    list.innerHTML = note + rows.map(function (r, i) {
       const self = authUser && r.user_id === authUser.id;
       const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1);
+      const wg = hasGambleCol && r.win_gambles != null ? Number(r.win_gambles) : null;
       return '<div class="board-row' + (self ? ' is-self' : '') + '">' +
         '<span class="board-rank">' + medal + '</span>' +
         '<span class="board-name">' + escapeHtml(r.username || '匿名') +
           (self ? ' <em>你</em>' : '') + '</span>' +
-        '<span class="board-best c-gold">' + fmt(r.best_money) + '</span>' +
-        '<span class="board-sub">当前 ' + fmt(r.money) + ' · 到达 1 万 ' + Number(r.wins || 0) + ' 次</span>' +
+        '<span class="board-best c-gold">' + (wg == null ? '—' : fmt(wg) + ' 次') + '</span>' +
+        '<span class="board-sub">' +
+          (wg == null ? '还没到过 1 万' : '最少赌博次数到达 1 万') +
+          ' · 最高 ' + fmt(r.best_money) + ' 元' +
+          ' · 到达 1 万 ' + Number(r.wins || 0) + ' 次</span>' +
       '</div>';
     }).join('');
   }
@@ -2737,6 +2811,8 @@
         best: state.best,
         wins: state.wins,
         plays: state.plays,
+        gambles: state.gambles,
+        winGambles: state.winGambles,
         started: state.started,
         celebrated: state.celebrated,
         laborPresses: state.laborPresses
@@ -2751,6 +2827,9 @@
     rollPetersburg: rollPetersburg,
     rollGate: rollGate,
     settleBalls: settleBalls,
+    recordGamble: recordGamble,
+    noteWin: noteWin,
+    checkVictory: checkVictory,
     showScreen: showScreen,
     // 调试用：直接设资金并切屏（仅供本地预览/测试，正常游玩用不到）
     _devSet: function (opts) {
@@ -2760,6 +2839,13 @@
         state.started = true;
         state.best = Math.max(state.best, state.money);
         renderMoney();
+      }
+      if (typeof opts.gambles === 'number') {
+        state.gambles = Math.max(0, Math.round(opts.gambles));
+        renderMoney();
+      }
+      if (opts.winGambles === null || typeof opts.winGambles === 'number') {
+        state.winGambles = opts.winGambles === null ? null : Math.max(0, Math.round(opts.winGambles));
       }
       if (opts.screen) showScreen(opts.screen);
     },

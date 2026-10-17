@@ -299,6 +299,39 @@ eq(C.settleBalls(500, 'red', 'red'), 2000, '押 500 中红拿回 2000');
   eq(C.rollLabor().wiped, false, '0.001 → 不清零');
 })();
 
+/* ================= 8b. 赌博次数 ================= */
+(() => {
+  const s0 = C.getState();
+  eq(s0.gambles, 0, '新档本次赌博次数为 0');
+  eq(s0.winGambles, null, '新档还没有到达 1 万的纪录');
+
+  C.recordGamble();
+  eq(C.getState().gambles, 1, 'recordGamble 让次数 +1');
+
+  // 到达 1 万时保留历史最少次数
+  C._devSet({ winGambles: 5 });
+  eq(C.noteWin(7), false, '7 次没有打破 5 次纪录');
+  eq(C.getState().winGambles, 5, '没破纪录时保持 5 次');
+  eq(C.noteWin(3), true, '3 次刷新最少纪录');
+  eq(C.getState().winGambles, 3, '纪录更新为 3 次');
+  eq(C.noteWin(3), false, '同样 3 次不算刷新');
+  C._devSet({ winGambles: null });
+  eq(C.noteWin(9), true, '第一次到达 1 万必定记纪录');
+  eq(C.getState().winGambles, 9, '首次纪录为 9 次');
+  C._devSet({ winGambles: null });
+  eq(C.noteWin(0), true, '0 次赌博到 1 万也是有效纪录（全靠干苦力）');
+  eq(C.getState().winGambles, 0, '0 次纪录能保存');
+
+  // 五个下注入口都要记一次；干苦力不算
+  ['playBalls', 'envelopeDecide', 'doorDecide', 'playPetersburg', 'resolveGate'].forEach(function (name) {
+    const re = new RegExp('function ' + name + '\\([\\s\\S]*?\\n  \\}');
+    const mm = m[1].match(re);
+    ok(mm && mm[0].includes('recordGamble()'), name + ' 会记一次赌博');
+  });
+  const laborBody = m[1].match(/function pressLabor\([\s\S]*?\n  \}/);
+  ok(laborBody && !laborBody[0].includes('recordGamble()'), '干苦力不计入赌博次数');
+})();
+
 /* ================= 9. 静态接线检查 ================= */
 (() => {
   // JS 里用到的所有 id 必须在 HTML 里存在

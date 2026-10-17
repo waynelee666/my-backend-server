@@ -319,17 +319,15 @@ eq(C.settleBalls(500, 'red', 'red'), 2000, '押 500 中红拿回 2000');
   eq(C.noteWin(9), true, '第一次到达 1 万必定记纪录');
   eq(C.getState().winGambles, 9, '首次纪录为 9 次');
   C._devSet({ winGambles: null });
-  eq(C.noteWin(0), true, '0 次赌博到 1 万也是有效纪录（全靠干苦力）');
+  eq(C.noteWin(0), true, '0 次也当有效数字保存，不和「没到过」混淆');
   eq(C.getState().winGambles, 0, '0 次纪录能保存');
 
-  // 五个下注入口都要记一次；干苦力不算
-  ['playBalls', 'envelopeDecide', 'doorDecide', 'playPetersburg', 'resolveGate'].forEach(function (name) {
+  // 干苦力 + 五个赌桌入口都要记一次
+  ['pressLabor', 'playBalls', 'envelopeDecide', 'doorDecide', 'playPetersburg', 'resolveGate'].forEach(function (name) {
     const re = new RegExp('function ' + name + '\\([\\s\\S]*?\\n  \\}');
     const mm = m[1].match(re);
     ok(mm && mm[0].includes('recordGamble()'), name + ' 会记一次赌博');
   });
-  const laborBody = m[1].match(/function pressLabor\([\s\S]*?\n  \}/);
-  ok(laborBody && !laborBody[0].includes('recordGamble()'), '干苦力不计入赌博次数');
 })();
 
 /* ================= 9. 静态接线检查 ================= */

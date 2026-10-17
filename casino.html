@@ -1743,7 +1743,7 @@
     if (state.money > state.best) state.best = state.money;
   }
 
-  // 只有真正下注/花钱的赌局才计数 —— 干苦力按一次不算赌博
+  // 每个动作都计数：干苦力按一次算 1 次，各赌桌每局/每次入场算 1 次
   function recordGamble() {
     state.gambles += 1;
   }
@@ -2005,6 +2005,7 @@
     const roll = rollLabor();
     state.plays += 1;
     state.laborPresses += 1;
+    recordGamble();
 
     if (roll.wiped) {
       laborBusy = true;

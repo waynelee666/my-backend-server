@@ -10,7 +10,7 @@
     <link rel="apple-touch-icon" href="/icon.png?v=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="stylesheet" href="style.css?v=4.9">
+    <link rel="stylesheet" href="style.css?v=5.0">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 
 </head>
@@ -29,8 +29,6 @@
             <button class="nav__tab" data-tab="chat">💬 小马</button>
             <button class="nav__tab" data-tab="thoughts" style="display:none;">🎬 脚本</button>
             <button class="nav__tab" data-tab="goals">🎯 目标</button>
-            <button class="nav__tab" data-tab="plans">📅 计划</button>
-            <button class="nav__tab" data-tab="ledger">💰 记账</button>
         </div>
         <ul class="nav__list">
             <li><span class="nav__datetime" id="navDatetime"></span></li>
@@ -68,6 +66,13 @@
         </div>
         <div class="home-countdowns" id="homeCountdowns"></div>
         <div class="home-nav">
+            <button class="home-nav-card home-nav-card--wide" data-tab="entertainment">
+                <span class="home-nav-card__icon">🎮</span>
+                <span class="home-nav-card__text">
+                    <span class="home-nav-card__label">娱乐</span>
+                    <span class="home-nav-card__sub">记账 · 实况足球抽卡</span>
+                </span>
+            </button>
             <button class="home-nav-card" data-tab="vocab">
                 <span class="home-nav-card__icon">📖</span>
                 <span class="home-nav-card__label">单词</span>
@@ -96,14 +101,6 @@
             <button class="home-nav-card" data-tab="goals">
                 <span class="home-nav-card__icon">🎯</span>
                 <span class="home-nav-card__label">目标</span>
-            </button>
-            <button class="home-nav-card" data-tab="plans">
-                <span class="home-nav-card__icon">📅</span>
-                <span class="home-nav-card__label">计划</span>
-            </button>
-            <button class="home-nav-card" data-tab="ledger">
-                <span class="home-nav-card__icon">💰</span>
-                <span class="home-nav-card__label">记账</span>
             </button>
         </div>
         <!-- 常用网站（内容见 script.js 的 QUICK_LINKS） -->
@@ -423,21 +420,50 @@
         </div>
     </section>
 
-    <!-- ===== 计划视图 ===== -->
-    <section class="view" id="view-plans">
+    <!-- ===== 娱乐视图 ===== -->
+    <section class="view" id="view-entertainment">
         <div class="view__header">
             <button class="btn btn--icon back-btn" data-back="home" title="返回首页">⋮</button>
-            <h2>📅 计划</h2>
+            <h2>🎮 娱乐</h2>
         </div>
-        <div class="plans-content" id="plansContent">
-            <p class="empty-text">加载中...</p>
+        <div class="hub-grid">
+            <button class="hub-card" data-tab="ledger">
+                <span class="hub-card__icon">💰</span>
+                <span class="hub-card__text">
+                    <span class="hub-card__title">记账</span>
+                    <span class="hub-card__desc">日常收支 · 医疗 · B计划</span>
+                </span>
+                <span class="hub-card__arrow">→</span>
+            </button>
+            <button class="hub-card" data-tab="pes">
+                <span class="hub-card__icon">⚽</span>
+                <span class="hub-card__text">
+                    <span class="hub-card__title">实况足球</span>
+                    <span class="hub-card__desc">标准经纪人抽卡记录</span>
+                </span>
+                <span class="hub-card__arrow">→</span>
+            </button>
+        </div>
+    </section>
+
+    <!-- ===== 实况足球视图 ===== -->
+    <section class="view" id="view-pes">
+        <div class="view__header">
+            <div class="view__header-left">
+                <button class="btn btn--icon back-btn" data-back="entertainment" title="返回娱乐">⋮</button>
+                <h2>⚽ 实况足球</h2>
+            </div>
+            <a class="btn btn--outline btn--sm" href="pes.html" target="_blank" rel="noopener">新窗口打开 ↗</a>
+        </div>
+        <div class="pes-frame">
+            <iframe src="pes.html" title="实况足球抽卡数据" loading="lazy"></iframe>
         </div>
     </section>
 
     <!-- ===== 记账视图 ===== -->
     <section class="view" id="view-ledger">
         <div class="view__header">
-            <button class="btn btn--icon back-btn" data-back="home" title="返回首页">⋮</button>
+            <button class="btn btn--icon back-btn" data-back="entertainment" title="返回娱乐">⋮</button>
             <h2>💰 记账</h2>
         </div>
         <div class="ledger-layout">
@@ -649,12 +675,11 @@
 
 <script src="supabase.min.js"></script>
 <script src="auth.js?v=3.2"></script>
-<script src="script.js?v=5.8"></script>
+<script src="script.js?v=5.9"></script>
 
 <script src="chat.js?v=1.5"></script>
 <script src="vocab.js?v=2.1"></script>
 <script src="goals.js?v=1.0"></script>
-<script src="plans.js?v=2.0"></script>
 <script src="ledger.js?v=2.0"></script>
 <script src="med.js?v=1.0"></script>
 <script src="bplan.js?v=1.0"></script>

@@ -107,7 +107,7 @@ function weeksSettledIn(cycleKey, ticks, today) {
   return n;
 }
 
-// ---- 数据层：Supabase 优先，失败降级 localStorage（照 plans.js 的模式）----
+// ---- 数据层：Supabase 优先，失败降级 localStorage（照 ledger.js 的模式）----
 function loadMedLocal() {
   try {
     const raw = localStorage.getItem(MED_LOCAL_KEY);

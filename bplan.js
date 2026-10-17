@@ -134,7 +134,7 @@ function bplanHolidayCountIn(weekKey) {
   return bplanWeekDays(weekKey).filter(d => BPLAN_HOLIDAY.indexOf(d) >= 0).length;
 }
 
-// ---- 数据层：Supabase 优先，失败降级 localStorage（照 med.js / plans.js 的模式）----
+// ---- 数据层：Supabase 优先，失败降级 localStorage（照 med.js / ledger.js 的模式）----
 function bplanNormalize(raw) {
   const s = { ticks: [], tasks: {} };
   if (raw && typeof raw === 'object') {

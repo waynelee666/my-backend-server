@@ -4,7 +4,7 @@
 --
 -- 说明：单行 JSON。每日勾选记录 + 「本周任务」的手改覆盖，
 --       都塞在 data 字段里，形状由前端的 bplanNormalize() 校验。
---       与 plans.js 的 plan_data 完全同构。
+--       单行 JSON，与 med.js 的数据形状相同。
 -- ============================================================
 
 create table if not exists public.bplan_data (

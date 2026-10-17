@@ -144,7 +144,7 @@ async function refreshAll() {
     });
     renderCurrent();
 }
-function renderCurrent() { if (currentTab==='home') renderHome(); else if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else if (currentTab==='subjects') renderSubjects(); else if (currentTab==='thoughts') renderThoughts(); else if (currentTab==='chat') renderChatView(); else if (currentTab==='vocab') renderVocabView(); else if (currentTab==='goals') renderGoalsView(); else if (currentTab==='plans') renderPlansView(); else if (currentTab==='ledger') renderLedgerView(); }
+function renderCurrent() { if (currentTab==='home') renderHome(); else if (currentTab==='todos') renderTodos(); else if (currentTab==='calendar') renderCalendar(); else if (currentTab==='subjects') renderSubjects(); else if (currentTab==='thoughts') renderThoughts(); else if (currentTab==='chat') renderChatView(); else if (currentTab==='vocab') renderVocabView(); else if (currentTab==='goals') renderGoalsView(); else if (currentTab==='ledger') renderLedgerView(); }
 
 // ==================== Tab 切换 ====================
 $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
@@ -160,8 +160,6 @@ $$('.nav__tab').forEach(btn => btn.addEventListener('click', () => {
     if (currentTab === 'chat') renderChatView();
     if (currentTab === 'vocab') renderVocabView();
     if (currentTab === 'goals') renderGoalsView();
-    if (currentTab === 'plans') renderPlansView();
-    if (currentTab === 'ledger') renderLedgerView();
 }));
 // 导航折叠断点：与 style.css 的 @media (max-width:1099.98px) 保持一致
 const NAV_FOLD_QUERY = window.matchMedia('(max-width: 1099.98px)');
@@ -2374,11 +2372,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.back-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const target = btn.dataset.back;
-            if (target === 'home') switchToTab('home');
+            if (target) switchToTab(document.getElementById(`view-${target}`) ? target : 'home');
         });
     });
     // 首页导航卡片
     document.querySelectorAll('.home-nav-card').forEach(card => {
+        card.addEventListener('click', () => {
+            switchToTab(card.dataset.tab);
+        });
+    });
+    // 娱乐页入口卡片
+    document.querySelectorAll('.hub-card').forEach(card => {
         card.addEventListener('click', () => {
             switchToTab(card.dataset.tab);
         });
@@ -2402,7 +2406,6 @@ function switchToTab(tab) {
     if (tab === 'chat') renderChatView();
     if (tab === 'vocab') renderVocabView();
     if (tab === 'goals') renderGoalsView();
-    if (tab === 'plans') renderPlansView();
     if (tab === 'ledger') renderLedgerView();
     // 手机端收起 tabs
     document.querySelector('.nav__tabs').classList.remove('nav__tabs--open');

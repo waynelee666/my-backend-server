@@ -140,6 +140,16 @@
   }
   .bank__meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 14px; max-width: 520px; margin: 0 auto; font-size: .78rem; color: var(--muted); }
   .bank__meta b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .bank__meta--center { justify-content: center; }
+
+  /* 资金与赌博次数并排，地位相同 */
+  .bank-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
+  .bank-row .bank { margin-top: 0; height: 100%; box-sizing: border-box; padding: 22px 18px 18px; }
+  .bank__money--cyan { color: var(--cyan); text-shadow: 0 0 24px rgba(34, 211, 238, .35); }
+  .bank__money small { font-size: .34em; font-weight: 700; letter-spacing: .05em; color: var(--muted); text-shadow: none; }
+  .bank__fill--cyan { background: linear-gradient(90deg, var(--cyan), var(--purple)); box-shadow: 0 0 14px rgba(34, 211, 238, .6); }
+  .bank__fill--cyan.is-over { background: linear-gradient(90deg, var(--pink), #ef4444); box-shadow: 0 0 14px rgba(239, 68, 68, .6); }
+  @media (max-width: 640px) { .bank-row { grid-template-columns: 1fr; } }
 
   .game-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(248px, 1fr)); gap: 12px; margin-top: 16px; }
   .game-card {
@@ -594,14 +604,23 @@
 
   <!-- ===== 大厅 ===== -->
   <section class="screen" id="screen-lobby" hidden>
-    <div class="bank">
-      <div class="bank__label">当前资金</div>
-      <div class="bank__money" id="lobbyMoney">0</div>
-      <div class="bank__bar"><div class="bank__fill" id="lobbyBar"></div></div>
-      <div class="bank__meta">
-        <span>距离 10000 还差 <b id="lobbyGap">10000</b></span>
-        <span>本次已赌 <b id="lobbyGambles">0</b> 次</span>
-        <span>最高纪录 <b id="lobbyBest">0</b></span>
+    <div class="bank-row">
+      <div class="bank">
+        <div class="bank__label">当前资金</div>
+        <div class="bank__money" id="lobbyMoney">0</div>
+        <div class="bank__bar"><div class="bank__fill" id="lobbyBar"></div></div>
+        <div class="bank__meta">
+          <span>距离 10000 还差 <b id="lobbyGap">10000</b></span>
+          <span>最高纪录 <b id="lobbyBest">0</b></span>
+        </div>
+      </div>
+      <div class="bank bank--gambles">
+        <div class="bank__label">本次已赌</div>
+        <div class="bank__money bank__money--cyan"><span id="lobbyGambles">0</span><small> 次</small></div>
+        <div class="bank__bar"><div class="bank__fill bank__fill--cyan" id="lobbyGambleBar"></div></div>
+        <div class="bank__meta bank__meta--center">
+          <span id="lobbyGambleRecord">还没到过 1 万</span>
+        </div>
       </div>
     </div>
     <div class="game-grid" id="gameGrid">
@@ -1950,6 +1969,21 @@
     if (best) best.textContent = fmt(state.best);
     const gambles = $('#lobbyGambles');
     if (gambles) gambles.textContent = fmt(state.gambles);
+
+    // 赌博次数横条：以个人最少纪录为标尺，超过纪录变红
+    const gambleBar = $('#lobbyGambleBar');
+    if (gambleBar) {
+      const rec = state.winGambles;
+      const pct = rec === null ? 0 : Math.min(100, (state.gambles / Math.max(1, rec)) * 100);
+      gambleBar.style.width = pct + '%';
+      gambleBar.classList.toggle('is-over', rec !== null && state.gambles > rec);
+    }
+    const gambleRec = $('#lobbyGambleRecord');
+    if (gambleRec) {
+      gambleRec.innerHTML = state.winGambles === null
+        ? '还没到过 1 万'
+        : '历史最少 <b>' + fmt(state.winGambles) + '</b> 次到 1 万';
+    }
     const bar = $('#lobbyBar');
     if (bar) bar.style.width = Math.min(100, (state.money / RATES.target) * 100) + '%';
   }

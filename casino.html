@@ -898,6 +898,9 @@
   const GUEST = 'guest';
   const RESTART_PREFIX = 'tf_casino_restarts_v1:';
   const RESTART_LIMIT = 5; // 每人每天的重开机会
+  // 创始人账号：无限次重开（用户名或邮箱，大小写不敏感）
+  const FOUNDER_ACCOUNTS = ['waynelee', '2810303976@qq.com'];
+  const UNLIMITED_RESTARTS = -2; // 服务端返回 -2 = 创始人无限次，不扣次数
 
   /* ============================================================
      随机数（测试可注入）
@@ -1027,6 +1030,16 @@
   let authUser = null;
   let username = null;
 
+  function isFounderIdent(ident) {
+    return !!ident && FOUNDER_ACCOUNTS.indexOf(String(ident).trim().toLowerCase()) >= 0;
+  }
+
+  // 客户端判断只用于显示和「服务端连不上」时的兜底；
+  // 服务端是否无限次以 game_is_founder()（JWT 邮箱）为准，改本地改不出来。
+  function isFounder() {
+    return isFounderIdent(username) || isFounderIdent(authUser && authUser.email);
+  }
+
   function storeKey() {
     return STORE_PREFIX + (username || GUEST);
   }
@@ -1114,6 +1127,7 @@
         return null;
       }
       const n = Number(res.data);
+      if (n === UNLIMITED_RESTARTS) return UNLIMITED_RESTARTS;
       return Number.isFinite(n) ? Math.max(0, Math.min(RESTART_LIMIT, Math.round(n))) : null;
     } catch (e) {
       return null;
@@ -1975,19 +1989,31 @@
     });
   }
 
+  // 统一取重开状态：{ unlimited: true } 或 { unlimited: false, left: N }
+  // 登录账号以服务端为准；服务端不可用 / 游客时才看本机次数。
+  async function restartStatus() {
+    if (isServerQuotaMode()) {
+      const n = await serverRestartsLeft();
+      if (n === UNLIMITED_RESTARTS) return { unlimited: true, left: null };
+      if (n !== null) return { unlimited: false, left: n };
+    }
+    if (isFounder()) return { unlimited: true, left: null };
+    return { unlimited: false, left: restartsLeft() };
+  }
+
   async function askRestart() {
-    let left = null;
-    if (isServerQuotaMode()) left = await serverRestartsLeft();
-    if (left === null) left = restartsLeft();
-    if (left <= 0) {
+    const st = await restartStatus();
+    if (!st.unlimited && st.left <= 0) {
       noRestartsModal();
       return;
     }
     queueModal({
-      icon: '↺',
+      icon: st.unlimited ? '👑' : '↺',
       title: '重新开始？',
       body: '当前资金会清零，然后重新选择初始资金。最高纪录和胜场会保留。<br>' +
-            '<span class="muted">今天还剩 ' + left + ' 次重开机会。</span>',
+            (st.unlimited
+              ? '<span class="muted">创始人账号 · 无限次重开，不消耗每日机会。</span>'
+              : '<span class="muted">今天还剩 ' + st.left + ' 次重开机会。</span>'),
       actions: [
         { label: '取消', style: 'btn--ghost' },
         { label: '重新开始', style: 'btn--danger', onClick: confirmRestart }
@@ -1996,18 +2022,18 @@
   }
 
   async function confirmRestart() {
-    let left = null;
-    if (isServerQuotaMode()) left = await serverRestartsLeft();
-    if (left === null) left = restartsLeft();
-    if (left <= 0) {
+    const st = await restartStatus();
+    if (!st.unlimited && st.left <= 0) {
       noRestartsModal();
       return;
     }
     queueModal({
-      icon: '⚠️',
+      icon: st.unlimited ? '👑' : '⚠️',
       title: '最后确认',
-      body: '你确定要重开吗？<br><b class="c-gold">请珍惜你的机会</b>，每人一天只有 5 次重开机会，' +
-            '<span style="white-space:nowrap">当前还剩 <b class="c-gold">' + left + '</b> 次。</span>',
+      body: st.unlimited
+        ? '你确定要重开吗？<br><b class="c-gold">创始人账号拥有无限次重开机会</b>，此操作不消耗每日次数。'
+        : '你确定要重开吗？<br><b class="c-gold">请珍惜你的机会</b>，每人一天只有 5 次重开机会，' +
+          '<span style="white-space:nowrap">当前还剩 <b class="c-gold">' + st.left + '</b> 次。</span>',
       actions: [
         { label: '取消', style: 'btn--ghost' },
         { label: '确定重开', style: 'btn--danger', onClick: finishRestart }
@@ -2030,9 +2056,14 @@
     try {
       if (isServerQuotaMode()) {
         const r = await consumeServerRestart();
+        if (r === UNLIMITED_RESTARTS) {
+          // 服务端确认是创始人：无限次，直接重开
+          doRestart();
+          return;
+        }
         if (r === null) {
-          // 服务端暂时连不上：退回本机次数，保证还能玩
-          if (consumeLocalRestart()) doRestart();
+          // 服务端暂时连不上：创始人直接重开，其他人退回本机次数
+          if (isFounder() || consumeLocalRestart()) doRestart();
           return;
         }
         if (r < 0) {
@@ -2042,7 +2073,7 @@
         doRestart();
         return;
       }
-      if (consumeLocalRestart()) doRestart();
+      if (isFounder() || consumeLocalRestart()) doRestart();
     } finally {
       restartPending = false;
     }
@@ -3009,6 +3040,9 @@
   window.__casino = {
     RATES: RATES,
     restartLimit: RESTART_LIMIT,
+    unlimitedRestarts: UNLIMITED_RESTARTS,
+    founderAccounts: FOUNDER_ACCOUNTS,
+    isFounderIdent: isFounderIdent,
     restartsLeft: restartsLeft,
     consumeRestart: consumeRestart,
     getState: function () {

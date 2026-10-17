@@ -351,6 +351,15 @@ eq(C.settleBalls(500, 'red', 'red'), 2000, '押 500 中红拿回 2000');
   localStorage.setItem('tf_casino_restarts_v1:guest',
     JSON.stringify({ day: '2000-01-01', used: 5 }));
   eq(C.restartsLeft(), 5, '到了新的一天自动恢复 5 次');
+
+  // 创始人账号：waynelee / 2810303976@qq.com 无限次
+  eq(C.unlimitedRestarts, -2, '服务端用 -2 表示创始人无限次');
+  ok(C.isFounderIdent('waynelee'), '用户名 waynelee 是创始人');
+  ok(C.isFounderIdent('WayneLee'), '创始人用户名大小写不敏感');
+  ok(C.isFounderIdent('2810303976@qq.com'), '创始人邮箱也算');
+  ok(!C.isFounderIdent('waynelee666'), 'GitHub 名 waynelee666 不是用户名，别误判');
+  ok(!C.isFounderIdent('guest'), '游客不是创始人');
+  ok(!C.isFounderIdent(''), '空账号不是创始人');
 })();
 
 /* ================= 9. 静态接线检查 ================= */
@@ -386,8 +395,14 @@ eq(C.settleBalls(500, 'red', 'red'), 2000, '押 500 中红拿回 2000');
   ok(m[1].includes("rpc('game_restart_consume')"), '客户端在服务端原子扣次数');
   const restartSql = fs.readFileSync(path.join(ROOT, 'game_restarts_setup.sql'), 'utf8');
   ok(restartSql.includes('function public.game_restart_consume'), 'SQL 里有扣次数函数');
+  ok(restartSql.includes('function public.game_is_founder'), 'SQL 里有创始人判断函数');
+  ok(restartSql.includes('2810303976@qq.com'), 'SQL 按登录邮箱识别创始人');
+  ok(restartSql.includes('return -2'), 'SQL 对创始人返回无限次标记 -2');
   ok(restartSql.includes("Asia/Shanghai"), 'SQL 按中国时区计算每天');
   ok(restartSql.includes('security definer'), 'SQL 函数用 security definer 保护表');
+  ok(m[1].includes('UNLIMITED_RESTARTS'), '客户端识别无限次标记');
+  ok(m[1].includes('function restartStatus'), '客户端统一读取重开状态');
+  ok(m[1].includes('创始人账号'), '客户端有创始人提示文案');
 })();
 
 C._setRand(Math.random);

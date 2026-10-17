@@ -271,7 +271,7 @@
   }
   .labor-shell { position: relative; }
 
-  /* ============ 摸球 ============ */
+  /* ============ 埃尔斯伯格（摸球） ============ */
   .ball-stage { display: flex; flex-direction: column; align-items: center; margin: 16px 0 4px; }
   .pit-wrap { position: relative; width: min(100%, 430px); }
   #ballCanvas {
@@ -314,7 +314,7 @@
   .bet-actions .btn { flex: 1; }
   .btn--red { background: linear-gradient(135deg, #fb7185, #be123c); box-shadow: 0 6px 22px rgba(244, 63, 94, .28); }
 
-  /* ============ 两信封（3D 拆封） ============ */
+  /* ============ 克拉伊奇克（两信封，3D 拆封） ============ */
   .env-stage { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 20px 0 6px; }
   .envelope {
     position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -371,7 +371,7 @@
   }
   .env-actions .btn, .door-actions .btn { flex: 1; min-width: 130px; }
 
-  /* ============ 三门（3D 开门） ============ */
+  /* ============ 蒙提霍尔（三门，3D 开门） ============ */
   .doors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0 6px; }
   .door {
     position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px;
@@ -616,7 +616,7 @@
       <button class="game-card" data-game="balls" type="button">
         <span class="game-card__icon">🎱</span>
         <span class="game-card__text">
-          <span class="game-card__title">摸球</span>
+          <span class="game-card__title">埃尔斯伯格（摸球）</span>
           <span class="game-card__desc">押红或押黑，押中拿回 4 倍总回报</span>
         </span>
         <span class="game-card__arrow">→</span>
@@ -624,7 +624,7 @@
       <button class="game-card" data-game="envelope" type="button">
         <span class="game-card__icon">✉️</span>
         <span class="game-card__text">
-          <span class="game-card__title">两信封</span>
+          <span class="game-card__title">克拉伊奇克（两信封）</span>
           <span class="game-card__desc">交 100 元，开一个信封，换还是不换？</span>
         </span>
         <span class="game-card__arrow">→</span>
@@ -632,7 +632,7 @@
       <button class="game-card" data-game="doors" type="button">
         <span class="game-card__icon">🚪</span>
         <span class="game-card__text">
-          <span class="game-card__title">三门</span>
+          <span class="game-card__title">蒙提霍尔（三门）</span>
           <span class="game-card__desc">三选一，押中翻倍，庄家帮你排除一扇空门</span>
         </span>
         <span class="game-card__arrow">→</span>
@@ -675,7 +675,7 @@
   <section class="screen" id="screen-balls" hidden>
     <div class="game-head">
       <button class="back-btn" data-lobby type="button">← 大厅</button>
-      <h2>🎱 摸球</h2>
+      <h2>🎱 埃尔斯伯格（摸球）</h2>
     </div>
     <div class="panel">
       <p class="rules">池子里一共 100 个球：<b class="c-red">30 个红球</b>，其余都是黑球或黄球，<b>各有多少不公开</b>。押红或押黑，押中拿回 <b class="c-gold">4 倍总回报</b>（押 100 拿回 400）；押错本金归零。</p>
@@ -711,7 +711,7 @@
   <section class="screen" id="screen-envelope" hidden>
     <div class="game-head">
       <button class="back-btn" data-lobby type="button">← 大厅</button>
-      <h2>✉️ 两信封</h2>
+      <h2>✉️ 克拉伊奇克（两信封）</h2>
     </div>
     <div class="panel">
       <p class="rules">交 <b class="c-gold">100 元</b> 参与。两个信封里，一个的金额是另一个的 <b>2 倍</b>。先选一个打开看金额，然后决定换不换 —— 最终那个信封里的钱归你。</p>
@@ -742,7 +742,7 @@
   <section class="screen" id="screen-doors" hidden>
     <div class="game-head">
       <button class="back-btn" data-lobby type="button">← 大厅</button>
-      <h2>🚪 三门</h2>
+      <h2>🚪 蒙提霍尔（三门）</h2>
     </div>
     <div class="panel">
       <p class="rules">三扇门，只有一扇后面有奖励。押一笔钱选一扇门，庄家会打开另外两扇中<b>没有奖励</b>的一扇，然后你可以保持或更换。押中押注翻倍，押错押金归零。</p>
@@ -2052,7 +2052,7 @@
   }
 
   /* ============================================================
-     2. 摸球
+     2. 埃尔斯伯格（摸球）
      ============================================================ */
   let ballBusy = false;
 
@@ -2162,7 +2162,7 @@
   }
 
   /* ============================================================
-     3. 两信封（克拉伊奇克）
+     3. 克拉伊奇克（两信封）
      ============================================================ */
   const env = { phase: 'idle', picked: -1, shown: 0, other: 0, final: 0, prevMoney: 0 };
 
@@ -2301,7 +2301,7 @@
   }
 
   /* ============================================================
-     4. 三门（蒙提霍尔）
+     4. 蒙提霍尔（三门）
      ============================================================ */
   const door = { phase: 'idle', pick: -1, prize: -1, opened: -1, finalPick: -1, bet: 0, won: false, prevMoney: 0 };
 

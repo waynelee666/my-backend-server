@@ -2254,6 +2254,35 @@ function renderHome() {
     countdownTimer = setInterval(renderCountdowns, 30000);
 }
 
+// ==================== 账号可见性 ====================
+// 🔒 只对这些账号显示个人内容（用户名或邮箱，大小写不敏感）
+//    waynelee = 主人账号（GitHub 名 waynelee666，别搞混成用户名）
+const OWNER_ACCOUNTS = ['waynelee', '2810303976@qq.com'];
+
+function isOwnerIdent(ident) {
+    return !!ident && OWNER_ACCOUNTS.includes(String(ident).trim().toLowerCase());
+}
+
+/** 当前登录账号是否为主人（读本地 session，不发网络请求） */
+let _ownerPromise = null;
+function isOwner() {
+    if (_ownerPromise) return _ownerPromise;
+    _ownerPromise = (async () => {
+        try {
+            const { data } = await sb.auth.getSession();
+            const u = data?.session?.user;
+            if (!u) return false;
+            return isOwnerIdent(u.user_metadata?.username) || isOwnerIdent(u.email);
+        } catch (e) {
+            return false;
+        }
+    })().then(v => {
+        if (!v) _ownerPromise = null;   // 没拿到结果不缓存，下次再判断
+        return v;
+    });
+    return _ownerPromise;
+}
+
 // ==================== 本学期目标 ====================
 // ✏️ 改目标只改这个数组：数组顺序 = 首页从上到下的显示顺序（第 1 条最重要）
 //    name   目标名
@@ -2266,9 +2295,15 @@ const SEMESTER_GOALS = [
     { icon: '🤝', name: '志愿者·活动',   target: '30 小时' },
 ];
 
-function renderSemesterGoals() {
+async function renderSemesterGoals() {
     const el = document.getElementById('homeGoals');
     if (!el) return;
+    if (!(await isOwner())) {          // 其他账号：整条目标栏不显示
+        el.innerHTML = '';
+        el.style.display = 'none';
+        return;
+    }
+    el.style.display = '';
     el.innerHTML = `
         <div class="home-goals__list">
             ${SEMESTER_GOALS.map((g, i) => `

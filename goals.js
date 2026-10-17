@@ -329,6 +329,13 @@ function getGoalProgress(goal) {
 // ==================== 渲染 ====================
 
 async function renderGoalsView() {
+  // 🔒 目标模块只对主人账号开放，其他账号显示空状态（也不写入预置数据）
+  if (typeof isOwner === 'function' && !(await isOwner())) {
+    goalsData = [];
+    const empty = document.getElementById('goalsContent');
+    if (empty) empty.innerHTML = '<p class="empty-text">暂无目标 🎯</p>';
+    return;
+  }
   if (goalsData.length === 0) {
     goalsData = await loadGoals();
   }

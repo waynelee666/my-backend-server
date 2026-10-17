@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>抽卡模拟器 · TaskFlow</title>
+<style>
+  /* ============ 基础 ============ */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #f4f6fb;
+    color: #1e293b;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    font-size: 16px;
+  }
+  button { font-family: inherit; }
+  [hidden] { display: none !important; }
+  .app { max-width: 1080px; margin: 0 auto; padding: 14px 14px 36px; }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+
+  /* ============ 顶栏 ============ */
+  .topbar {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 12px;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; font-size: 1.05rem; font-weight: 800; }
+  .badge {
+    font-size: .66rem; font-weight: 600; color: #4f46e5; background: #eef0ff;
+    border: 1px solid #dcdffb; padding: 2px 8px; border-radius: 999px;
+  }
+  .wallet { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 999px;
+    padding: 5px 11px; font-size: .82rem; font-weight: 600;
+  }
+  .chip b { font-variant-numeric: tabular-nums; }
+  .chip--btn { cursor: pointer; color: #4f46e5; transition: border-color .15s, color .15s; }
+  .chip--btn:hover:not(:disabled) { border-color: #4f46e5; }
+  .chip--btn:disabled { color: #94a3b8; cursor: default; background: #f8fafc; }
+
+  /* ============ 控制面板 ============ */
+  .controls {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 14px;
+    padding: 14px; margin-bottom: 14px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, .04);
+  }
+  .control-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .control-row + .control-row { margin-top: 10px; }
+
+  .seg { display: inline-flex; gap: 2px; padding: 3px; background: #f1f5f9; border-radius: 10px; }
+  .seg button {
+    display: flex; flex-direction: column; align-items: center; line-height: 1.2;
+    border: 0; background: transparent; color: #64748b; cursor: pointer;
+    padding: 7px 15px; border-radius: 8px; font-size: .85rem; font-weight: 600;
+    transition: background .15s, color .15s, box-shadow .15s;
+  }
+  .seg button small { font-size: .64rem; font-weight: 500; opacity: .75; margin-top: 1px; }
+  .seg button.active { background: #fff; color: #4f46e5; box-shadow: 0 1px 4px rgba(15, 23, 42, .12); }
+
+  .status-row {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    font-size: .8rem; color: #64748b;
+  }
+  .status-row b { color: #1e293b; font-variant-numeric: tabular-nums; }
+  .status-row .note { font-size: .72rem; color: #94a3b8; }
+
+  .draw-buttons { display: flex; gap: 10px; margin-top: 12px; }
+  .btn {
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; line-height: 1.25; border: 0; border-radius: 10px; cursor: pointer;
+    padding: 12px 18px; font-size: .92rem; font-weight: 700;
+    transition: transform .12s, box-shadow .12s, opacity .12s, background .15s;
+  }
+  .btn small { font-size: .68rem; font-weight: 500; opacity: .82; }
+  .btn--primary {
+    flex: 1; background: #4f46e5; color: #fff;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, .28);
+  }
+  .btn--primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(79, 70, 229, .35); }
+  .btn--gold {
+    flex: 1; background: linear-gradient(135deg, #d99a1c, #b4770c); color: #fff;
+    box-shadow: 0 4px 14px rgba(180, 119, 12, .3);
+  }
+  .btn--gold:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(180, 119, 12, .38); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; transform: none; }
+  .btn--ghost {
+    flex-direction: row; background: #fff; border: 1px solid #e2e8f0;
+    color: #475569; font-size: .78rem; font-weight: 600; padding: 8px 12px;
+    box-shadow: none;
+  }
+  .btn--ghost:hover:not(:disabled) { border-color: #4f46e5; color: #4f46e5; }
+  .btn--dark { background: transparent; border-color: rgba(255, 255, 255, .28); color: rgba(255, 255, 255, .82); }
+  .btn--dark:hover:not(:disabled) { border-color: #fff; color: #fff; }
+  .extras { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .extras .btn--danger { color: #b91c1c; border-color: #fecaca; }
+  .extras .btn--danger:hover:not(:disabled) { border-color: #b91c1c; color: #b91c1c; }
+
+  /* ============ 结果舞台 ============ */
+  .stage {
+    position: relative; margin-bottom: 16px; padding: 20px 16px;
+    min-height: 250px; border-radius: 16px; overflow: hidden;
+    color: #e8f5f2;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(56, 189, 248, .16), transparent 62%),
+      linear-gradient(160deg, #0d3b34, #0a2230 58%, #0a1a26);
+    box-shadow: 0 12px 30px rgba(8, 30, 40, .28);
+  }
+  .stage::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .45;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, .06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, .06) 1px, transparent 1px);
+    background-size: 46px 46px;
+  }
+  .stage::after {
+    content: ""; position: absolute; left: 50%; top: 50%; width: 230px; height: 230px;
+    border: 1px solid rgba(255, 255, 255, .09); border-radius: 50%;
+    transform: translate(-50%, -50%); pointer-events: none;
+  }
+  .stage__hint {
+    position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;
+    min-height: 190px; text-align: center; font-size: .86rem; color: rgba(232, 245, 242, .62);
+  }
+  .stage__hint[hidden] { display: none; }
+  .stage__foot { position: relative; z-index: 1; display: flex; justify-content: center; margin-top: 12px; }
+
+  .grid { position: relative; z-index: 1; display: grid; gap: 10px; }
+  .grid--1 { grid-template-columns: minmax(0, 214px); justify-content: center; }
+  .grid--10 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+  /* ============ 卡片 ============ */
+  .card {
+    position: relative; display: flex; flex-direction: column; align-items: center;
+    gap: 3px; aspect-ratio: 3 / 4; padding: 10px 6px 8px;
+    border-radius: 12px; border: 1px solid rgba(255, 255, 255, .18);
+    background: linear-gradient(170deg, #1b2b3a, #111c28);
+    color: #fff; text-align: center; text-decoration: none;
+    cursor: pointer; overflow: hidden; -webkit-appearance: none; appearance: none;
+    transition: transform .16s, box-shadow .16s;
+  }
+  .card > * { position: relative; z-index: 1; }
+  .card:hover { transform: translateY(-3px); }
+  .card--3 { border-color: rgba(196, 138, 90, .65); background: linear-gradient(170deg, #2a2118, #1a140f); }
+  .card--4 { border-color: rgba(127, 163, 214, .7); background: linear-gradient(170deg, #1b2a3c, #131d2b); }
+  .card--5 { border-color: rgba(224, 178, 60, .85); background: linear-gradient(170deg, #33290f, #1d1708); }
+  .card--H {
+    border-color: #e8d9ff;
+    background: linear-gradient(170deg, #2f2445, #101828 72%);
+    box-shadow: 0 0 0 1px rgba(200, 180, 255, .35), 0 8px 24px rgba(124, 92, 255, .28);
+  }
+  .card--H::before {
+    content: ""; position: absolute; inset: -40% -70%; opacity: .24;
+    background: linear-gradient(115deg,
+      transparent 42%, rgba(240, 171, 252, .9) 48%,
+      rgba(129, 140, 248, 1) 53%, rgba(34, 211, 238, .85) 58%, transparent 66%);
+    animation: holoSweep 4.2s ease-in-out infinite;
+  }
+  .card__badge {
+    display: grid; place-items: center; width: 36px; height: 36px; flex: none;
+    border-radius: 50%; font-size: 1rem; font-weight: 800;
+    background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .3);
+  }
+  .card__name {
+    display: flex; align-items: center; min-height: 2em;
+    font-size: .74rem; font-weight: 700; line-height: 1.18; word-break: break-word;
+  }
+  .card__pos { font-size: .58rem; letter-spacing: .08em; opacity: .62; }
+  .card__rating {
+    margin-top: auto; font-size: 1.3rem; font-weight: 800; line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+  }
+  .card__tier {
+    font-size: .56rem; font-weight: 700; letter-spacing: .12em;
+    padding: 1px 7px; border-radius: 999px;
+    background: rgba(255, 255, 255, .1); border: 1px solid currentColor;
+  }
+  .card--3 .card__tier { color: #e8b48a; }
+  .card--4 .card__tier { color: #a9c6f0; }
+  .card--5 .card__tier { color: #f2cf6e; }
+  .card--H .card__tier { color: #e3d4ff; }
+
+  .card__tag {
+    position: absolute; top: 5px; right: 5px; z-index: 2;
+    font-size: .56rem; font-weight: 800; padding: 2px 6px; border-radius: 6px;
+    background: #4f46e5; color: #fff; white-space: nowrap;
+  }
+  .card__tag.is-new { background: #10b981; }
+  .card__tag.is-dup { background: rgba(0, 0, 0, .55); border: 1px solid rgba(255, 255, 255, .25); }
+
+  .card.reveal { animation: cardIn .5s cubic-bezier(.2, .9, .3, 1.2) both; animation-delay: calc(var(--i, 0) * 80ms); }
+  .card--H.reveal { box-shadow: 0 0 0 1px rgba(232, 217, 255, .55), 0 0 28px rgba(139, 92, 246, .6); }
+  @keyframes cardIn {
+    0%   { opacity: 0; transform: rotateY(82deg) scale(.86); }
+    60%  { opacity: 1; transform: rotateY(-8deg) scale(1.03); }
+    100% { opacity: 1; transform: rotateY(0) scale(1); }
+  }
+  @keyframes holoSweep {
+    0%   { transform: translateX(-28%); }
+    50%  { transform: translateX(28%); }
+    100% { transform: translateX(-28%); }
+  }
+  .stage.skip-anim .card.reveal { animation: none; }
+
+  /* ============ 底部 tabs ============ */
+  .tabbar {
+    position: sticky; top: 0; z-index: 8; display: flex; gap: 4px;
+    padding: 4px; margin-bottom: 12px;
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+  }
+  .tabbar button {
+    flex: 1; padding: 8px 6px; border: 0; border-radius: 9px; cursor: pointer;
+    background: transparent; color: #64748b; font-size: .84rem; font-weight: 600;
+    transition: background .15s, color .15s;
+  }
+  .tabbar button.active { background: #eef0ff; color: #4f46e5; }
+
+  .panel { display: none; }
+  .panel.active { display: block; animation: fade .2s ease; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+  .panel-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 10px; margin-bottom: 10px;
+  }
+  .panel-head h2 { margin: 0; font-size: .95rem; font-weight: 800; }
+  .panel-head .count { font-size: .78rem; color: #64748b; font-variant-numeric: tabular-nums; }
+  .fineprint { margin: 10px 0 0; font-size: .72rem; line-height: 1.6; color: #94a3b8; }
+
+  .collection-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+  .collection-grid .card { padding: 8px 4px 6px; border-radius: 10px; }
+  .collection-grid .card__badge { width: 26px; height: 26px; font-size: .8rem; }
+  .collection-grid .card__name { font-size: .6rem; min-height: 2.3em; }
+  .collection-grid .card__pos { font-size: .52rem; }
+  .collection-grid .card__rating { font-size: .92rem; }
+  .collection-grid .card__tier { font-size: .5rem; padding: 1px 5px; }
+  .collection-grid .card__tag { font-size: .5rem; padding: 1px 4px; }
+
+  .card--locked {
+    filter: grayscale(1); opacity: .55;
+    background: linear-gradient(170deg, #334155, #1e293b);
+    border-color: #475569; cursor: pointer;
+  }
+  .card--locked .card__badge { background: rgba(255, 255, 255, .08); color: rgba(255, 255, 255, .6); }
+  .card--locked .card__tier { color: rgba(255, 255, 255, .55); }
+
+  /* ============ 统计 ============ */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; }
+  .stat__k { font-size: .7rem; font-weight: 600; color: #64748b; }
+  .stat__v { margin-top: 3px; font-size: 1.05rem; font-weight: 800; }
+
+  .table-wrap { overflow-x: auto; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { background: #fafbfd; color: #64748b; font-size: .72rem; font-weight: 700; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td .pct { display: block; font-size: .68rem; color: #94a3b8; font-weight: 500; }
+
+  .sandbox {
+    margin-top: 12px; padding: 14px;
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+  }
+  .sandbox__title { font-size: .86rem; font-weight: 800; margin-bottom: 4px; }
+  .sandbox__desc { font-size: .72rem; color: #94a3b8; line-height: 1.55; margin: 0 0 10px; }
+  .sandbox__btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sandbox__meta { margin: 12px 0 8px; font-size: .74rem; color: #64748b; }
+
+  /* ============ 说明 ============ */
+  .rates-note { margin: 10px 0 0; padding: 0 0 0 18px; font-size: .76rem; line-height: 1.7; color: #64748b; }
+  .rates-note li + li { margin-top: 2px; }
+  .rates-note b { color: #334155; }
+
+  /* ============ 弹层 ============ */
+  .modal {
+    position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+    padding: 18px; background: rgba(15, 23, 42, .55);
+  }
+  .modal[hidden] { display: none; }
+  .modal__box {
+    position: relative; width: 100%; max-width: 340px; max-height: 86vh; overflow: auto;
+    padding: 18px; background: #fff; border-radius: 14px;
+  }
+  .modal__close {
+    position: absolute; top: 8px; right: 8px; width: 30px; height: 30px;
+    border: 0; border-radius: 8px; background: #f1f5f9; color: #64748b;
+    font-size: .9rem; cursor: pointer;
+  }
+  .modal__card { width: 130px; margin: 4px auto 12px; }
+  .modal__card .card { cursor: default; }
+  .modal__card .card:hover { transform: none; }
+  .modal__box h3 { margin: 0 0 10px; font-size: 1rem; text-align: center; }
+  .detail { margin: 0; font-size: .8rem; }
+  .detail > div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid #f1f5f9; }
+  .detail dt { color: #64748b; }
+  .detail dd { margin: 0; font-weight: 600; text-align: right; }
+
+  /* ============ 页脚 / toast ============ */
+  .footer { margin-top: 22px; font-size: .7rem; line-height: 1.6; color: #94a3b8; text-align: center; }
+  .toast {
+    position: fixed; left: 50%; bottom: 18px; z-index: 60; max-width: 90vw;
+    padding: 9px 16px; border-radius: 999px; background: #1e293b; color: #fff;
+    font-size: .8rem; font-weight: 600; text-align: center;
+    opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(10px);
+    transition: opacity .22s, transform .22s;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ============ 响应式 ============ */
+  @media (max-width: 640px) {
+    .app { padding: 10px 10px 30px; }
+    .grid--10 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid--1 { grid-template-columns: minmax(0, 172px); }
+    .collection-grid { grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); }
+    .btn { padding: 11px 12px; }
+    .seg button { padding: 7px 11px; font-size: .8rem; }
+    .topbar { gap: 8px; }
+    .brand { font-size: .98rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">🎴 抽卡模拟器 <span class="badge">概率演示 · 非官方</span></div>
+    <div class="wallet">
+      <span class="chip">🪙 <b id="coins">6,000</b></span>
+      <span class="chip">✨ <b id="points">0</b> 分</span>
+      <button class="chip chip--btn" id="signInBtn" type="button">签到 +1,000</button>
+    </div>
+  </header>
+
+  <section class="controls">
+    <div class="control-row">
+      <div class="seg" role="tablist" aria-label="经纪人">
+        <button type="button" data-agent="std" class="active">标准经纪人<small>免费</small></button>
+        <button type="button" data-agent="prm">特级经纪人<small>300 金币/抽</small></button>
+      </div>
+      <div class="seg" role="tablist" aria-label="位置">
+        <button type="button" data-pos="mid" class="active">中场</button>
+        <button type="button" data-pos="fwd">前锋</button>
+      </div>
+    </div>
+
+    <div class="control-row status-row">
+      <span>今日剩余 <b id="remainText">50/50</b></span>
+      <span>五星保底 <b id="pityText">0/50</b> <span class="note" id="pityNote"></span></span>
+    </div>
+
+    <div class="draw-buttons">
+      <button type="button" class="btn btn--primary" id="draw1">
+        <span id="draw1Label">标准单抽</span><small id="draw1Sub">免费</small>
+      </button>
+      <button type="button" class="btn btn--gold" id="draw10">
+        <span>十连</span><small id="draw10Sub">免费 · 保底四星+</small>
+      </button>
+    </div>
+
+    <div class="extras">
+      <button type="button" class="btn btn--ghost" id="exchangeBtn">✨ 心仪积分兑换高光（0/50）</button>
+      <button type="button" class="btn btn--ghost" id="resetBtn">重置存档</button>
+    </div>
+  </section>
+
+  <section class="stage" id="stage">
+    <div class="stage__hint" id="stageHint">选择经纪人和位置，开始抽卡</div>
+    <div class="grid" id="resultGrid"></div>
+    <div class="stage__foot">
+      <button type="button" class="btn btn--ghost btn--dark" id="skipBtn" hidden>跳过动画</button>
+    </div>
+    <div class="sr-only" id="live" aria-live="polite"></div>
+  </section>
+
+  <section class="tabs">
+    <nav class="tabbar" id="bottomTabs" aria-label="信息面板">
+      <button type="button" data-tab="collection" class="active">图鉴</button>
+      <button type="button" data-tab="stats">统计</button>
+      <button type="button" data-tab="rates">概率说明</button>
+    </nav>
+
+    <div class="panel active" id="panel-collection">
+      <div class="panel-head">
+        <h2>卡片图鉴</h2>
+        <span class="count" id="collCount">0 / 52</span>
+      </div>
+      <div class="collection-grid" id="collGrid"></div>
+      <p class="fineprint">灰色卡片表示尚未获得，点击可查看档位与单卡概率。</p>
+    </div>
+
+    <div class="panel" id="panel-stats">
+      <div id="statsSummary"></div>
+
+      <div class="sandbox">
+        <div class="sandbox__title">🧪 概率沙盒</div>
+        <p class="sandbox__desc">只跑随机数，不出卡、不扣金币、不计入存档。用来直观看看大数定律。</p>
+        <div class="sandbox__btns">
+          <button type="button" class="btn btn--ghost" id="sim1k">模拟 1,000 抽</button>
+          <button type="button" class="btn btn--ghost" id="sim10k">模拟 10,000 抽</button>
+        </div>
+        <div id="sandboxOut"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-rates">
+      <div class="panel-head">
+        <h2>概率说明</h2>
+        <span class="count">近似演示值</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>档位</th><th>标准</th><th>特级</th>
+              <th>标准单卡</th><th>特级单卡</th>
+            </tr>
+          </thead>
+          <tbody id="ratesBody"></tbody>
+        </table>
+      </div>
+      <ul class="rates-note">
+        <li>每个位置各 <b>4 张高光、6 张五星、8 张四星、8 张三星</b>；同一档位、同一位置内每张卡等概率。</li>
+        <li><b>十连保底</b>：若 10 抽都没有四星及以上，最后一张替换为四星。这会让四星的实际出货率略高于表内数值。</li>
+        <li><b>特级保底</b>：连续 49 抽未出五星及以上时，第 50 抽必为五星或高光（高光 : 五星 = 1 : 4）。计数从第 1 次特级抽卡开始。</li>
+        <li>标准经纪人没有保底、没有心仪积分；特级每抽 1 分，50 分可兑换一次必得高光。</li>
+        <li>概率表是<b>近似演示值</b>，不代表任何真实游戏的公示概率。真实卡包概率无法从外部精确得知。</li>
+      </ul>
+    </div>
+  </section>
+
+  <p class="footer">
+    非官方、非商业的抽卡概率演示小游戏，所有球员与卡片均为虚构。<br>
+    进度只保存在本机浏览器（localStorage），不会上传。
+  </p>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal__box" role="dialog" aria-modal="true" aria-label="卡片详情">
+    <button type="button" class="modal__close" aria-label="关闭">✕</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     常量
+     ============================================================ */
+  var KEY = 'tf_gacha_v1';
+  var START_COINS = 6000;
+  var SIGN_IN_COINS = 1000;
+  var FREE_PER_POS = 50;
+  var PREMIUM_PER_POS = 50;
+  var COST = { single: 300, ten: 3000 };
+  var PITY_LIMIT = 50;
+  var POINT_COST = 50;
+
+  var TIER_ORDER = ['H', '5', '4', '3'];
+  var TIERS = {
+    'H': { label: '高光' },
+    '5': { label: '五星' },
+    '4': { label: '四星' },
+    '3': { label: '三星' }
+  };
+  var RATES = {
+    std: { 'H': 0.001, '5': 0.019, '4': 0.14, '3': 0.84 },
+    prm: { 'H': 0.01,  '5': 0.04,  '4': 0.25, '3': 0.70 }
+  };
+  var DUP_COINS = { 'H': 2000, '5': 500, '4': 100, '3': 20 };
+  var POS_LABEL = { mid: '中场', fwd: '前锋' };
+
+  /* ============================================================
+     固定卡池：52 张虚构卡（中场 26 + 前锋 26）
+     ============================================================ */
+  var CARDS = [
+    /* ---- 中场 · 高光 ---- */
+    { id: 'mh1', name: 'A. 诺瓦克',    pos: 'mid', tier: 'H', rating: 108 },
+    { id: 'mh2', name: 'L. 卡瓦列里',  pos: 'mid', tier: 'H', rating: 104 },
+    { id: 'mh3', name: 'M. 林德贝里',  pos: 'mid', tier: 'H', rating: 101 },
+    { id: 'mh4', name: 'T. 奥孔科沃',  pos: 'mid', tier: 'H', rating: 99 },
+    /* ---- 中场 · 五星 ---- */
+    { id: 'm51', name: 'R. 佩特罗维奇', pos: 'mid', tier: '5', rating: 97 },
+    { id: 'm52', name: 'S. 范德斯托姆', pos: 'mid', tier: '5', rating: 95 },
+    { id: 'm53', name: 'D. 莫雷诺',     pos: 'mid', tier: '5', rating: 93 },
+    { id: 'm54', name: 'K. 施密特',     pos: 'mid', tier: '5', rating: 92 },
+    { id: 'm55', name: 'N. 哈达德',     pos: 'mid', tier: '5', rating: 90 },
+    { id: 'm56', name: 'Y. 田中',       pos: 'mid', tier: '5', rating: 89 },
+    /* ---- 中场 · 四星 ---- */
+    { id: 'm41', name: 'P. 迪亚洛',     pos: 'mid', tier: '4', rating: 88 },
+    { id: 'm42', name: 'G. 罗西',       pos: 'mid', tier: '4', rating: 86 },
+    { id: 'm43', name: 'B. 科瓦奇',     pos: 'mid', tier: '4', rating: 85 },
+    { id: 'm44', name: 'V. 桑托斯',     pos: 'mid', tier: '4', rating: 84 },
+    { id: 'm45', name: 'C. 埃克伦德',   pos: 'mid', tier: '4', rating: 83 },
+    { id: 'm46', name: 'F. 门德斯',     pos: 'mid', tier: '4', rating: 82 },
+    { id: 'm47', name: 'H. 阿尔-萨义德', pos: 'mid', tier: '4', rating: 81 },
+    { id: 'm48', name: 'E. 拉尔森',     pos: 'mid', tier: '4', rating: 79 },
+    /* ---- 中场 · 三星 ---- */
+    { id: 'm31', name: 'J. 姆本巴',     pos: 'mid', tier: '3', rating: 78 },
+    { id: 'm32', name: 'O. 费舍尔',     pos: 'mid', tier: '3', rating: 76 },
+    { id: 'm33', name: 'Q. 佩雷拉',     pos: 'mid', tier: '3', rating: 74 },
+    { id: 'm34', name: 'U. 伊万诺夫',   pos: 'mid', tier: '3', rating: 72 },
+    { id: 'm35', name: 'W. 杜阿尔特',   pos: 'mid', tier: '3', rating: 70 },
+    { id: 'm36', name: 'X. 兰格',       pos: 'mid', tier: '3', rating: 67 },
+    { id: 'm37', name: 'Z. 阿尤布',     pos: 'mid', tier: '3', rating: 64 },
+    { id: 'm38', name: 'D. 贝尔纳',     pos: 'mid', tier: '3', rating: 61 },
+
+    /* ---- 前锋 · 高光 ---- */
+    { id: 'fh1', name: 'Á. 佩尼亚',     pos: 'fwd', tier: 'H', rating: 110 },
+    { id: 'fh2', name: 'T. 克鲁格',     pos: 'fwd', tier: 'H', rating: 106 },
+    { id: 'fh3', name: 'S. 奥萨苏',     pos: 'fwd', tier: 'H', rating: 102 },
+    { id: 'fh4', name: 'M. 达席尔瓦',   pos: 'fwd', tier: 'H', rating: 100 },
+    /* ---- 前锋 · 五星 ---- */
+    { id: 'f51', name: 'J. 沃尔科夫',   pos: 'fwd', tier: '5', rating: 97 },
+    { id: 'f52', name: 'R. 恩迪亚耶',   pos: 'fwd', tier: '5', rating: 96 },
+    { id: 'f53', name: 'D. 卡斯特里',   pos: 'fwd', tier: '5', rating: 94 },
+    { id: 'f54', name: 'K. 布兰登',     pos: 'fwd', tier: '5', rating: 92 },
+    { id: 'f55', name: 'L. 特奥多罗',   pos: 'fwd', tier: '5', rating: 91 },
+    { id: 'f56', name: 'N. 阿卜杜拉',   pos: 'fwd', tier: '5', rating: 89 },
+    /* ---- 前锋 · 四星 ---- */
+    { id: 'f41', name: 'P. 霍尔姆',     pos: 'fwd', tier: '4', rating: 88 },
+    { id: 'f42', name: 'G. 维加',       pos: 'fwd', tier: '4', rating: 87 },
+    { id: 'f43', name: 'B. 富兰克林',   pos: 'fwd', tier: '4', rating: 85 },
+    { id: 'f44', name: 'V. 久里奇',     pos: 'fwd', tier: '4', rating: 84 },
+    { id: 'f45', name: 'C. 姆瓦纳',     pos: 'fwd', tier: '4', rating: 83 },
+    { id: 'f46', name: 'F. 阿隆迪',     pos: 'fwd', tier: '4', rating: 82 },
+    { id: 'f47', name: 'H. 索伦森',     pos: 'fwd', tier: '4', rating: 80 },
+    { id: 'f48', name: 'I. 帕帕多普洛斯', pos: 'fwd', tier: '4', rating: 77 },
+    /* ---- 前锋 · 三星 ---- */
+    { id: 'f31', name: 'E. 里维拉',     pos: 'fwd', tier: '3', rating: 78 },
+    { id: 'f32', name: 'O. 夸梅',       pos: 'fwd', tier: '3', rating: 76 },
+    { id: 'f33', name: 'Q. 布洛姆',     pos: 'fwd', tier: '3', rating: 73 },
+    { id: 'f34', name: 'U. 塞拉',       pos: 'fwd', tier: '3', rating: 71 },
+    { id: 'f35', name: 'W. 丹尼斯',     pos: 'fwd', tier: '3', rating: 69 },
+    { id: 'f36', name: 'X. 洛佩斯',     pos: 'fwd', tier: '3', rating: 66 },
+    { id: 'f37', name: 'Y. 阿尔巴',     pos: 'fwd', tier: '3', rating: 63 },
+    { id: 'f38', name: 'Z. 科菲',       pos: 'fwd', tier: '3', rating: 61 }
+  ];
+
+  /* 按 位置 + 档位 建索引 */
+  var POOLS = { mid: {}, fwd: {} };
+  TIER_ORDER.forEach(function (t) {
+    POOLS.mid[t] = CARDS.filter(function (c) { return c.pos === 'mid' && c.tier === t; });
+    POOLS.fwd[t] = CARDS.filter(function (c) { return c.pos === 'fwd' && c.tier === t; });
+  });
+
+  /* ============================================================
+     工具
+     ============================================================ */
+  function $(id) { return document.getElementById(id); }
+
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function fmt(n) {
+    return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
+  /* 0.001 -> 0.1%   0.001/4 -> 0.025%   0.84 -> 84% */
+  function pctStr(x) {
+    var v = x * 100;
+    var s;
+    if (v >= 10) s = v.toFixed(1);
+    else if (v >= 1) s = v.toFixed(2);
+    else s = v.toFixed(3);
+    s = s.replace(/0+$/, '').replace(/\.$/, '');
+    return s + '%';
+  }
+
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { el.classList.remove('show'); }, 2000);
+  }
+
+  /* ============================================================
+     存档
+     ============================================================ */
+  function freshState() {
+    return {
+      v: 1,
+      coins: START_COINS,
+      points: 0,
+      day: todayStr(),
+      free: { mid: FREE_PER_POS, fwd: FREE_PER_POS },
+      premium: { mid: 0, fwd: 0 },
+      pity: 0,
+      lastSignIn: '',
+      exchanges: 0,
+      collection: {},
+      stats: {
+        std: { draws: 0, tiers: { 'H': 0, '5': 0, '4': 0, '3': 0 } },
+        prm: { draws: 0, tiers: { 'H': 0, '5': 0, '4': 0, '3': 0 } },
+        best: { id: null, rating: 0 },
+        drought: 0,
+        longestDrought: 0
+      }
+    };
+  }
+
+  function normInt(v, def, min) {
+    return (typeof v === 'number' && isFinite(v)) ? Math.max(min, Math.floor(v)) : def;
+  }
+
+  function normalize(raw) {
+    var f = freshState();
+    if (!raw || typeof raw !== 'object') return f;
+
+    f.coins = normInt(raw.coins, f.coins, 0);
+    f.points = normInt(raw.points, 0, 0);
+    f.exchanges = normInt(raw.exchanges, 0, 0);
+    f.pity = Math.min(normInt(raw.pity, 0, 0), PITY_LIMIT);
+    f.day = (typeof raw.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.day)) ? raw.day : f.day;
+    f.lastSignIn = (typeof raw.lastSignIn === 'string') ? raw.lastSignIn : '';
+
+    ['free', 'premium'].forEach(function (k) {
+      var src = raw[k];
+      if (src && typeof src === 'object') {
+        var cap = (k === 'free') ? FREE_PER_POS : PREMIUM_PER_POS;
+        f[k].mid = Math.min(cap, normInt(src.mid, f[k].mid, 0));
+        f[k].fwd = Math.min(cap, normInt(src.fwd, f[k].fwd, 0));
+      }
+    });
+
+    if (raw.collection && typeof raw.collection === 'object') {
+      CARDS.forEach(function (c) {
+        var n = raw.collection[c.id];
+        if (typeof n === 'number' && isFinite(n) && n > 0) {
+          f.collection[c.id] = Math.floor(n);
+        }
+      });
+    }
+
+    var st = raw.stats;
+    if (st && typeof st === 'object') {
+      ['std', 'prm'].forEach(function (k) {
+        var s = st[k];
+        if (s && typeof s === 'object') {
+          f.stats[k].draws = normInt(s.draws, 0, 0);
+          if (s.tiers && typeof s.tiers === 'object') {
+            TIER_ORDER.forEach(function (t) {
+              f.stats[k].tiers[t] = normInt(s.tiers[t], 0, 0);
+            });
+          }
+        }
+      });
+      if (st.best && typeof st.best === 'object' && typeof st.best.id === 'string' &&
+          CARDS.some(function (c) { return c.id === st.best.id; })) {
+        f.stats.best = { id: st.best.id, rating: normInt(st.best.rating, 0, 0) };
+      }
+      f.stats.drought = normInt(st.drought, 0, 0);
+      f.stats.longestDrought = normInt(st.longestDrought, 0, 0);
+    }
+
+    return f;
+  }
+
+  var state;
+  var corrupted = false;
+  try {
+    var rawSave = localStorage.getItem(KEY);
+    if (rawSave) {
+      state = normalize(JSON.parse(rawSave));
+    } else {
+      state = freshState();
+    }
+  } catch (e) {
+    state = freshState();
+    corrupted = true;
+    try { localStorage.removeItem(KEY); } catch (e2) {}
+    save();
+  }
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* 存储不可用时静默 */ }
+  }
+
+  function ensureDay() {
+    var t = todayStr();
+    if (state.day !== t) {
+      state.day = t;
+      state.free = { mid: FREE_PER_POS, fwd: FREE_PER_POS };
+      state.premium = { mid: 0, fwd: 0 };
+      save();
+    }
+  }
+
+  /* ============================================================
+     抽卡核心
+     ============================================================ */
+  var ui = { agent: 'std', pos: 'mid', tab: 'collection' };
+  var skipTimer = null;
+
+  function rollTier(agent) {
+    var rates = RATES[agent];
+    var r = Math.random();
+    var acc = 0;
+    for (var i = 0; i < TIER_ORDER.length; i++) {
+      var t = TIER_ORDER[i];
+      acc += rates[t];
+      if (r < acc) return t;
+    }
+    return '3';
+  }
+
+  function pickCard(pos, tier) {
+    var pool = POOLS[pos][tier];
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function acquire(card) {
+    var prev = state.collection[card.id] || 0;
+    state.collection[card.id] = prev + 1;
+
+    var dup = 0;
+    if (prev > 0) {
+      dup = DUP_COINS[card.tier];
+      state.coins += dup;
+    }
+
+    if (card.rating > state.stats.best.rating) {
+      state.stats.best = { id: card.id, rating: card.rating };
+    }
+
+    if (card.tier === 'H' || card.tier === '5') {
+      state.stats.drought = 0;
+    } else {
+      state.stats.drought++;
+      if (state.stats.drought > state.stats.longestDrought) {
+        state.stats.longestDrought = state.stats.drought;
+      }
+    }
+
+    return { card: card, isNew: prev === 0, dup: dup };
+  }
+
+  function doDraw(count) {
+    ensureDay();
+
+    var agent = ui.agent;
+    var pos = ui.pos;
+    var paid = agent === 'prm';
+    var cost = paid ? (count === 1 ? COST.single : COST.ten) : 0;
+
+    if (!paid) {
+      if (state.free[pos] < count) return toast('今天的免费次数不够了');
+    } else {
+      if (state.premium[pos] + count > PREMIUM_PER_POS) {
+        return toast('特级经纪人每个位置每天最多 50 抽');
+      }
+      if (state.coins < cost) {
+        return toast('金币不够，去签到或抽标准经纪人吧');
+      }
+    }
+
+    if (paid) {
+      state.premium[pos] += count;
+      state.coins -= cost;
+      state.points += count;
+    } else {
+      state.free[pos] -= count;
+    }
+
+    /* 先定档位（含特级保底），再出卡 */
+    var sp = state.pity;
+    var tiers = [];
+    for (var i = 0; i < count; i++) {
+      var t;
+      if (paid && sp >= PITY_LIMIT - 1) {
+        var pH = RATES.prm['H'] / (RATES.prm['H'] + RATES.prm['5']);
+        t = Math.random() < pH ? 'H' : '5';
+      } else {
+        t = rollTier(agent);
+      }
+      tiers.push(t);
+      if (t === 'H' || t === '5') sp = 0; else sp++;
+    }
+    /* 十连保底：全三星时把最后一张换成四星（仍不是五星+，不影响保底计数） */
+    if (count === 10 && !tiers.some(function (x) { return x !== '3'; })) {
+      tiers[9] = '4';
+    }
+    if (paid) state.pity = sp;
+
+    var st = state.stats[agent];
+    st.draws += count;
+
+    var entries = [];
+    for (var j = 0; j < tiers.length; j++) {
+      st.tiers[tiers[j]] = (st.tiers[tiers[j]] || 0) + 1;
+      entries.push(acquire(pickCard(pos, tiers[j])));
+    }
+
+    save();
+    showResults(entries);
+    renderWallet();
+    renderControls();
+    renderCollection();
+    renderStats();
+  }
+
+  /* ============================================================
+     渲染：卡片
+     ============================================================ */
+  function cardHTML(card, opts) {
+    opts = opts || {};
+    var t = card.tier;
+    var tag = opts.tag || '';
+    var tagCls = opts.tagClass || '';
+    return '<button type="button" class="card card--' + t + (opts.reveal ? ' reveal' : '') + '"' +
+      ' style="--i:' + (opts.i || 0) + '" data-card="' + card.id + '"' +
+      ' title="' + card.name + ' · ' + TIERS[t].label + '">' +
+      '<span class="card__badge">' + card.name.slice(0, 1) + '</span>' +
+      '<span class="card__name">' + card.name + '</span>' +
+      '<span class="card__pos">' + POS_LABEL[card.pos] + '</span>' +
+      '<span class="card__rating">' + card.rating + '</span>' +
+      '<span class="card__tier">' + TIERS[t].label + '</span>' +
+      (tag ? '<span class="card__tag ' + tagCls + '">' + tag + '</span>' : '') +
+      '</button>';
+  }
+
+  function lockedHTML(card) {
+    return '<button type="button" class="card card--locked" data-card="' + card.id + '" title="未获得">' +
+      '<span class="card__badge">?</span>' +
+      '<span class="card__name">未获得</span>' +
+      '<span class="card__pos">' + POS_LABEL[card.pos] + '</span>' +
+      '<span class="card__rating">—</span>' +
+      '<span class="card__tier">' + TIERS[card.tier].label + '</span>' +
+      '</button>';
+  }
+
+  /* ============================================================
+     渲染：顶部 / 控制区
+     ============================================================ */
+  function renderWallet() {
+    $('coins').textContent = fmt(state.coins);
+    $('points').textContent = fmt(state.points);
+    var btn = $('signInBtn');
+    var done = state.lastSignIn === todayStr();
+    btn.disabled = done;
+    btn.textContent = done ? '今日已签到' : '签到 +' + fmt(SIGN_IN_COINS);
+  }
+
+  function renderControls() {
+    document.querySelectorAll('[data-agent]').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.agent === ui.agent);
+    });
+    document.querySelectorAll('[data-pos]').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.pos === ui.pos);
+    });
+
+    var paid = ui.agent === 'prm';
+    var limit = paid ? PREMIUM_PER_POS : FREE_PER_POS;
+    var remain = paid
+      ? Math.max(0, PREMIUM_PER_POS - state.premium[ui.pos])
+      : state.free[ui.pos];
+
+    $('remainText').textContent = remain + '/' + limit;
+    $('pityText').textContent = state.pity + '/' + PITY_LIMIT;
+    $('pityNote').textContent = paid ? '' : '（仅特级累计）';
+
+    $('draw1Label').textContent = paid ? '特级单抽' : '标准单抽';
+    $('draw1Sub').textContent = paid ? fmt(COST.single) + ' 🪙' : '免费';
+    $('draw10Sub').textContent = (paid ? fmt(COST.ten) + ' 🪙' : '免费') + ' · 保底四星+';
+
+    $('draw1').disabled = remain < 1 || (paid && state.coins < COST.single);
+    $('draw10').disabled = remain < 10 || (paid && state.coins < COST.ten);
+
+    var ex = $('exchangeBtn');
+    ex.disabled = state.points < POINT_COST;
+    ex.textContent = '✨ 心仪积分兑换高光（' + state.points + '/' + POINT_COST + '）';
+  }
+
+  /* ============================================================
+     渲染：结果舞台
+     ============================================================ */
+  function showResults(entries) {
+    var stage = $('stage');
+    var grid = $('resultGrid');
+    stage.classList.remove('skip-anim');
+    $('stageHint').hidden = true;
+
+    grid.className = 'grid ' + (entries.length === 1 ? 'grid--1' : 'grid--10');
+    grid.innerHTML = entries.map(function (e, i) {
+      var tag = e.isNew ? 'NEW' : (e.dup ? '+' + fmt(e.dup) + ' 🪙' : '');
+      return cardHTML(e.card, {
+        reveal: true,
+        i: i,
+        tag: tag,
+        tagClass: e.isNew ? 'is-new' : 'is-dup'
+      });
+    }).join('');
+
+    var counts = {};
+    entries.forEach(function (e) { counts[e.card.tier] = (counts[e.card.tier] || 0) + 1; });
+    var summary = TIER_ORDER.filter(function (t) { return counts[t]; })
+      .map(function (t) { return TIERS[t].label + ' ' + counts[t] + ' 张'; }).join('，');
+    $('live').textContent = (entries.length === 1 ? '单抽结果：' : '十连结果：') + summary;
+
+    var skip = $('skipBtn');
+    skip.hidden = entries.length === 1;
+    clearTimeout(skipTimer);
+    skipTimer = setTimeout(function () { skip.hidden = true; }, 3000);
+  }
+
+  function clearStage() {
+    $('resultGrid').innerHTML = '';
+    $('resultGrid').className = 'grid';
+    $('stageHint').hidden = false;
+    $('skipBtn').hidden = true;
+    $('stage').classList.remove('skip-anim');
+  }
+
+  /* ============================================================
+     渲染：图鉴
+     ============================================================ */
+  function renderCollection() {
+    var owned = CARDS.filter(function (c) { return state.collection[c.id]; }).length;
+    $('collCount').textContent = owned + ' / ' + CARDS.length;
+
+    var list = CARDS.slice().sort(function (a, b) {
+      return TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier) || b.rating - a.rating;
+    });
+
+    $('collGrid').innerHTML = list.map(function (c) {
+      var n = state.collection[c.id] || 0;
+      if (!n) return lockedHTML(c);
+      return cardHTML(c, { tag: n > 1 ? '×' + n : '', tagClass: 'is-dup' });
+    }).join('');
+  }
+
+  /* ============================================================
+     渲染：统计
+     ============================================================ */
+  function renderStats() {
+    var s = state.stats;
+    var best = s.best.id ? CARDS.filter(function (c) { return c.id === s.best.id; })[0] : null;
+
+    var rows = TIER_ORDER.map(function (t) {
+      var a = s.std.tiers[t] || 0;
+      var b = s.prm.tiers[t] || 0;
+      return '<tr><td>' + TIERS[t].label + '</td>' +
+        '<td>' + a + '<span class="pct">' + (s.std.draws ? (a / s.std.draws * 100).toFixed(1) : '0.0') + '%</span></td>' +
+        '<td>' + b + '<span class="pct">' + (s.prm.draws ? (b / s.prm.draws * 100).toFixed(1) : '0.0') + '%</span></td></tr>';
+    }).join('');
+
+    $('statsSummary').innerHTML =
+      '<div class="stat-grid">' +
+        '<div class="stat"><div class="stat__k">总抽数</div><div class="stat__v">' + fmt(s.std.draws + s.prm.draws) + '</div></div>' +
+        '<div class="stat"><div class="stat__k">最高评分</div><div class="stat__v">' + (best ? best.rating + ' · ' + best.name : '—') + '</div></div>' +
+        '<div class="stat"><div class="stat__k">当前五星荒</div><div class="stat__v">' + s.drought + '</div></div>' +
+        '<div class="stat"><div class="stat__k">最长五星荒</div><div class="stat__v">' + s.longestDrought + '</div></div>' +
+      '</div>' +
+      '<div class="table-wrap"><table>' +
+        '<thead><tr><th>档位</th><th>标准（次数 / 占比）</th><th>特级（次数 / 占比）</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table></div>' +
+      '<p class="fineprint">「五星荒」= 连续未出五星及以上（含高光）的抽数，标准与特级合并计算。</p>';
+  }
+
+  /* ============================================================
+     渲染：概率说明
+     ============================================================ */
+  function renderRates() {
+    var countPerTier = { 'H': 4, '5': 6, '4': 8, '3': 8 };
+
+    $('ratesBody').innerHTML = TIER_ORDER.map(function (t) {
+      return '<tr>' +
+        '<td>' + TIERS[t].label + '</td>' +
+        '<td>' + pctStr(RATES.std[t]) + '</td>' +
+        '<td>' + pctStr(RATES.prm[t]) + '</td>' +
+        '<td>' + pctStr(RATES.std[t] / countPerTier[t]) + '</td>' +
+        '<td>' + pctStr(RATES.prm[t] / countPerTier[t]) + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  /* ============================================================
+     签到 / 积分兑换 / 重置
+     ============================================================ */
+  function doSignIn() {
+    ensureDay();
+    if (state.lastSignIn === todayStr()) return;
+    state.coins += SIGN_IN_COINS;
+    state.lastSignIn = todayStr();
+    save();
+    renderWallet();
+    renderControls();
+    toast('签到成功，+' + fmt(SIGN_IN_COINS) + ' 金币');
+  }
+
+  function doExchange() {
+    ensureDay();
+    if (state.points < POINT_COST) return toast('心仪积分还不够');
+
+    var unowned = CARDS.filter(function (c) { return c.tier === 'H' && !state.collection[c.id]; });
+    var pool = unowned.length ? unowned : CARDS.filter(function (c) { return c.tier === 'H'; });
+    if (!pool.length) return toast('没有可兑换的卡片');
+
+    var card = pool[Math.floor(Math.random() * pool.length)];
+    state.points -= POINT_COST;
+    state.exchanges++;
+    var res = acquire(card);
+
+    save();
+    showResults([res]);
+    renderWallet();
+    renderControls();
+    renderCollection();
+    renderStats();
+
+    toast(res.isNew ? '获得新高光：' + card.name : '重复高光，折算 ' + fmt(res.dup) + ' 金币');
+  }
+
+  var resetArmed = false;
+  var resetTimer = null;
+
+  function disarmReset() {
+    resetArmed = false;
+    clearTimeout(resetTimer);
+    var btn = $('resetBtn');
+    btn.textContent = '重置存档';
+    btn.classList.remove('btn--danger');
+  }
+
+  function doReset() {
+    var btn = $('resetBtn');
+    if (!resetArmed) {
+      resetArmed = true;
+      btn.textContent = '再点一次确认清空';
+      btn.classList.add('btn--danger');
+      resetTimer = setTimeout(disarmReset, 3000);
+      return;
+    }
+    disarmReset();
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    state = freshState();
+    save();
+    clearStage();
+    renderWallet();
+    renderControls();
+    renderCollection();
+    renderStats();
+    toast('存档已重置');
+  }
+
+  /* ============================================================
+     概率沙盒
+     ============================================================ */
+  function simulate(n) {
+    var agent = ui.agent;
+    var counts = { 'H': 0, '5': 0, '4': 0, '3': 0 };
+    for (var i = 0; i < n; i++) counts[rollTier(agent)]++;
+
+    var rows = TIER_ORDER.map(function (t) {
+      return '<tr><td>' + TIERS[t].label + '</td>' +
+        '<td>' + fmt(counts[t]) + '</td>' +
+        '<td>' + (counts[t] / n * 100).toFixed(2) + '%</td>' +
+        '<td>' + pctStr(RATES[agent][t]) + '</td></tr>';
+    }).join('');
+
+    $('sandboxOut').innerHTML =
+      '<div class="sandbox__meta">按「' + (agent === 'prm' ? '特级' : '标准') + '经纪人」概率模拟 ' +
+      fmt(n) + ' 抽 · 不计入存档</div>' +
+      '<div class="table-wrap"><table>' +
+        '<thead><tr><th>档位</th><th>次数</th><th>实测占比</th><th>设定概率</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table></div>';
+  }
+
+  /* ============================================================
+     卡片详情
+     ============================================================ */
+  function openCard(id) {
+    var card = CARDS.filter(function (c) { return c.id === id; })[0];
+    if (!card) return;
+
+    var n = state.collection[id] || 0;
+    var poolSize = POOLS[card.pos][card.tier].length;
+    var perStd = RATES.std[card.tier] / poolSize;
+    var perPrm = RATES.prm[card.tier] / poolSize;
+
+    $('modalBody').innerHTML =
+      '<div class="modal__card">' + cardHTML(card, {}) + '</div>' +
+      '<h3>' + card.name + '</h3>' +
+      '<dl class="detail">' +
+        '<div><dt>位置</dt><dd>' + POS_LABEL[card.pos] + '</dd></div>' +
+        '<div><dt>档位</dt><dd>' + TIERS[card.tier].label + '</dd></div>' +
+        '<div><dt>评分</dt><dd>' + card.rating + '</dd></div>' +
+        '<div><dt>持有</dt><dd>' + (n ? n + ' 张' : '未获得') + '</dd></div>' +
+        '<div><dt>单卡概率</dt><dd>标准 ' + pctStr(perStd) + ' · 特级 ' + pctStr(perPrm) + '</dd></div>' +
+        (n > 1 ? '<div><dt>重复折算</dt><dd>' + fmt(DUP_COINS[card.tier]) + ' 🪙 / 张</dd></div>' : '') +
+      '</dl>';
+
+    $('modal').hidden = false;
+  }
+
+  function closeModal() { $('modal').hidden = true; }
+
+  /* ============================================================
+     事件绑定 / 初始化
+     ============================================================ */
+  function init() {
+    ensureDay();
+
+    document.querySelectorAll('[data-agent]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        ui.agent = b.dataset.agent;
+        renderControls();
+      });
+    });
+
+    document.querySelectorAll('[data-pos]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        ui.pos = b.dataset.pos;
+        renderControls();
+      });
+    });
+
+    $('draw1').addEventListener('click', function () { doDraw(1); });
+    $('draw10').addEventListener('click', function () { doDraw(10); });
+    $('signInBtn').addEventListener('click', doSignIn);
+    $('exchangeBtn').addEventListener('click', doExchange);
+    $('resetBtn').addEventListener('click', doReset);
+
+    $('skipBtn').addEventListener('click', function () {
+      $('stage').classList.add('skip-anim');
+      $('skipBtn').hidden = true;
+    });
+
+    $('bottomTabs').querySelectorAll('[data-tab]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        ui.tab = b.dataset.tab;
+        $('bottomTabs').querySelectorAll('[data-tab]').forEach(function (x) {
+          x.classList.toggle('active', x === b);
+        });
+        document.querySelectorAll('.panel').forEach(function (p) {
+          p.classList.toggle('active', p.id === 'panel-' + ui.tab);
+        });
+      });
+    });
+
+    $('collGrid').addEventListener('click', function (e) {
+      var el = e.target.closest('[data-card]');
+      if (el) openCard(el.dataset.card);
+    });
+
+    $('resultGrid').addEventListener('click', function (e) {
+      var el = e.target.closest('[data-card]');
+      if (el) openCard(el.dataset.card);
+    });
+
+    $('sim1k').addEventListener('click', function () { simulate(1000); });
+    $('sim10k').addEventListener('click', function () { simulate(10000); });
+
+    $('modal').addEventListener('click', function (e) {
+      if (e.target === $('modal') || e.target.closest('.modal__close')) closeModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    renderWallet();
+    renderControls();
+    renderCollection();
+    renderStats();
+    renderRates();
+
+    if (corrupted) {
+      setTimeout(function () { toast('存档损坏，已重置为新存档'); }, 500);
+    }
+  }
+
+  /* 调试 / 自动化测试用（不影响正常使用） */
+  window.__gacha = {
+    getState: function () { return state; },
+    draw: doDraw,
+    rollTier: rollTier,
+    acquire: acquire,
+    normalize: normalize,
+    freshState: freshState,
+    CARDS: CARDS,
+    POOLS: POOLS,
+    RATES: RATES,
+    reset: function () {
+      state = freshState();
+      save();
+      renderWallet();
+      renderControls();
+      renderCollection();
+      renderStats();
+    }
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
